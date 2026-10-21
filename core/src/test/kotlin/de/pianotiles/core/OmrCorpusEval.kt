@@ -7,18 +7,32 @@ import java.io.File
 import javax.imageio.ImageIO
 import kotlin.math.abs
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 /**
- * Evaluates the OMR on a folder of generated scores (see docs/OMR.md, "Testkorpus").
- * Runs only when -Pomr.corpus=<dir> is given. Each sub-folder contains truth.txt
- * ("midi start duration hand" per line) and page images <engraver>-<n>.png.
+ * Evaluates the OMR on a corpus of public-domain scores engraved by two different programs
+ * (LilyPond and Verovio, see docs/OMR.md "Testkorpus"). Each sub-folder contains truth.txt
+ * ("midi start duration hand" per line) and <engraver>.pdf (or page images <engraver>-<n>.png).
+ * By default the bundled corpus in src/test/resources/corpus is used; -Pomr.corpus=<dir> overrides it.
+ * Fails when the average quality drops below the documented level (regression guard).
  */
 class OmrCorpusEval {
+    /** Renders all pages at 2000 px width, like the app does with PdfRenderer. */
+    private fun renderPdf(f: File): List<java.awt.image.BufferedImage> =
+        org.apache.pdfbox.Loader.loadPDF(f).use { doc ->
+            val r = org.apache.pdfbox.rendering.PDFRenderer(doc)
+            (0 until doc.numberOfPages).map { i ->
+                val widthPt = doc.getPage(i).mediaBox.width
+                r.renderImageWithDPI(i, 2000f / widthPt * 72f, org.apache.pdfbox.rendering.ImageType.GRAY)
+            }
+        }
+
     data class T(val pitch: Int, val start: Double, val hand: Char)
 
     @Test
     fun evaluateCorpus() {
-        val dir = System.getProperty("omr.corpus") ?: return
+        val external = System.getProperty("omr.corpus")
+        val dir = external ?: File(javaClass.getResource("/corpus")!!.toURI()).path
         val only = System.getProperty("omr.only")
         val rows = ArrayList<String>()
         var sumR = 0.0; var sumP = 0.0; var sumPitch = 0.0; var n = 0
@@ -28,11 +42,15 @@ class OmrCorpusEval {
                 val p = it.split(" "); T(p[0].toInt(), p[1].toDouble(), p[3][0])
             }
             for (eng in listOf("lilypond", "verovio")) {
-                val pages = piece.listFiles()!!.filter { it.name.startsWith("$eng-") && it.name.endsWith(".png") }
+                val pdf = File(piece, "$eng.pdf")
+                val pngs = piece.listFiles()!!.filter { it.name.startsWith("$eng-") && it.name.endsWith(".png") }
                     .sortedBy { it.name.substringAfterLast('-').substringBefore('.').toInt() }
-                if (pages.isEmpty()) continue
-                val imgs = pages.map { f ->
-                    val img = ImageIO.read(f)
+                val buffered: List<java.awt.image.BufferedImage> = when {
+                    pngs.isNotEmpty() -> pngs.map { ImageIO.read(it) }
+                    pdf.exists() -> renderPdf(pdf)
+                    else -> continue
+                }
+                val imgs = buffered.map { img ->
                     val px = IntArray(img.width * img.height)
                     img.getRGB(0, 0, img.width, img.height, px, 0, img.width)
                     GrayImage.fromArgb(img.width, img.height, px)
@@ -98,6 +116,10 @@ class OmrCorpusEval {
         }
         println("==== OMR CORPUS ====")
         rows.forEach { println(it) }
+        if (external == null && only == null) {
+            assertTrue(sumR / n >= 0.78, "Notenerkennung gesunken: ${sumR / n}")
+            assertTrue(sumPitch / n >= 0.82, "Rhythmuserkennung gesunken: ${sumPitch / n}")
+        }
         println(String.format("DURCHSCHNITT über %d: noten=%.1f%% präzision=%.1f%% rhythmus=%.1f%%", n, sumR / n * 100, sumP / n * 100, sumPitch / n * 100))
     }
 }

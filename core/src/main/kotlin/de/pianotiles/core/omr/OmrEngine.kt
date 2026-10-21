@@ -122,6 +122,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val rests: MutableList<Rest> = ArrayList(),
         /** Key signature read at the start of this staff (null = could not tell). */
         var keyGuess: Int? = null,
+        /** A "C" / cut-time symbol was found: 4 quarter notes per measure. */
+        var commonTime: Boolean = false,
         /** Thin arcs (ties or slurs): x0, x1, centre y. */
         val arcs: MutableList<DoubleArray> = ArrayList(),
         /** Detected clefs (x position → clef), sorted by x. */
@@ -353,7 +355,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         if (timeSigBoxes.isEmpty()) glyphs.firstOrNull {
             abs(it.cy + top - st.middle) < ss * 0.5 && it.cx + left < st.xStart + ss * 12 && openRight(it)
-        }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)) }
+        }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)); sd.commonTime = true }
         timeSigBoxes.forEach { sd.timeSigs.add(intArrayOf(it[0] + left, it[1] + top, it[2] + left, it[3] + top)) }
         fun inTimeSig(b: Blob) = timeSigBoxes.any { bx -> b.cx >= bx[0] - 2 && b.cx <= bx[2] + 2 && b.cy >= bx[1] - 2 && b.cy <= bx[3] + 2 }
         for ((blobId, b) in blobs.withIndex()) {
@@ -958,7 +960,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val counts = sums.groupingBy { it }.eachCount()
             val candidates = listOf(4.0, 3.0, 2.0, 1.5, 6.0, 4.5, 8.0)
             fun score(c: Double) = (counts[c] ?: 0) * when (c) { 4.0 -> 1.15; 8.0, 4.5 -> 0.7; else -> 1.0 }
-            val mode = candidates.maxByOrNull { score(it) }?.takeIf { (counts[it] ?: 0) > 0 } ?: 4.0
+            val common = systems.firstOrNull()?.staves?.any { it.commonTime } == true
+            val mode = if (common) 4.0 else candidates.maxByOrNull { score(it) }?.takeIf { (counts[it] ?: 0) > 0 } ?: 4.0
             if (abs(mode - Math.round(mode)) < 1e-6) { num = mode.roundToInt(); den = 4 } else { num = (mode * 2).roundToInt(); den = 8 }
             measureLen = num * 4.0 / den
         }

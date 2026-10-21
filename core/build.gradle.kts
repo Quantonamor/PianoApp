@@ -16,6 +16,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
+    // renders the PDF test corpus (same role as android.graphics.pdf.PdfRenderer in the app)
+    testImplementation("org.apache.pdfbox:pdfbox:3.0.3")
 }
 
 tasks.test {
