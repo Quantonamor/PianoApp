@@ -138,7 +138,7 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit)
                     }
                     val expected = HashMap<Int, Hand>()
                     val sounding = HashMap<Int, Hand>()
-                    @Suppress("UNUSED_EXPRESSION") vm.frame
+                    vm.frame.also { }
                     for (p in engine.expectedPitches) expected[p] = song.notes.firstOrNull { it.pitch == p && it.start >= engine.position - 0.6 }?.hand ?: Hand.RIGHT
                     for (i in engine.soundingNotes()) {
                         val n = song.notes[i]
@@ -172,7 +172,7 @@ private fun TopBar(vm: PracticeViewModel, onBack: () -> Unit, onEdit: () -> Unit
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück") }
             Column(Modifier.weight(1f)) {
                 Text(vm.song.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                @Suppress("UNUSED_EXPRESSION") vm.frame
+                vm.frame.also { }
                 val m = vm.engine.currentMeasure + 1
                 Text(
                     "Takt $m / ${vm.song.measureCount} · ${(vm.song.bpm * vm.speed).toInt()} BPM",
@@ -274,7 +274,7 @@ private fun BottomBar(vm: PracticeViewModel, onLoopOptions: () -> Unit) {
             }
             IconButton(onClick = { vm.seekMeasureDelta(1) }) { Icon(Icons.Filled.FastForward, "Takt vor") }
             Spacer(Modifier.width(6.dp))
-            @Suppress("UNUSED_EXPRESSION") vm.frame
+            vm.frame.also { }
             Timeline(
                 song = vm.song, position = vm.engine.position, loop = vm.loop,
                 mistakes = vm.engine.mistakesPerMeasure + vm.song.stats.mistakesPerMeasure.filterKeys { it !in vm.engine.mistakesPerMeasure },
@@ -296,7 +296,7 @@ private fun BottomBar(vm: PracticeViewModel, onLoopOptions: () -> Unit) {
 
 @Composable
 private fun Overlays(vm: PracticeViewModel) {
-    @Suppress("UNUSED_EXPRESSION") vm.frame
+    vm.frame.also { }
     Box(Modifier.fillMaxSize()) {
         // big play hint when paused
         if (!vm.isPlaying && vm.finished == null) {

@@ -68,7 +68,7 @@ fun FallingNotes(
             }
             .pointerInput(Unit) { detectTapGestures(onTap = { onTap() }, onDoubleTap = { onDoubleTap() }) },
     ) {
-        @Suppress("UNUSED_EXPRESSION") frame // read to redraw every frame
+        frame.also { } // read to redraw every frame
         val layout = KeyLayout(range.first, range.last, size.width)
         val h = size.height
         val beatsVisible = lookaheadSeconds * song.bpm * engine.speed / 60.0
