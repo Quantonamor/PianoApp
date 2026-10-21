@@ -109,7 +109,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
     private class StaffData(
         val page: Int,
         val staff: Staff,
+        /** Clef assumed when none is detected. */
         val clef: Clef,
+        /** Hand by position in the system: upper staff = right hand, lower staff = left hand. */
+        val hand: Hand,
         val heads: MutableList<Head> = ArrayList(),
         val barlines: MutableList<IntRange> = ArrayList(),
         val stemXs: MutableList<Int> = ArrayList(),
@@ -117,7 +120,13 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         /** Page-coordinate boxes (x0, y0, x1, y1) of time signatures. */
         val timeSigs: MutableList<IntArray> = ArrayList(),
         val rests: MutableList<Rest> = ArrayList(),
-    )
+        /** Key signature read at the start of this staff (null = could not tell). */
+        var keyGuess: Int? = null,
+        /** Detected clefs (x position → clef), sorted by x. */
+        val clefs: MutableList<Pair<Double, Clef>> = ArrayList(),
+    ) {
+        fun clefAt(x: Double): Clef = clefs.lastOrNull { it.first <= x }?.second ?: clefs.firstOrNull()?.second ?: clef
+    }
 
     private data class Rest(val x0: Int, val y0: Int, val x1: Int, val y1: Int, val duration: Double) {
         val cx get() = (x0 + x1) / 2.0
@@ -154,7 +163,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             currentNoStaff = noStaff
             val all = ArrayList<StaffData>()
             for (sys in grouped) {
-                val sds = sys.map { (st, clef) -> StaffData(pageIdx, st, clef) }
+                val sds = sys.mapIndexed { i, (st, clef) ->
+                    val hand = when {
+                        sys.size >= 2 -> if (i == 0) Hand.RIGHT else Hand.LEFT
+                        options.layout == StaffLayout.SINGLE_BASS -> Hand.LEFT
+                        else -> Hand.RIGHT
+                    }
+                    StaffData(pageIdx, st, clef, hand)
+                }
                 for (sd in sds) analyzeStaff(bit, noStaff, sd, staves)
                 if (firstKey == null && sds.isNotEmpty()) firstKey = detectKey(sds.first())
                 all.addAll(sds)
@@ -164,7 +180,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         progress(pages.size, pages.size)
 
-        val keyFifths = options.keyFifths ?: firstKey ?: 0
+        val votes = systems.flatMap { it.staves }.mapNotNull { it.keyGuess }
+        val voted = votes.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+        val keyFifths = options.keyFifths ?: voted ?: firstKey ?: 0
         val (song, estimated) = assemble(systems, keyFifths)
 
         for ((pageIdx, gray) in pages.withIndex()) {
@@ -175,7 +193,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     sds.flatMap { sd -> sd.barlines.map { b -> ((b.first + b.last) / 2) to (sd.staff.top.toInt()..sd.staff.bottom.toInt()) } },
                     sds.flatMap { sd ->
                         sd.heads.map { h ->
-                            DetectedHead(h.page, h.x0, h.y0, h.x1, h.y1, h.pitch, h.hollow, h.duration, sd.clef, h.accidental, h.measure, h.onset)
+                            DetectedHead(h.page, h.x0, h.y0, h.x1, h.y1, h.pitch, h.hollow, h.duration, sd.clefAt(h.cx), h.accidental, h.measure, h.onset)
                         }
                     },
                 ),
@@ -271,6 +289,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (b.minX == 0 || b.minY == 0 || b.maxX == img.width - 1 || b.maxY == img.height - 1) return false
             val h = b.height / ss; val w = b.width / ss; val a = b.area / (ss * ss)
             if (h > maxHeight || w > 1.45 || a > 0.8 || a < 0.02) return false
+            // gaps between (double) beams are long and flat
+            if (h < 0.28 || w / h > 3.0) return false
             if (h <= 0.78) return true
             // Taller holes (a head in a space, bounded by the staff lines) must be oval, not a
             // rectangular cell between stems and lines: top and bottom rows are clearly narrower.
@@ -419,6 +439,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // 4) Small dots → augmentation dots.
         val noCrop = noStaff.crop(left, top, right, bottom)
         val symbols = Components.find(noCrop)
+        if (options.layout == StaffLayout.AUTO || options.layout == StaffLayout.PIANO) {
+            detectClefs(noStaff, sd)
+            detectClefChanges(symbols, sd, left, top, headerEnd)
+        }
+        sd.keyGuess = readKeySignature(noCrop, symbols, sd, left, top)
         detectRests(noCrop, symbols, sd, left, top, headerEnd)
         val dots = symbols.filter {
             val w = it.width / ss; val h = it.height / ss
@@ -445,6 +470,143 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
 
         // 7) Accidentals in front of note heads.
         for (hd in sd.heads) hd.accidental = detectAccidental(hd, sd, ss)
+    }
+
+    /**
+     * Clef at the start of the staff: a treble clef reaches clearly above and below the staff,
+     * a bass clef stays in the upper three quarters of the staff.
+     */
+    private fun detectClefs(img: BitImage, sd: StaffData) {
+        val st = sd.staff
+        val ss = st.space
+        var above = 0.0; var below = 0.0; var ink = 0; var lowerInk = 0
+        for (x in (st.xStart + ss * 0.3).roundToInt()..(st.xStart + ss * 2.8).roundToInt()) {
+            for (y in (st.top - ss * 3).roundToInt()..(st.bottom + ss * 3).roundToInt()) {
+                if (!img[x, y]) continue
+                ink++
+                above = max(above, (st.top - y) / ss)
+                below = max(below, (y - st.bottom) / ss)
+                if (y > st.bottom - ss * 0.9) lowerInk++
+            }
+        }
+        if (ink < ss * ss * 0.5) return
+        val clef = when {
+            above >= 0.7 && below >= 0.7 -> Clef.TREBLE
+            below < 0.4 && above < 0.6 && lowerInk < ink * 0.12 -> Clef.BASS
+            else -> return
+        }
+        sd.clefs.add(st.xStart.toDouble() to clef)
+    }
+
+    /**
+     * Clef changes inside the staff. Bass clef: a compact glyph in the upper part of the staff with two
+     * dots to its right. Treble clef: a tall glyph reaching above and below the staff. Note heads that were
+     * found on such a glyph are removed.
+     */
+    private fun detectClefChanges(blobs: List<Blob>, sd: StaffData, left: Int, top: Int, headerEnd: Double) {
+        val st = sd.staff
+        val ss = st.space
+        val found = ArrayList<Pair<Blob, Clef>>()
+        for (b in blobs) {
+            val x0 = b.minX + left; val x1 = b.maxX + left; val y0 = b.minY + top; val y1 = b.maxY + top
+            if (x1 < headerEnd) continue
+            val w = b.width / ss; val h = b.height / ss
+            if (sd.stemXs.any { it in x0..x1 } && h > 3.0) continue
+            if (h in 1.6..3.4 && w in 1.1..2.8 && abs(y0 - st.top) < ss * 0.8 && y1 < st.bottom - ss * 0.3 && b.fill in 0.15..0.6) {
+                val dots = blobs.count { d ->
+                    val dw = d.width / ss; val dh = d.height / ss
+                    dw in 0.15..0.6 && dh in 0.15..0.6 && d.minX + left in x1..(x1 + (ss * 1.3).toInt()) &&
+                        (abs(d.cy + top - (st.lines[0] + st.lines[1]) / 2) < ss * 0.4 || abs(d.cy + top - (st.lines[1] + st.lines[2]) / 2) < ss * 0.4)
+                }
+                if (dots >= 2) found.add(b to Clef.BASS)
+            } else if (h >= 4.3 && h <= 8.5 && w in 1.0..3.2 && y0 < st.top - ss * 0.4 && y1 > st.bottom + ss * 0.4 && b.fill in 0.1..0.5) {
+                found.add(b to Clef.TREBLE)
+            }
+        }
+        for ((b, clef) in found) {
+            val x0 = b.minX + left; val x1 = b.maxX + left
+            sd.clefs.add((x0 - ss * 0.2) to clef)
+            sd.heads.removeAll { it.cx >= x0 - 2 && it.cx <= x1 + ss * 0.8 && it.cy >= b.minY + top - 2 && it.cy <= b.maxY + top + 2 }
+        }
+        sd.clefs.sortBy { it.first }
+        if (sd.clefs.isNotEmpty() && sd.clefs[0].first > st.xStart + 1) sd.clefs.add(0, st.xStart.toDouble() to sd.clef)
+    }
+
+    /** Flat: only the thin stem in the upper part, a wide bowl in the lower part. */
+    private fun flatShape(img: BitImage, b: Blob, ss: Double): Boolean {
+        fun rowWidth(y: Int): Int { var l = -1; var r = -1; for (x in b.minX..b.maxX) if (img[x, y]) { if (l < 0) l = x; r = x }; return if (l < 0) 0 else r - l + 1 }
+        val upper = (b.minY..(b.minY + b.height * 0.35).toInt()).maxOf { rowWidth(it) }
+        val lower = ((b.maxY - b.height * 0.35).toInt()..b.maxY).maxOf { rowWidth(it) }
+        return upper <= ss * 0.32 && lower >= ss * 0.45
+    }
+
+    /** Number of separate vertical strokes (runs ≥ [minLen]) inside a blob, with their x positions. */
+    private fun verticalStrokes(img: BitImage, b: Blob, minLen: Double): List<Int> {
+        val cols = ArrayList<Int>()
+        for (x in b.minX..b.maxX) {
+            var run = 0; var best = 0
+            for (y in b.minY..b.maxY) { if (img[x, y]) { run++; best = max(best, run) } else run = 0 }
+            if (best >= minLen) cols.add(x)
+        }
+        val strokes = ArrayList<Int>()
+        var i = 0
+        while (i < cols.size) {
+            var j = i
+            while (j + 1 < cols.size && cols[j + 1] - cols[j] <= 1) j++
+            strokes.add((cols[i] + cols[j]) / 2)
+            i = j + 1
+        }
+        return strokes
+    }
+
+    /**
+     * Key signature: the accidental-shaped symbols between the clef and the time signature / first note.
+     * Sharp = two vertical strokes, flat = one stroke on the left with a bowl. Returns +n / -n or null.
+     */
+    private fun readKeySignature(img: BitImage, blobs: List<Blob>, sd: StaffData, left: Int, top: Int): Int? {
+        val st = sd.staff
+        val ss = st.space
+        val inStaff = blobs.filter { b ->
+            val cy = b.cy + top
+            cy > st.top - ss * 2 && cy < st.bottom + ss * 2 && b.minX + left > st.xStart - 2
+        }
+        // clef = the tallest glyph at the start of the staff
+        val clef = inStaff.filter { it.minX + left < st.xStart + ss * 2.5 && it.height > ss * 2.2 }.maxByOrNull { it.height } ?: return null
+        val from = clef.maxX + left + 1
+        val firstNote = sd.heads.minOfOrNull { it.x0 } ?: Int.MAX_VALUE
+        val firstBar = sd.barlines.minOfOrNull { it.first } ?: Int.MAX_VALUE
+        val timeSig = sd.timeSigs.minOfOrNull { it[0] } ?: Int.MAX_VALUE
+        val to = minOf(firstNote - (ss * 0.3).toInt(), firstBar, timeSig, (st.xStart + ss * 14).toInt())
+        var sharps = 0; var flats = 0; var other = 0
+        for (b in inStaff.sortedBy { it.minX }) {
+            val x0 = b.minX + left; val x1 = b.maxX + left
+            if (x0 < from || x1 > to) continue
+            val w = b.width / ss; val h = b.height / ss
+            if (h < 1.3 || h > 3.6 || w > 1.5) {
+                if (System.getProperty("omr.trace") != null) println("KEYSKIP x=$x0 w=${"%.2f".format(w)} h=${"%.2f".format(h)}")
+                if (h >= 1.3) other++; continue
+            }
+            val strokes = verticalStrokes(img, b, ss * 1.2)
+            if (System.getProperty("omr.trace") != null) println("KEYSYM x=$x0 w=${"%.2f".format(w)} h=${"%.2f".format(h)} strokes=${strokes.map { it - b.minX }} width=${b.width} fill=${"%.2f".format(b.fill)}")
+            // A flat whose bowl was cut off by the staff-line removal: thin stroke + small blob right next to it.
+            val bowlNext = w < 0.45 && strokes.size == 1 && inStaff.any { o ->
+                o !== b && o.minX in b.maxX..(b.maxX + (ss * 0.35).toInt()) && o.height / ss in 0.5..1.3 &&
+                    o.width / ss in 0.25..0.8 && o.maxY >= b.maxY - ss * 0.5 && o.maxY <= b.maxY + ss * 0.3
+            }
+            when {
+                bowlNext -> flats++
+                strokes.size >= 2 && w in 0.5..1.4 -> sharps++
+                strokes.size == 1 && (strokes[0] - b.minX) < b.width * 0.4 && w in 0.45..1.2 && flatShape(img, b, ss) -> flats++
+                else -> other++
+            }
+        }
+        if (sharps > 0 && flats > 0) return if (sharps >= flats) sharps.coerceAtMost(7) else -flats.coerceAtMost(7)
+        return when {
+            sharps > 0 -> sharps.coerceAtMost(7)
+            flats > 0 -> -flats.coerceAtMost(7)
+            other == 0 -> 0
+            else -> null
+        }
     }
 
     /** Longest vertical ink run inside the blob's bounding box. */
@@ -818,14 +980,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             }
             for ((si, cols) in slot.perStaff.withIndex()) {
                 val sd = slot.staves[si]
-                val hand = if (sd.clef == Clef.TREBLE) Hand.RIGHT else Hand.LEFT
+                val hand = sd.hand
                 val accidentals = HashMap<Int, Int>()
                 for ((ci, col) in cols.withIndex()) {
                     val onset = onsets[si][ci]
                     val nextOnset = onsets[si].getOrNull(ci + 1) ?: length
                     for (h in col.heads.sortedBy { it.cx }) {
                         h.accidental?.let { accidentals[h.step] = it }
-                        val base = if (sd.clef == Clef.TREBLE) 30 else 18 // diatonic index of the bottom line (E4 / G2)
+                        val base = if (sd.clefAt(h.cx) == Clef.TREBLE) 30 else 18 // diatonic index of the bottom line (E4 / G2)
                         val diatonic = base + h.step
                         val alter = accidentals[h.step]
                         h.pitch = Pitch.fromDiatonic(diatonic, keyFifths, alter).coerceIn(Pitch.LOWEST_PIANO, Pitch.HIGHEST_PIANO)
