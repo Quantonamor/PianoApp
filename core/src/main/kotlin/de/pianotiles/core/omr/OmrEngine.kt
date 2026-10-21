@@ -515,6 +515,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val x0 = b.minX + left; val x1 = b.maxX + left; val y0 = b.minY + top; val y1 = b.maxY + top
             if (x1 < headerEnd) continue
             val w = b.width / ss; val h = b.height / ss
+            if (System.getProperty("omr.trace") != null && h > 3.0) println("CLEFCAND x=$x0 y=$y0-$y1 top=${st.top} bottom=${st.bottom} w=${"%.2f".format(w)} h=${"%.2f".format(h)} fill=${"%.2f".format(b.fill)} stem=${sd.stemXs.any { it in x0..x1 }}")
             if (sd.stemXs.any { it in x0..x1 } && h > 3.0) continue
             if (h in 1.6..3.4 && w in 1.1..2.8 && abs(y0 - st.top) < ss * 0.8 && y1 < st.bottom - ss * 0.3 && b.fill in 0.15..0.6) {
                 val dots = blobs.count { d ->
@@ -523,7 +524,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         (abs(d.cy + top - (st.lines[0] + st.lines[1]) / 2) < ss * 0.4 || abs(d.cy + top - (st.lines[1] + st.lines[2]) / 2) < ss * 0.4)
                 }
                 if (dots >= 2) found.add(b to Clef.BASS)
-            } else if (h >= 4.3 && h <= 8.5 && w in 1.0..3.2 && y0 < st.top - ss * 0.4 && y1 > st.bottom + ss * 0.4 && b.fill in 0.1..0.5) {
+            } else if (h >= 4.3 && h <= 8.5 && w in 1.0..3.2 && y0 < st.top + ss * 0.3 && y1 > st.bottom + ss * 0.4 && b.fill in 0.1..0.5 &&
+                sd.heads.none { it.cx in x0.toDouble()..x1.toDouble() && it.cy in y0.toDouble()..y1.toDouble() && it.hasStem }) {
                 found.add(b to Clef.TREBLE)
             }
         }
