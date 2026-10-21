@@ -54,7 +54,7 @@ fun Timeline(
                     change.consume()
                     val cur = (change.position.x / size.width * count).toInt().coerceIn(0, count - 1)
                     if (dragStart >= 0) onSelectLoop(minOf(dragStart, cur), maxOf(dragStart, cur))
-                },
+                }
             },
     ) {
         val w = size.width; val h = size.height
