@@ -298,7 +298,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (h > maxHeight || w > 1.45 || a > 0.8 || a < 0.02) return false
             // Gaps between (double) beams are long and flat. Halves of a hole cut by a staff line are flat
             // too, but they touch the line.
-            val lineYs = st.lines.toList() + (1..5).flatMap { k -> listOf(st.top - k * ss, st.bottom + k * ss) }
+            // ledger line positions only count where a ledger line is actually printed across the hole
+            fun ledgerPrinted(ly: Double): Boolean {
+                val y = (ly - top).roundToInt()
+                val cx = (b.minX + b.maxX) / 2
+                return (-1..1).any { dy ->
+                    (b.minX..b.maxX).count { x -> origCrop[x, y + dy] } >= b.width * 0.8 &&
+                        (origCrop.verticalRun(cx, y + dy)?.let { it.last - it.first + 1 } ?: 99) <= st.lineThickness * 2 + 2
+                }
+            }
+            val lineYs = st.lines.toList() + (1..5).flatMap { k -> listOf(st.top - k * ss, st.bottom + k * ss) }.filter { ledgerPrinted(it) }
             val touchesLine = lineYs.any { ly -> abs(b.minY + top - 1 - ly) <= st.lineThickness + 1 || abs(b.maxY + top + 1 - ly) <= st.lineThickness + 1 }
             if (!touchesLine && (h < 0.28 || w / h > 3.0)) return false
             if (h <= 0.78) return true
