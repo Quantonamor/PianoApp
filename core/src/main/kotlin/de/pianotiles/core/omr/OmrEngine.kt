@@ -122,6 +122,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val rests: MutableList<Rest> = ArrayList(),
         /** Key signature read at the start of this staff (null = could not tell). */
         var keyGuess: Int? = null,
+        /** Thin arcs (ties or slurs): x0, x1, centre y. */
+        val arcs: MutableList<DoubleArray> = ArrayList(),
         /** Detected clefs (x position → clef), sorted by x. */
         val clefs: MutableList<Pair<Double, Clef>> = ArrayList(),
     ) {
@@ -449,6 +451,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         sd.keyGuess = readKeySignature(noCrop, symbols, sd, left, top)
         detectRests(noCrop, symbols, sd, left, top, headerEnd)
+        for (b in symbols) {
+            val w = b.width / ss; val h = b.height / ss
+            if (w < 1.0 || w > 12 || h > 1.6 || w / h < 2.2 || b.fill > 0.45) continue
+            if (maxVerticalRun(noCrop, b) > ss * 0.32) continue
+            // beams cross stems, ties and slurs do not
+            if (sd.stemXs.any { it > b.minX + left + ss * 0.3 && it < b.maxX + left - ss * 0.3 }) continue
+            sd.arcs.add(doubleArrayOf((b.minX + left).toDouble(), (b.maxX + left).toDouble(), b.cy + top))
+        }
         val dots = symbols.filter {
             val w = it.width / ss; val h = it.height / ss
             w in 0.2..0.7 && h in 0.2..0.7 && it.fill > 0.5
@@ -524,13 +534,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         (abs(d.cy + top - (st.lines[0] + st.lines[1]) / 2) < ss * 0.4 || abs(d.cy + top - (st.lines[1] + st.lines[2]) / 2) < ss * 0.4)
                 }
                 if (dots >= 2) found.add(b to Clef.BASS)
-            } else if (h >= 4.3 && h <= 8.5 && w in 1.0..3.2 && y0 < st.top + ss * 0.3 && y1 > st.bottom + ss * 0.4 && b.fill in 0.1..0.5 &&
+            } else if (h >= 4.3 && h <= 8.5 && w in 1.0..3.2 && y1 > st.bottom + ss * 0.4 && b.fill in 0.1..0.5 &&
+                // full-size clefs reach above the staff; cue-size clefs (clef changes) may start at the top line
+                (y0 < st.top - ss * 0.4 || (y0 < st.top + ss * 0.3 && h <= 6.2 && w in 1.5..2.6 && b.fill in 0.25..0.45)) &&
                 sd.heads.none { it.cx in x0.toDouble()..x1.toDouble() && it.cy in y0.toDouble()..y1.toDouble() && it.hasStem }) {
                 found.add(b to Clef.TREBLE)
             }
         }
         for ((b, clef) in found) {
             val x0 = b.minX + left; val x1 = b.maxX + left
+            if (System.getProperty("omr.trace") != null) println("CLEFFOUND $clef x=$x0-$x1 y=${b.minY + top}-${b.maxY + top} top=${st.top} w=${"%.2f".format(b.width / ss)} h=${"%.2f".format(b.height / ss)} fill=${"%.2f".format(b.fill)}")
             sd.clefs.add((x0 - ss * 0.2) to clef)
             sd.heads.removeAll { it.cx >= x0 - 2 && it.cx <= x1 + ss * 0.8 && it.cy >= b.minY + top - 2 && it.cy <= b.maxY + top + 2 }
         }
@@ -954,6 +967,21 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val estimated = ArrayList<Int>()
         var measureStart = 0.0
         var pickup = 0.0
+        // Ties: an arc from just right of one head to just left of the next head on the same staff position.
+        val tieSource = HashMap<Head, Head>()
+        val noteIndex = HashMap<Head, Int>()
+        for (sys in systems) for (sd in sys.staves) {
+            val ss = sd.staff.space
+            for (arc in sd.arcs) {
+                val near = sd.heads.filter { abs(it.cy - arc[2]) <= ss * 1.4 }
+                val a = near.filter { it.x1 >= arc[0] - ss * 1.2 && it.x1 <= arc[0] + ss * 0.8 }
+                for (h1 in a) {
+                    val h2 = near.filter { it.step == h1.step && it.x0 > h1.x1 && it.x0 >= arc[1] - ss * 0.8 && it.x0 <= arc[1] + ss * 1.2 }
+                        .minByOrNull { it.x0 } ?: continue
+                    if (h2 !in tieSource) tieSource[h2] = h1
+                }
+            }
+        }
         for ((mi, slot) in slots.withIndex()) {
             val ss = slot.staves.first().staff.space
             val sums = slot.perStaff.map { cols -> cols.sumOf { it.advance } }
@@ -1001,7 +1029,18 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         h.duration = dur
                         h.onset = measureStart + onset
                         h.measure = mi
-                        notes.add(Note(h.pitch, measureStart + onset, dur * 0.95, hand))
+                        val src = tieSource[h]
+                        val srcIdx = src?.let { noteIndex[it] }
+                        if (srcIdx != null) {
+                            // Tied note: extend the first note instead of striking the key again.
+                            val first = notes[srcIdx]
+                            h.pitch = first.pitch
+                            notes[srcIdx] = first.copy(duration = measureStart + onset + dur * 0.95 - first.start)
+                            noteIndex[h] = srcIdx
+                        } else {
+                            noteIndex[h] = notes.size
+                            notes.add(Note(h.pitch, measureStart + onset, dur * 0.95, hand))
+                        }
                     }
                 }
             }
