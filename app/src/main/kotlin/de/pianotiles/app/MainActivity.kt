@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import de.pianotiles.app.ui.common.ScreenScope
 import de.pianotiles.app.ui.editor.EditorScreen
 import de.pianotiles.app.ui.importflow.ImportScreen
 import de.pianotiles.app.ui.library.LibraryScreen
@@ -80,7 +81,13 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Navigation() {
         BackHandler(enabled = backStack.size > 1) { pop() }
-        when (val screen = backStack.last()) {
+        val screen = backStack.last()
+        ScreenScope(screen) { Content(screen) }
+    }
+
+    @Composable
+    private fun Content(screen: Screen) {
+        when (screen) {
             Screen.Library -> LibraryScreen(
                 onOpen = { push(Screen.Practice(it)) },
                 onImport = { push(Screen.Import(it)) },
