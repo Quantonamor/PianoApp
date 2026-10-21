@@ -124,6 +124,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         var keyGuess: Int? = null,
         /** A "C" / cut-time symbol was found: 4 quarter notes per measure. */
         var commonTime: Boolean = false,
+        /** x centres of small digits outside the staff (possible tuplet numbers like "3"). */
+        val tupletMarks: MutableList<Double> = ArrayList(),
         /** Thin arcs (ties or slurs): x0, x1, centre y. */
         val arcs: MutableList<DoubleArray> = ArrayList(),
         /** Detected clefs (x position → clef), sorted by x. */
@@ -353,6 +355,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         for (a in glyphs) if (upperDigit(a)) for (c in glyphs) if (lowerDigit(c) && abs(a.cx - c.cx) < ss * 0.8) {
             timeSigBoxes.add(intArrayOf(min(a.minX, c.minX), a.minY, max(a.maxX, c.maxX), c.maxY))
         }
+        // Both digits joined into one glyph (connected through the middle staff line): tall, centred, wider
+        // than a quarter rest, before the first note.
+        if (timeSigBoxes.isEmpty()) {
+            val firstNoteX = sd.heads.minOfOrNull { it.x0 } ?: Int.MAX_VALUE
+            Components.find(noStaffCrop).filter {
+                val h = it.height / ss; val w = it.width / ss
+                h in 2.6..4.7 && w in 1.1..2.4 && abs(it.cy + top - st.middle) < ss * 0.6 &&
+                    it.maxX + left < firstNoteX && it.cx + left < st.xStart + ss * 14 && it.minX + left > st.xStart + ss * 2.5
+            }.minByOrNull { it.minX }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)) }
+        }
         if (timeSigBoxes.isEmpty()) glyphs.firstOrNull {
             abs(it.cy + top - st.middle) < ss * 0.5 && it.cx + left < st.xStart + ss * 12 && openRight(it)
         }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)); sd.commonTime = true }
@@ -453,6 +465,13 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         sd.keyGuess = readKeySignature(noCrop, symbols, sd, left, top)
         detectRests(noCrop, symbols, sd, left, top, headerEnd)
+        for (b in symbols) {
+            val w = b.width / ss; val h = b.height / ss
+            val y0 = b.minY + top; val y1 = b.maxY + top
+            if (h in 0.7..1.7 && w in 0.4..1.3 && b.fill in 0.2..0.7 && (y1 < st.top - ss * 0.2 || y0 > st.bottom + ss * 0.2) &&
+                (b.cx + left) > headerEnd && sd.heads.none { abs(it.cx - (b.cx + left)) < ss * 0.7 && abs(it.cy - (b.cy + top)) < ss * 0.8 }
+            ) sd.tupletMarks.add(b.cx + left)
+        }
         for (b in symbols) {
             val w = b.width / ss; val h = b.height / ss
             if (w < 1.0 || w > 12 || h > 1.6 || w / h < 2.2 || b.fill > 0.45) continue
@@ -594,15 +613,22 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // clef = the tallest glyph at the start of the staff
         val clef = inStaff.filter { it.minX + left < st.xStart + ss * 2.5 && it.height > ss * 2.2 }.maxByOrNull { it.height } ?: return null
         val from = clef.maxX + left + 1
-        val firstNote = sd.heads.minOfOrNull { it.x0 } ?: Int.MAX_VALUE
+        // stemless "heads" may be artefacts on the key signature itself
+        val firstNote = (sd.heads.filter { it.hasStem }.ifEmpty { sd.heads }).minOfOrNull { it.x0 } ?: Int.MAX_VALUE
         val firstBar = sd.barlines.minOfOrNull { it.first } ?: Int.MAX_VALUE
         val timeSig = sd.timeSigs.minOfOrNull { it[0] } ?: Int.MAX_VALUE
         val to = minOf(firstNote - (ss * 0.3).toInt(), firstBar, timeSig, (st.xStart + ss * 14).toInt())
         var sharps = 0; var flats = 0; var other = 0
+        var keyEnd = -1
         for (b in inStaff.sortedBy { it.minX }) {
             val x0 = b.minX + left; val x1 = b.maxX + left
             if (x0 < from || x1 > to) continue
             val w = b.width / ss; val h = b.height / ss
+            if (h in 1.3..3.6 && w in 1.2..4.5) {
+                // several sharps touching each other: count stroke pairs
+                val st2 = verticalStrokes(img, b, ss * 1.2)
+                if (st2.size >= 4 && st2.size % 2 == 0) { sharps += st2.size / 2; keyEnd = maxOf(keyEnd, x1); continue }
+            }
             if (h < 1.3 || h > 3.6 || w > 1.5) {
                 if (System.getProperty("omr.trace") != null) println("KEYSKIP x=$x0 w=${"%.2f".format(w)} h=${"%.2f".format(h)}")
                 if (h >= 1.3) other++; continue
@@ -615,12 +641,15 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     o.width / ss in 0.25..0.8 && o.maxY >= b.maxY - ss * 0.5 && o.maxY <= b.maxY + ss * 0.3
             }
             when {
-                bowlNext -> flats++
-                strokes.size >= 2 && w in 0.5..1.4 -> sharps++
-                strokes.size == 1 && (strokes[0] - b.minX) < b.width * 0.4 && w in 0.45..1.2 && flatShape(img, b, ss) -> flats++
+                bowlNext -> { flats++; keyEnd = maxOf(keyEnd, x1) }
+                strokes.size >= 2 && w in 0.5..1.4 -> { sharps++; keyEnd = maxOf(keyEnd, x1) }
+                strokes.size == 1 && (strokes[0] - b.minX) < b.width * 0.4 && w in 0.45..1.2 && flatShape(img, b, ss) -> { flats++; keyEnd = maxOf(keyEnd, x1) }
                 else -> other++
             }
         }
+        // Nothing playable sits inside the key signature or before the time signature.
+        val noHeadsBefore = maxOf(keyEnd, sd.timeSigs.maxOfOrNull { it[2] } ?: -1)
+        if (noHeadsBefore > 0) sd.heads.removeAll { it.cx < noHeadsBefore + ss * 0.2 && it.cx > st.xStart && !it.hasStem }
         if (sharps > 0 && flats > 0) return if (sharps >= flats) sharps.coerceAtMost(7) else -flats.coerceAtMost(7)
         return when {
             sharps > 0 -> sharps.coerceAtMost(7)
@@ -662,6 +691,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 h in 0.3..0.7 && w in 0.8..1.6 && b.fill > 0.8 && abs((b.minY + top) - st.lines[1]) < ss * 0.35 -> 4.0
                 else -> continue
             }
+            val rcx = b.cx + left; val rcy = b.cy + top
+            if (sd.timeSigs.any { rcx >= it[0] - ss * 0.3 && rcx <= it[2] + ss * 0.3 && rcy >= it[1] - ss && rcy <= it[3] + ss }) continue
+            if (System.getProperty("omr.trace") != null) println("REST $duration x=${b.minX + left} y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} fill=${"%.2f".format(b.fill)} vrun=${"%.2f".format(vRun)} ts=${sd.timeSigs.map { it.toList() }}")
             sd.rests.add(Rest(b.minX + left, b.minY + top, b.maxX + left, b.maxY + top, duration))
         }
     }
@@ -884,7 +916,42 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
     // ------------------------------------------------------------------ rhythm & assembly
 
     private class Column(val x: Double, val heads: List<Head>, val restDuration: Double = 0.0) {
-        val advance: Double get() = if (heads.isEmpty()) restDuration else heads.minOf { it.baseDuration }
+        /** 2/3 inside a triplet. */
+        var factor = 1.0
+        val advance: Double get() = factor * if (heads.isEmpty()) restDuration else heads.minOf { it.baseDuration }
+    }
+
+    /**
+     * Triplets: if a staff's measure is too long, try to scale groups of three equal notes next to a small
+     * digit ("3") by 2/3. Only accepted when the measure then adds up exactly.
+     */
+    private fun applyTuplets(cols: List<Column>, marks: List<Double>, measureLen: Double, ss: Double) {
+        if (cols.size < 3) return
+        fun sum() = cols.sumOf { it.advance }
+        if (sum() <= measureLen + 0.05) return
+        val changed = ArrayList<Column>()
+        for (mx in marks.sorted()) {
+            if (sum() <= measureLen + 0.05) break
+            // three neighbouring columns centred on the digit
+            val centre = cols.indices.minByOrNull { abs(cols[it].x + ss * 0.6 - mx) } ?: continue
+            val start = (centre - 1).coerceIn(0, cols.size - 3)
+            val group = cols.subList(start, start + 3)
+            if (group.any { it.factor != 1.0 }) continue
+            val a = group.map { it.advance }
+            if (a.maxOrNull()!! - a.minOrNull()!! > 1e-6 && abs(a[0] + a[1] - a[2]) > 1e-6 && abs(a[1] + a[2] - a[0]) > 1e-6) continue
+            group.forEach { it.factor = 2.0 / 3.0; changed.add(it) }
+        }
+        if (abs(sum() - measureLen) > 0.05) {
+            // Remaining notes all equal and exactly 3/2 too long together → they are all triplets
+            // (e.g. 12 triplet eighths in 4/4 where only some "3"s were found).
+            val rest = cols.filter { it.factor == 1.0 }
+            val a = rest.map { it.advance }
+            val fixedPart = cols.filter { it.factor != 1.0 }.sumOf { it.advance }
+            if (rest.size >= 3 && rest.size % 3 == 0 && a.max() - a.min() < 1e-6 &&
+                abs(fixedPart + a.sum() * 2 / 3 - measureLen) < 0.05 && (marks.isNotEmpty() || changed.isEmpty())
+            ) rest.forEach { it.factor = 2.0 / 3.0 }
+            else changed.forEach { it.factor = 1.0 }
+        }
     }
 
     private class MeasureSlot(val system: Int, val left: Double, val right: Double, val perStaff: List<List<Column>>, val staves: List<StaffData>)
@@ -987,8 +1054,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         for ((mi, slot) in slots.withIndex()) {
             val ss = slot.staves.first().staff.space
+            slot.perStaff.forEachIndexed { si, cols ->
+                applyTuplets(cols, slot.staves[si].tupletMarks.filter { it > slot.left && it < slot.right }, measureLen, ss)
+            }
             val sums = slot.perStaff.map { cols -> cols.sumOf { it.advance } }
             val good = slot.perStaff.indices.filter { slot.perStaff[it].isNotEmpty() && abs(sums[it] - measureLen) < 0.05 }
+            if (System.getProperty("omr.trace") != null) println("SLOT $mi marks=${slot.staves.map { sd -> sd.tupletMarks.filter { it > slot.left && it < slot.right }.map { it.toInt() } }} sys=${slot.system} x=${slot.left.toInt()}-${slot.right.toInt()} L=$measureLen sums=$sums cols=${slot.perStaff.map { c -> c.map { "%.2f".format(it.advance) } }}")
             var length = measureLen
             val onsets: List<List<Double>> // per staff per column
             if (good.isNotEmpty()) {
@@ -1028,7 +1099,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         val diatonic = base + h.step
                         val alter = accidentals[h.step]
                         h.pitch = Pitch.fromDiatonic(diatonic, keyFifths, alter).coerceIn(Pitch.LOWEST_PIANO, Pitch.HIGHEST_PIANO)
-                        val dur = if (si in good || mi == 0 && pickup > 0) h.baseDuration else min(h.baseDuration, max(0.25, nextOnset - onset))
+                        val baseDur = h.baseDuration * col.factor
+                        val dur = if (si in good || mi == 0 && pickup > 0) baseDur else min(baseDur, max(0.25, nextOnset - onset))
                         h.duration = dur
                         h.onset = measureStart + onset
                         h.measure = mi

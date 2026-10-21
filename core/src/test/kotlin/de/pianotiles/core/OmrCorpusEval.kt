@@ -105,6 +105,18 @@ class OmrCorpusEval {
                     val dg = gl[pairs[k].second].second - gl[pairs[k - 1].second].second
                     if (abs(dt - dg) < 0.05) rhythmOk++
                 }
+                if (System.getProperty("omr.debugDir") != null) {
+                    // first places where pitch order or rhythm diverge
+                    var shown = 0
+                    for (k in 1 until pairs.size) {
+                        val (ti, gi) = pairs[k]; val (pti, pgi) = pairs[k - 1]
+                        val dt = tl[ti].second - tl[pti].second; val dg = gl[gi].second - gl[pgi].second
+                        if (abs(dt - dg) >= 0.05 || ti - pti != 1 || gi - pgi != 1) {
+                            println("DIFF $eng truth[${tl.subList(maxOf(0, pti - 2), minOf(tl.size, ti + 3)).joinToString { "${it.first}@${it.second}" }}]  got[${gl.subList(maxOf(0, pgi - 2), minOf(gl.size, gi + 3)).joinToString { "${it.first}@${it.second}" }}]")
+                            if (++shown >= 6) break
+                        }
+                    }
+                }
                 val r = pairs.size.toDouble() / tl.size          // notes found in the right order
                 val p = pairs.size.toDouble() / gl.size.coerceAtLeast(1)
                 val pr = if (pairs.size > 1) rhythmOk.toDouble() / (pairs.size - 1) else 0.0 // rhythm
