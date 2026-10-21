@@ -158,6 +158,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 pageStaves.add(emptyList())
                 continue
             }
+            if (System.getProperty("omr.trace") != null) staves.forEach { println("STAFF lines=${it.lines.map { l -> "%.1f".format(l) }} lt=${it.lineThickness} x=${it.xStart}-${it.xEnd}") }
             val grouped = groupSystems(bit, staves)
             val noStaff = removeStaffLines(bit, staves)
             currentNoStaff = noStaff
@@ -637,6 +638,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 h in 2.1..3.4 && w in 0.55..1.4 && b.fill in 0.2..0.65 && vRun < 1.5 && abs(cy - st.middle) < ss * 0.9 -> 1.0
                 h in 1.3..2.1 && w in 0.6..1.4 && b.fill in 0.15..0.6 && vRun < 1.3 && cy > st.top && cy < st.bottom -> 0.5
                 h in 0.3..0.7 && w in 0.8..1.6 && b.fill > 0.8 && abs((b.maxY + top) - st.middle) < ss * 0.35 -> 2.0
+                // whole rest hangs from the second line from the top
+                h in 0.3..0.7 && w in 0.8..1.6 && b.fill > 0.8 && abs((b.minY + top) - st.lines[1]) < ss * 0.35 -> 4.0
                 else -> continue
             }
             sd.rests.add(Rest(b.minX + left, b.minY + top, b.maxX + left, b.maxY + top, duration))
@@ -933,14 +936,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val sums = slots.drop(1).dropLast(1).ifEmpty { slots }
                 .mapNotNull { s -> s.perStaff.filter { it.isNotEmpty() }.maxOfOrNull { cols -> cols.sumOf { it.advance } } }
                 .map { (it * 2).roundToInt() / 2.0 }
-            val mode = sums.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key ?: 4.0
-            when (mode) {
-                1.5 -> { num = 3; den = 8 }
-                2.0 -> { num = 2; den = 4 }
-                3.0 -> { num = 3; den = 4 }
-                6.0 -> { num = 6; den = 4 }
-                else -> { num = 4; den = 4 }
-            }
+            // Choose among the usual meters the one most measures add up to (4/4 wins ties; 4/2 must clearly win).
+            val counts = sums.groupingBy { it }.eachCount()
+            val candidates = listOf(4.0, 3.0, 2.0, 1.5, 6.0, 4.5, 8.0)
+            fun score(c: Double) = (counts[c] ?: 0) * when (c) { 4.0 -> 1.15; 8.0, 4.5 -> 0.7; else -> 1.0 }
+            val mode = candidates.maxByOrNull { score(it) }?.takeIf { (counts[it] ?: 0) > 0 } ?: 4.0
+            if (abs(mode - Math.round(mode)) < 1e-6) { num = mode.roundToInt(); den = 4 } else { num = (mode * 2).roundToInt(); den = 8 }
             measureLen = num * 4.0 / den
         }
 

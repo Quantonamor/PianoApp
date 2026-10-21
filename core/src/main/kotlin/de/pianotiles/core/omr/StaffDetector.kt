@@ -74,22 +74,39 @@ object StaffDetector {
             lines.add(Line(sumYW / sumW, y - start))
         }
 
-        // Group into staves of five equally spaced lines.
+        // Group into staves of five equally spaced lines. Long beams can look like staff lines but are
+        // thicker: a thick line may be inside a staff (beam on a line) but never be its first or last line.
+        val thick = lt * 2 + 2
         val staves = ArrayList<Staff>()
-        var i = 0
-        while (i + 4 < lines.size) {
-            val group = lines.subList(i, i + 5)
-            val gaps = (0 until 4).map { group[it + 1].y - group[it].y }
-            val mean = gaps.average()
-            val ok = gaps.all { abs(it - mean) <= mean * 0.2 + 1 } && abs(mean - spacing) <= spacing * 0.35 + 1
-            if (ok) {
-                val ys = DoubleArray(5) { group[it].y }
-                val (xs, xe) = horizontalExtent(img, ys, minRun)
-                staves.add(Staff(ys, group.maxOf { it.thickness }.coerceAtLeast(lt), xs, xe))
-                i += 5
-            } else {
-                i++
+        fun chainFrom(start: Int): List<Int>? {
+            val chain = arrayListOf(start)
+            var cur = start
+            var gap = spacing
+            while (chain.size < 5) {
+                val tol = if (chain.size == 1) spacing * 0.4 + 1 else gap * 0.2 + 1
+                val next = (cur + 1 until lines.size)
+                    .filter { abs(lines[it].y - lines[cur].y - gap) <= tol }
+                    .minByOrNull { lines[it].thickness * 10 + abs(lines[it].y - lines[cur].y - gap) }
+                    ?: return null
+                if (chain.size == 1) gap = lines[next].y - lines[cur].y
+                chain.add(next); cur = next
             }
+            val ys = chain.map { lines[it].y }
+            val gaps = (0 until 4).map { ys[it + 1] - ys[it] }
+            val mean = gaps.average()
+            return chain.takeIf { gaps.all { abs(it - mean) <= mean * 0.2 + 1 } }
+        }
+        var i = 0
+        while (i < lines.size) {
+            var chain = chainFrom(i)
+            if (chain == null) { i++; continue }
+            // A thick first line followed by a complete staff is a beam above the staff.
+            if (lines[chain[0]].thickness > thick) chainFrom(chain[1])?.let { chain = it }
+            val c = chain!!
+            val ys = DoubleArray(5) { lines[c[it]].y }
+            val (xs, xe) = horizontalExtent(img, ys, minRun)
+            staves.add(Staff(ys, c.minOf { lines[it].thickness }.coerceAtLeast(lt), xs, xe))
+            i = c[4] + 1
         }
         return staves
     }
