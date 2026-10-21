@@ -105,7 +105,7 @@ object StaffDetector {
             val c = chain!!
             val ys = DoubleArray(5) { lines[c[it]].y }
             val (xs, xe) = horizontalExtent(img, ys, minRun)
-            staves.add(Staff(ys, c.minOf { lines[it].thickness }.coerceAtLeast(lt), xs, xe))
+            staves.add(Staff(ys, c.map { lines[it].thickness }.sorted()[2].coerceAtLeast(lt), xs, xe))
             i = c[4] + 1
         }
         return staves

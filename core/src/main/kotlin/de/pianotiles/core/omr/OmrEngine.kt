@@ -290,8 +290,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (b.minX == 0 || b.minY == 0 || b.maxX == img.width - 1 || b.maxY == img.height - 1) return false
             val h = b.height / ss; val w = b.width / ss; val a = b.area / (ss * ss)
             if (h > maxHeight || w > 1.45 || a > 0.8 || a < 0.02) return false
-            // gaps between (double) beams are long and flat
-            if (h < 0.28 || w / h > 3.0) return false
+            // Gaps between (double) beams are long and flat. Halves of a hole cut by a staff line are flat
+            // too, but they touch the line.
+            val lineYs = st.lines.toList() + (1..5).flatMap { k -> listOf(st.top - k * ss, st.bottom + k * ss) }
+            val touchesLine = lineYs.any { ly -> abs(b.minY + top - 1 - ly) <= st.lineThickness + 1 || abs(b.maxY + top + 1 - ly) <= st.lineThickness + 1 }
+            if (!touchesLine && (h < 0.28 || w / h > 3.0)) return false
             if (h <= 0.78) return true
             // Taller holes (a head in a space, bounded by the staff lines) must be oval, not a
             // rectangular cell between stems and lines: top and bottom rows are clearly narrower.
