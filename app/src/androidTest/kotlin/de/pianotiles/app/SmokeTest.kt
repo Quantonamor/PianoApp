@@ -11,6 +11,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -61,7 +62,7 @@ class SmokeTest {
 
             // Flow mode, play for a while
             compose.onNodeWithText("Fließend").performClick()
-            compose.onNodeWithContentDescription("Start", useUnmergedTree = true).performClick()
+            compose.onAllNodesWithContentDescription("Start")[0].performClick()
             compose.mainClock.autoAdvance = true
             Thread.sleep(4000)
             compose.waitForIdle()
@@ -71,7 +72,7 @@ class SmokeTest {
             // Hands, wait mode with on-screen keys
             compose.onNodeWithText("R").performClick()
             compose.onNodeWithText("Warten").performClick()
-            compose.onNodeWithContentDescription("Start", useUnmergedTree = true).performClick()
+            compose.onAllNodesWithContentDescription("Start")[0].performClick()
             Thread.sleep(2500)
             shot("04_wait_mode")
             compose.onNodeWithContentDescription("Pause").performClick()

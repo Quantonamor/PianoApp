@@ -31,7 +31,10 @@ class Synth(private val sampleRate: Int = 44100) {
     fun start() {
         if (running) return
         running = true
-        thread = Thread({ loop() }, "PianoSynth").apply { priority = Thread.MAX_PRIORITY; start() }
+        thread = Thread({
+            // Never crash the app because of audio output problems (e.g. no audio device).
+            try { loop() } catch (e: Exception) { android.util.Log.w("Synth", "audio output failed", e); running = false }
+        }, "PianoSynth").apply { priority = Thread.MAX_PRIORITY; start() }
     }
 
     fun stop() {

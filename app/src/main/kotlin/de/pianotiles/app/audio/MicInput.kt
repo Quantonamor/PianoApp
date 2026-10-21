@@ -49,13 +49,16 @@ class MicInput(private val onFrame: (DetectionFrame) -> Unit) {
             val buf = ShortArray(1024)
             val f = FloatArray(1024)
             try {
-                record.startRecording()
+                runCatching { record.startRecording() }.onFailure { running = false; return@Thread }
                 while (running) {
                     val n = record.read(buf, 0, buf.size)
                     if (n <= 0) continue
                     for (i in 0 until n) f[i] = buf[i] / 32768f
                     for (frame in detector.process(f, n)) main.post { if (running) onFrame(frame) }
                 }
+            } catch (e: Exception) {
+                android.util.Log.w("MicInput", "recording failed", e)
+                running = false
             } finally {
                 runCatching { record.stop() }
                 record.release()
