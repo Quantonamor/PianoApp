@@ -23,7 +23,17 @@ jobs:
         run: ./gradlew :core:test --stacktrace
 
       - name: Build APK
-        run: ./gradlew :app:assembleDebug :app:assembleRelease --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleDebug :app:assembleRelease --console=plain 2>&1 | tee build.log
+
+      - name: Summarize build errors
+        if: failure()
+        shell: bash
+        run: |
+          echo "==== COMPILER ERRORS ===="
+          grep -E "^e: |What went wrong" -A2 build.log | head -150 || true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
