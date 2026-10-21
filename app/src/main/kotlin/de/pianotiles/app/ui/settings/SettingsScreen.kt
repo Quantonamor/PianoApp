@@ -1,0 +1,106 @@
+package de.pianotiles.app.ui.settings
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import de.pianotiles.app.PianoTilesApp
+import de.pianotiles.app.ui.theme.PtColors
+import de.pianotiles.core.model.NoteNaming
+import kotlinx.coroutines.launch
+
+@Composable
+fun SettingsScreen(onBack: () -> Unit) {
+    val app = LocalContext.current.applicationContext as PianoTilesApp
+    val s by app.settings.settings.collectAsState()
+    val scope = rememberCoroutineScope()
+    fun upd(f: (de.pianotiles.app.data.AppSettings) -> de.pianotiles.app.data.AppSettings) = app.settings.update(f)
+
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück") }
+            Text("Einstellungen", style = MaterialTheme.typography.titleMedium)
+        }
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).widthIn(max = 760.dp)) {
+            Header("Anzeige")
+            Text("Notennamen")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for ((n, label) in listOf(NoteNaming.GERMAN to "Deutsch (C D E … H)", NoteNaming.ENGLISH to "Englisch (… B)", NoteNaming.SOLFEGE to "Do Re Mi", NoteNaming.NONE to "Keine")) {
+                    FilterChip(selected = s.noteNaming == n, onClick = { upd { it.copy(noteNaming = n) } }, label = { Text(label) })
+                }
+            }
+            Toggle("Namen auf den fallenden Noten", s.showNamesOnTiles) { v -> upd { it.copy(showNamesOnTiles = v) } }
+            Toggle("Namen auf den Tasten", s.showNamesOnKeys) { v -> upd { it.copy(showNamesOnKeys = v) } }
+            Toggle("Taktnummern", s.showMeasureNumbers) { v -> upd { it.copy(showMeasureNumbers = v) } }
+            SliderRow("Vorschau / Zoom: ${"%.1f".format(s.lookaheadSeconds)} s sichtbar", s.lookaheadSeconds, 1.5f..8f) { v -> upd { it.copy(lookaheadSeconds = v) } }
+
+            Header("Üben")
+            Toggle("Einzählen (1 Takt) vor dem Start", s.countIn) { v -> upd { it.copy(countIn = v) } }
+            Toggle("Andere Hand automatisch mitspielen", s.accompaniment) { v -> upd { it.copy(accompaniment = v) } }
+            Toggle("Metronom standardmäßig an", s.metronome) { v -> upd { it.copy(metronome = v) } }
+            SliderRow("Lautstärke: ${(s.volume * 100).toInt()} %", s.volume, 0f..1f) { v -> upd { it.copy(volume = v) }; app.synth.volume = v }
+
+            Header("Mikrofon")
+            SliderRow("Empfindlichkeit: ${(s.micSensitivity * 100).toInt()} %", s.micSensitivity, 0.1f..0.95f) { v -> upd { it.copy(micSensitivity = v) } }
+            Text(
+                "Höher = auch leise Töne werden erkannt (aber eher Fehlalarme durch Geräusche). Bei Digitalpianos über Kopfhörer hört das Mikrofon nichts – dann bitte Lautsprecher verwenden.",
+                style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim,
+            )
+            Toggle("Oktavfehler tolerieren (empfohlen)", s.octaveTolerant) { v -> upd { it.copy(octaveTolerant = v) } }
+
+            Header("Bibliothek")
+            OutlinedButton(onClick = { scope.launch { app.songs.restoreDemos() } }) { Text("Demo-Stücke wiederherstellen") }
+            Spacer(Modifier.height(32.dp))
+            Text("PianoTiles 0.1 · Alle Daten bleiben auf deinem Gerät.", style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun Header(t: String) {
+    Spacer(Modifier.height(20.dp))
+    Text(t, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+    HorizontalDivider(Modifier.padding(vertical = 6.dp))
+}
+
+@Composable
+private fun Toggle(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f))
+        Switch(checked = value, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun SliderRow(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
+    Text(label, Modifier.padding(top = 8.dp))
+    Slider(value = value, onValueChange = onChange, valueRange = range)
+}

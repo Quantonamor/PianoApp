@@ -1,0 +1,63 @@
+package de.pianotiles.app.data
+
+import android.content.Context
+import de.pianotiles.core.model.NoteNaming
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+data class AppSettings(
+    val noteNaming: NoteNaming = NoteNaming.GERMAN,
+    /** How many seconds of music are visible above the keyboard ("zoom"). */
+    val lookaheadSeconds: Float = 3.0f,
+    val micSensitivity: Float = 0.5f,
+    /** Compensates for audio input latency in FLOW mode (ms). */
+    val latencyMs: Int = 80,
+    val showNamesOnTiles: Boolean = true,
+    val showNamesOnKeys: Boolean = true,
+    val countIn: Boolean = true,
+    val metronome: Boolean = false,
+    val accompaniment: Boolean = true,
+    val octaveTolerant: Boolean = true,
+    val volume: Float = 0.8f,
+    val showMeasureNumbers: Boolean = true,
+)
+
+class SettingsStore(context: Context) {
+    private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private val _settings = MutableStateFlow(read())
+    val settings: StateFlow<AppSettings> = _settings
+
+    private fun read() = AppSettings(
+        noteNaming = runCatching { NoteNaming.valueOf(prefs.getString("naming", null) ?: "GERMAN") }.getOrDefault(NoteNaming.GERMAN),
+        lookaheadSeconds = prefs.getFloat("lookahead", 3f),
+        micSensitivity = prefs.getFloat("micSensitivity", 0.5f),
+        latencyMs = prefs.getInt("latency", 80),
+        showNamesOnTiles = prefs.getBoolean("namesTiles", true),
+        showNamesOnKeys = prefs.getBoolean("namesKeys", true),
+        countIn = prefs.getBoolean("countIn", true),
+        metronome = prefs.getBoolean("metronome", false),
+        accompaniment = prefs.getBoolean("accompaniment", true),
+        octaveTolerant = prefs.getBoolean("octaveTolerant", true),
+        volume = prefs.getFloat("volume", 0.8f),
+        showMeasureNumbers = prefs.getBoolean("measureNumbers", true),
+    )
+
+    fun update(transform: (AppSettings) -> AppSettings) {
+        val s = transform(_settings.value)
+        prefs.edit()
+            .putString("naming", s.noteNaming.name)
+            .putFloat("lookahead", s.lookaheadSeconds)
+            .putFloat("micSensitivity", s.micSensitivity)
+            .putInt("latency", s.latencyMs)
+            .putBoolean("namesTiles", s.showNamesOnTiles)
+            .putBoolean("namesKeys", s.showNamesOnKeys)
+            .putBoolean("countIn", s.countIn)
+            .putBoolean("metronome", s.metronome)
+            .putBoolean("accompaniment", s.accompaniment)
+            .putBoolean("octaveTolerant", s.octaveTolerant)
+            .putFloat("volume", s.volume)
+            .putBoolean("measureNumbers", s.showMeasureNumbers)
+            .apply()
+        _settings.value = s
+    }
+}
