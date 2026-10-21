@@ -44,13 +44,30 @@ class SmokeTest {
         File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
+    /**
+     * The practice screen animates continuously, so Compose never becomes idle. The test therefore drives
+     * the clock itself: every check advances it by 100 ms.
+     */
     private fun waitText(text: String, timeout: Long = 15_000): SemanticsNodeInteraction {
-        compose.waitUntil(timeout) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
-        return compose.onAllNodesWithText(text, substring = true)[0]
+        val end = System.currentTimeMillis() + timeout
+        while (System.currentTimeMillis() < end) {
+            compose.mainClock.advanceTimeBy(100)
+            if (compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty()) {
+                return compose.onAllNodesWithText(text, substring = true)[0]
+            }
+            Thread.sleep(50)
+        }
+        throw AssertionError("Text '$text' not shown within $timeout ms")
+    }
+
+    private fun play(ms: Long) {
+        var t = 0L
+        while (t < ms) { compose.mainClock.advanceTimeBy(50); Thread.sleep(25); t += 50 }
     }
 
     @Test
     fun libraryPracticeEditorSettings() {
+        compose.mainClock.autoAdvance = false
         ActivityScenario.launch(MainActivity::class.java).use {
             waitText("Meine Bibliothek")
             waitText("Alle meine Entchen")
@@ -63,9 +80,7 @@ class SmokeTest {
             // Flow mode, play for a while
             compose.onNodeWithText("Fließend").performClick()
             compose.onAllNodesWithContentDescription("Start")[0].performClick()
-            compose.mainClock.autoAdvance = true
-            Thread.sleep(4000)
-            compose.waitForIdle()
+            play(4000)
             shot("03_practice_playing")
             compose.onNodeWithContentDescription("Pause").performClick()
 
@@ -73,7 +88,7 @@ class SmokeTest {
             compose.onNodeWithText("R").performClick()
             compose.onNodeWithText("Warten").performClick()
             compose.onAllNodesWithContentDescription("Start")[0].performClick()
-            Thread.sleep(2500)
+            play(2500)
             shot("04_wait_mode")
             compose.onNodeWithContentDescription("Pause").performClick()
 
@@ -121,6 +136,7 @@ class SmokeTest {
             action = Intent.ACTION_VIEW
             setDataAndType(Uri.fromFile(pdf), "application/pdf")
         }
+        compose.mainClock.autoAdvance = false
         ActivityScenario.launch<MainActivity>(intent).use {
             waitText("Noten in", timeout = 120_000)
             shot("09_import_review")

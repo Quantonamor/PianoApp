@@ -36,6 +36,7 @@ class OmrCorpusEval {
         val only = System.getProperty("omr.only")
         val rows = ArrayList<String>()
         var sumR = 0.0; var sumP = 0.0; var sumPitch = 0.0; var n = 0
+        val errors = java.util.TreeMap<String, Int>()
         for (piece in File(dir).listFiles()!!.filter { it.isDirectory }.sortedBy { it.name }) {
             if (only != null && !piece.name.contains(only)) continue
             val truth = File(piece, "truth.txt").readLines().filter { it.isNotBlank() }.map {
@@ -117,6 +118,25 @@ class OmrCorpusEval {
                         }
                     }
                 }
+                // error categories (by absolute time)
+                run {
+                    val matched = pairs.map { it.first }.toHashSet()
+                    for ((k, t) in tl.withIndex()) {
+                        if (k in matched) continue
+                        val same = gl.filter { abs(it.second - t.second) < 0.05 }
+                        val d = same.map { it.first - t.first }
+                        val cat = when {
+                            same.isEmpty() -> "fehlt"
+                            d.any { abs(it) == 1 } -> "vorzeichen"
+                            d.any { abs(it) == 12 } -> "oktave"
+                            d.any { abs(it) in 2..4 } -> "linie"
+                            else -> "anders"
+                        }
+                        errors[cat] = (errors[cat] ?: 0) + 1
+                    }
+                    val matchedG = pairs.map { it.second }.toHashSet()
+                    errors["extra"] = (errors["extra"] ?: 0) + gl.indices.count { it !in matchedG && tl.none { t -> abs(t.second - gl[it].second) < 0.05 } }
+                }
                 val r = pairs.size.toDouble() / tl.size          // notes found in the right order
                 val p = pairs.size.toDouble() / gl.size.coerceAtLeast(1)
                 val pr = if (pairs.size > 1) rhythmOk.toDouble() / (pairs.size - 1) else 0.0 // rhythm
@@ -127,6 +147,7 @@ class OmrCorpusEval {
             }
         }
         println("==== OMR CORPUS ====")
+        println("FEHLERARTEN $errors")
         rows.forEach { println(it) }
         if (external == null && only == null) {
             assertTrue(sumR / n >= 0.78, "Notenerkennung gesunken: ${sumR / n}")

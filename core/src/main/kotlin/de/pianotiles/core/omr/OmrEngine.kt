@@ -124,6 +124,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         var keyGuess: Int? = null,
         /** A "C" / cut-time symbol was found: 4 quarter notes per measure. */
         var commonTime: Boolean = false,
+        /** Accidental glyphs: x0, x1, reference y (height of the note they belong to), type (+1/0/-1). */
+        val accGlyphs: MutableList<DoubleArray> = ArrayList(),
         /** x centres of small digits outside the staff (possible tuplet numbers like "3"). */
         val tupletMarks: MutableList<Double> = ArrayList(),
         /** Thin arcs (ties or slurs): x0, x1, centre y. */
@@ -474,6 +476,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         sd.keyGuess = readKeySignature(noCrop, symbols, sd, left, top)
         detectRests(noCrop, symbols, sd, left, top, headerEnd)
+        findAccidentalGlyphs(noCrop, symbols, sd, left, top, headerEnd)
         for (b in symbols) {
             val w = b.width / ss; val h = b.height / ss
             val y0 = b.minY + top; val y1 = b.maxY + top
@@ -513,7 +516,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             println("HEAD staff=$staffNo x=${h.x0}-${h.x1} y=${h.y0}-${h.y1} step=${h.step} hollow=${h.hollow} stem=${h.stemX}/${if (h.stemUp) "up" else "down"} end=${h.stemEnd} beams=${h.beams} dot=${h.dotted} blob=${h.blobId}")
 
         // 7) Accidentals in front of note heads.
-        for (hd in sd.heads) hd.accidental = detectAccidental(hd, sd, ss)
+        val usedAcc = HashSet<DoubleArray>()
+        for (hd in sd.heads.sortedByDescending { it.x0 }) hd.accidental = accidentalFor(hd, sd, ss, usedAcc)
     }
 
     /**
@@ -881,6 +885,56 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // single stroke: flat (stem above the bowl that sits at the note's height)
         if (a.top < hd.cy - ss * 0.8 && a.bottom in (hd.cy - ss * 0.2).toInt()..(hd.cy + ss * 0.9).toInt() && looksLikeFlat(a, ss)) return -1
         return null
+    }
+
+    /** Top and bottom of the longest vertical run in column [x] inside the blob. */
+    private fun strokeExtent(img: BitImage, b: Blob, x: Int): IntRange {
+        var bestTop = 0; var bestLen = 0; var run = 0
+        for (y in b.minY..b.maxY) {
+            if (img[x, y]) { run++; if (run > bestLen) { bestLen = run; bestTop = y - run + 1 } } else run = 0
+        }
+        return bestTop until bestTop + bestLen
+    }
+
+    private fun findAccidentalGlyphs(img: BitImage, blobs: List<Blob>, sd: StaffData, left: Int, top: Int, headerEnd: Double) {
+        val st = sd.staff
+        val ss = st.space
+        for (b in blobs) {
+            val w = b.width / ss; val h = b.height / ss
+            if (h < 1.5 || h > 3.7 || w < 0.2 || w > 1.5) continue
+            val x0 = b.minX + left; val x1 = b.maxX + left
+            if (x0 < headerEnd) continue
+            // must not contain a note head (stems belong to heads)
+            if (sd.heads.any { it.cx >= x0 - 1 && it.cx <= x1 + 1 && it.cy >= b.minY + top - 1 && it.cy <= b.maxY + top + 1 }) continue
+            if (sd.barlines.any { (it.first + it.last) / 2 in x0..x1 }) continue
+            val strokes = verticalStrokes(img, b, ss * 1.0)
+            var type: Int? = null
+            var refY = b.cy + top
+            if (strokes.size == 2 && w >= 0.45) {
+                val l = strokeExtent(img, b, strokes[0]); val r = strokeExtent(img, b, strokes[1])
+                type = if (l.first < r.first - ss * 0.35 && l.last < r.last - ss * 0.35) 0 else 1
+                refY = (b.minY + b.maxY) / 2.0 + top
+            } else if (strokes.size == 1 && (strokes[0] - b.minX) < b.width * 0.4 && w >= 0.45 && flatShape(img, b, ss)) {
+                type = -1
+                refY = b.maxY + top - ss * 0.45
+            } else if (strokes.size == 1 && w < 0.45) {
+                // flat whose bowl got separated by the staff-line removal
+                val bowl = blobs.firstOrNull { o ->
+                    o !== b && o.minX in b.maxX..(b.maxX + (ss * 0.35).toInt()) && o.height / ss in 0.4..1.3 &&
+                        o.width / ss in 0.25..0.8 && o.maxY >= b.maxY - ss * 0.5 && o.maxY <= b.maxY + ss * 0.3
+                }
+                if (bowl != null) { type = -1; refY = b.maxY + top - ss * 0.45 }
+            }
+            if (type != null) sd.accGlyphs.add(doubleArrayOf(x0.toDouble(), x1.toDouble(), refY, type.toDouble()))
+        }
+    }
+
+    /** Accidental for a head: the nearest accidental glyph to its left at the same height. */
+    private fun accidentalFor(hd: Head, sd: StaffData, ss: Double, used: MutableSet<DoubleArray>): Int? {
+        val g = sd.accGlyphs.filter { it !in used && it[1] <= hd.x0 + ss * 0.15 && it[1] >= hd.x0 - ss * 3.2 && abs(it[2] - hd.cy) <= ss * 0.45 }
+            .maxByOrNull { it[1] } ?: return null
+        used.add(g)
+        return g[3].toInt()
     }
 
     private var currentNoStaff: BitImage? = null
