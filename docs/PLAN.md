@@ -36,31 +36,42 @@ Eine Android-App (Tablet & Handy, Querformat), die beim Klavierüben hilft:
 ### M1 – Fundament
 - [x] Projektgerüst (Gradle, Module `core` + `app`, Wrapper)
 - [x] Plan & Doku-Struktur
-- [ ] CI: GitHub Actions (Core-Tests + APK-Build als Download-Artefakt)
+- [x] CI: GitHub Actions (Core-Tests + APK-Build als Download-Artefakt)
 
 ### M2 – Core-Logik (lokal getestet)
-- [ ] Datenmodell (Song, Note, Hand, Abschnitte, Statistiken) + JSON
-- [ ] MIDI-Import (SMF Typ 0/1, Tempo, Taktart, Handzuordnung)
-- [ ] MusicXML-Import (.xml/.musicxml und komprimiert .mxl)
-- [ ] Demo-Stücke (Alle meine Entchen, Ode an die Freude, Für Elise-Anfang, Tonleiter)
-- [ ] Übungs-Engine (Warten/Durchlauf/Vorspielen, Schleifen, Tempo-Treppe, Hände, Wertung)
-- [ ] Tonerkennung (FFT, harmonische Salienz, Abgleich mit erwarteten Tönen, Anschlagserkennung)
-- [ ] OMR: Binarisierung, Notenlinien, Systeme, Notenköpfe, Hälse/Balken, Taktstriche, Rhythmus, Tonhöhe, Tonart
+- [x] Datenmodell (Song, Note, Hand, Abschnitte, Statistiken) + JSON
+- [x] MIDI-Import (SMF Typ 0/1, Tempo, Taktart, Handzuordnung)
+- [x] MusicXML-Import (.xml/.musicxml und komprimiert .mxl)
+- [x] Demo-Stücke (Alle meine Entchen, Ode an die Freude, Für Elise-Anfang, Tonleiter)
+- [x] Übungs-Engine (Warten/Durchlauf/Vorspielen, Schleifen, Tempo-Treppe, Hände, Wertung)
+- [x] Tonerkennung (FFT, harmonische Salienz, Abgleich mit erwarteten Tönen, Anschlagserkennung)
+- [x] OMR: Binarisierung, Notenlinien, Systeme, Notenköpfe, Hälse/Balken, Taktstriche, Rhythmus, Tonhöhe, Tonart
 
 ### M3 – Android-App
-- [ ] Bibliothek (Raster, Suche, Sortierung, Favoriten, Umbenennen, Löschen)
-- [ ] Import-Assistent (Datei wählen → Erkennung → Vorschau mit Overlay → Korrekturen → Speichern)
-- [ ] Übungsbildschirm (fallende Noten, Klaviatur, Zeitleiste mit Schleife, Steuerleiste)
-- [ ] Mikrofon-Anbindung + Berechtigung
-- [ ] Synthesizer (Vorspielen, Begleitung der anderen Hand, Metronom, Einzähler)
-- [ ] Einstellungen (Notennamen, Vorlaufzeit/Zoom, Mikro-Empfindlichkeit, Latenz)
-- [ ] Noten-Editor (Korrektur von Erkennungsfehlern)
+- [x] Bibliothek (Raster, Suche, Sortierung, Favoriten, Umbenennen, Löschen)
+- [x] Import-Assistent (Datei wählen → Erkennung → Vorschau mit Overlay → Korrekturen → Speichern)
+- [x] Übungsbildschirm (fallende Noten, Klaviatur, Zeitleiste mit Schleife, Steuerleiste)
+- [x] Mikrofon-Anbindung + Berechtigung
+- [x] Synthesizer (Vorspielen, Begleitung der anderen Hand, Metronom, Einzähler)
+- [x] Einstellungen (Notennamen, Vorlaufzeit/Zoom, Mikro-Empfindlichkeit, Latenz)
+- [x] Noten-Editor (Korrektur von Erkennungsfehlern)
 
 ### M4 – Feinschliff
-- [ ] Statistik je Stück (Bestwert, geübte Zeit, schwierige Takte)
-- [ ] Englische Übersetzung
-- [ ] App-Icon, Splash
-- [ ] Tests auf echten Geräten (durch Nutzer) + Fehlerbehebung
+- [x] Statistik je Stück (Bestwert, geübte Zeit, schwierige Takte)
+- [x] App-Icon
+- [ ] **Test auf echtem Gerät durch den Nutzer** (Rückmeldung → Fehlerbehebung)
+- [ ] Mikrofon-Erkennung mit echtem Klavier feinjustieren (Schwellen, Latenz)
+- [ ] Performance: Notennamen-Texte zwischenspeichern, große Stücke flüssig zeichnen
+- [ ] OMR: Haltebögen, Triolen, Wiederholungszeichen, leicht schiefe Scans (Entzerrung)
+- [ ] MusicXML: Wiederholungen ausklappen, Tempowechsel
+- [ ] Originale PDF-Seite parallel zum Üben anzeigen (Taktmarkierung)
+- [ ] Export/Backup der Bibliothek, Englische Übersetzung
+
+## Stand
+
+Alles bis M3 ist umgesetzt, der Core ist mit 23 Unit-Tests abgesichert (inkl. 100 % Erkennung
+auf drei echten Notensätzen) und die APK wird automatisch gebaut. Auf einem echten Gerät wurde die
+App noch **nicht** getestet – das ist der nächste wichtige Schritt.
 
 ## Bekannte Grenzen (ehrlich dokumentiert)
 
