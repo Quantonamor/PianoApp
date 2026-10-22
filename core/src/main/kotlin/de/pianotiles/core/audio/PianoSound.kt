@@ -15,46 +15,46 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * The tone of every piano key at the output rate: made from the nearest recording (every third key, see
- * `tools/samples/make_piano.py`) by resampling, or – until recordings are there – by an additive synthesizer.
- * Tones are cached; [tone] is thread-safe.
+ * Where the sound of a key comes from: the nearest real piano recording (Salamander Grand Piano, every third key,
+ * three velocity layers – see `tools/samples/make_piano.py`), played back at [step] source samples per output
+ * sample, so the mixer shifts the pitch while playing (no copy per key). Until recordings are there (or without
+ * them) an additive synthesizer stands in. Thread-safe.
  */
 class PianoTones(private val sampleRate: Int) {
-    private val tones = ConcurrentHashMap<Int, ShortArray>()
-    @Volatile private var recordings: Map<Int, ShortArray> = emptyMap()
 
-    val hasRecordings get() = recordings.isNotEmpty()
+    /** A source to play: [samples] read at [step] per output sample, loudness factor [gain] (velocity inside the layer). */
+    class Source(val samples: ShortArray, val step: Double, val gain: Float)
 
-    /** Installs recordings (MIDI pitch → samples at [RECORDING_RATE]); tones already made are redone from them. */
-    fun setRecordings(map: Map<Int, ShortArray>) {
-        if (map.isEmpty()) return
-        val wanted = tones.keys.toList()
-        recordings = map
-        tones.clear()
-        for (p in wanted) tone(p)
+    /** One velocity layer: the MIDI velocity it was recorded at and its recordings (MIDI pitch → samples). */
+    class Layer(val velocity: Int, val samples: Map<Int, ShortArray>)
+
+    private val synthTones = ConcurrentHashMap<Int, ShortArray>()
+    @Volatile private var layers: List<Layer> = emptyList()
+    @Volatile private var recordingRate = 44100
+
+    val hasRecordings get() = layers.isNotEmpty()
+
+    /** Installs the recordings ([rate] = their sample rate); layers are sorted from soft to loud. */
+    fun setRecordings(layers: List<Layer>, rate: Int) {
+        val l = layers.filter { it.samples.isNotEmpty() }.sortedBy { it.velocity }
+        if (l.isEmpty()) return
+        recordingRate = rate
+        this.layers = l
+        synthTones.clear()
     }
 
-    fun tone(pitch: Int): ShortArray = tones.getOrPut(pitch) { fromRecording(pitch) ?: toShorts(renderTone(pitch)) }
-
-    /** The nearest recording, resampled to [pitch] (linear interpolation; at most one semitone away). */
-    private fun fromRecording(pitch: Int): ShortArray? {
-        val rec = recordings
-        if (rec.isEmpty()) return null
-        val base = rec.keys.minBy { abs(it - pitch) }
-        val src = rec.getValue(base)
-        val step = 2.0.pow((pitch - base) / 12.0) * RECORDING_RATE / sampleRate // source samples per output sample
-        val n = ((src.size - 1) / step).toInt().coerceAtLeast(1)
-        val out = ShortArray(n)
-        var x = 0.0
-        for (i in 0 until n) {
-            val j = x.toInt()
-            val f = x - j
-            val a = src[j]; val b = src[min(j + 1, src.size - 1)]
-            out[i] = (a + (b - a) * f).toInt().toShort()
-            x += step
-        }
-        return out
+    fun source(pitch: Int, velocity: Int): Source {
+        val ls = layers
+        if (ls.isEmpty()) return Source(synthTones.getOrPut(pitch) { toShorts(renderTone(pitch)) }, 1.0, velocity.coerceIn(1, 127) / 100f)
+        // the layer recorded closest to this velocity; inside it the loudness follows the velocity gently
+        val layer = ls.minBy { abs(it.velocity - velocity) }
+        val base = layer.samples.keys.minBy { abs(it - pitch) }
+        val gain = (velocity.coerceIn(1, 127).toFloat() / layer.velocity).pow(0.7f).coerceIn(0.45f, 1.6f)
+        return Source(layer.samples.getValue(base), 2.0.pow((pitch - base) / 12.0) * recordingRate / sampleRate, gain)
     }
+
+    /** Makes the stand-in tones ahead of time (only needed while there are no recordings). */
+    fun prepare(pitches: Collection<Int>) { if (layers.isEmpty()) for (p in pitches) synthTones.getOrPut(p) { toShorts(renderTone(p)) } }
 
     private fun toShorts(f: FloatArray) = ShortArray(f.size) { (f[it] * 30000f).toInt().toShort() }
 
@@ -101,8 +101,13 @@ class PianoTones(private val sampleRate: Int) {
     }
 
     companion object {
-        /** Sample rate of the recordings in assets/piano. */
-        const val RECORDING_RATE = 32000
+        /** Cuts silence (and decoder delay) before the note onset, keeping a few milliseconds. */
+        fun trimOnset(s: ShortArray, rate: Int): ShortArray {
+            var peak = 1
+            for (x in s) peak = max(peak, abs(x.toInt()))
+            val start = s.indexOfFirst { abs(it.toInt()) > peak * 0.02 }.coerceAtLeast(0)
+            return s.copyOfRange(max(0, start - rate / 700), s.size)
+        }
     }
 }
 
@@ -118,11 +123,12 @@ class PianoTones(private val sampleRate: Int) {
  */
 class PianoMixer(val sampleRate: Int, private val tones: PianoTones, private val maxVoices: Int = 64) {
 
-    private class Command(val pitch: Int, val tone: ShortArray, val amp: Float, val holdSamples: Int, val delay: Int, val bright: Float)
+    private class Command(val pitch: Int, val tone: ShortArray, val step: Double, val amp: Float, val holdSamples: Int, val delay: Int, val bright: Float)
 
     private class Scheduled(val startAt: Long, val seq: Long, val c: Command)
 
-    private class Voice(val c: Command, var pos: Int) {
+    private class Voice(val c: Command, var wait: Int) {
+        var pos = 0.0
         var gain = 1f
         var release = 1f
         var lp = 0f
@@ -164,12 +170,14 @@ class PianoMixer(val sampleRate: Int, private val tones: PianoTones, private val
      * Loudness and brightness follow [velocity].
      */
     fun noteOn(pitch: Int, velocity: Int, durationSeconds: Double, delaySeconds: Double = 0.0) {
+        val src = tones.source(pitch, velocity)
         val v = velocity.coerceIn(1, 127) / 127f
-        pending.add(Command(pitch, tones.tone(pitch), 0.14f + 0.36f * v * v, (durationSeconds.coerceIn(0.08, 30.0) * sampleRate).toInt(),
-            (delaySeconds.coerceIn(0.0, 60.0) * sampleRate).toInt(), 0.2f + 0.8f * v))
+        // the recordings carry the dynamics; a gentle low-pass only adds a little colour to soft notes
+        pending.add(Command(pitch, src.samples, src.step, 0.62f * src.gain, (durationSeconds.coerceIn(0.08, 30.0) * sampleRate).toInt(),
+            (delaySeconds.coerceIn(0.0, 60.0) * sampleRate).toInt(), 0.55f + 0.45f * v))
     }
 
-    fun click(tone: ShortArray, id: Int) { pending.add(Command(id, tone, 0.3f, Int.MAX_VALUE, 0, 1f)) }
+    fun click(tone: ShortArray, id: Int) { pending.add(Command(id, tone, 1.0, 0.3f, Int.MAX_VALUE, 0, 1f)) }
 
     /** Stops everything: waiting notes are dropped, sounding notes fade out quickly. */
     fun allNotesOff() { pending.clear(); silence = true }
@@ -194,23 +202,31 @@ class PianoMixer(val sampleRate: Int, private val tones: PianoTones, private val
         while (it.hasNext()) {
             val v = it.next()
             val tone = v.c.tone
+            val last = tone.size - 1
+            val step = v.c.step
             var pos = v.pos
+            var wait = v.wait
             var gain = v.gain
             var lp = v.lp
             val a = v.c.amp * inv
             val k = v.c.bright
+            val hold = v.c.holdSamples * step
             for (i in 0 until frames) {
-                if (pos < 0) { pos++; continue }
-                if (pos >= tone.size) break
-                if (pos >= v.c.holdSamples && v.release == 1f) v.release = damp
-                lp += (tone[pos] - lp) * k
+                if (wait > 0) { wait--; continue }
+                if (pos >= last) break
+                if (pos >= hold && v.release == 1f) v.release = damp
+                // pitch shift while playing: linear interpolation between two recorded samples
+                val j = pos.toInt()
+                val f = (pos - j).toFloat()
+                val x = tone[j] + (tone[j + 1] - tone[j]) * f
+                lp += (x - lp) * k
                 val s = lp * a * gain
                 left[i] += s * v.panL; right[i] += s * v.panR
                 gain *= v.release
-                pos++
+                pos += step
             }
-            v.pos = pos; v.gain = gain; v.lp = lp
-            if (pos >= tone.size || gain < 0.0005f) it.remove()
+            v.pos = pos; v.wait = wait; v.gain = gain; v.lp = lp
+            if (pos >= last || gain < 0.0005f) it.remove()
         }
         output(left, right, frames)
         clock += frames
@@ -223,7 +239,7 @@ class PianoMixer(val sampleRate: Int, private val tones: PianoTones, private val
         if (sounding >= maxVoices) {
             voices.filter { it.release != steal }.minByOrNull { it.gain * it.c.amp * (if (it.damped) 0.2f else 1f) }?.let { it.release = steal; stolen++ }
         }
-        voices.add(Voice(c, -offset))
+        voices.add(Voice(c, offset))
         started++
         startLog?.add(c.pitch to clock + offset)
     }

@@ -32,7 +32,7 @@ class PianoTilesApp : Application() {
         applyLanguage()
         secrets = SecretStore(this)
         practiceLog = PracticeLogStore(this)
-        // the piano recordings (~6 MB) are read in the background; until then the synthesizer stands in
+        // the piano recordings (MP3, ~5 MB) are decoded in the background; until then the synthesizer stands in
         Thread({ runCatching { synth.loadSamples(assets) } }, "PianoSamples").start()
     }
 

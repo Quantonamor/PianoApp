@@ -5,8 +5,13 @@
 * **Realistische 3D-Hände**: echtes Hand-Modell mit Skelett (WebXR „generic-hand“, MIT), Software-Rasterizer mit
   Skinning, Tiefenpuffer und Licht; jeder Finger wird per inverser Kinematik auf seine Taste gesetzt, die Hand
   rückt so weit an die Tasten, dass Daumen und kleiner Finger hinreichen; der Unterarm blendet weich aus.
-* **Klang mit echten Klavieraufnahmen** (npm `tonejs-instrument-piano-mp3`, MIT; jede dritte Taste, umgerechnet); Töne werden vorab
-  mit kleiner Verzögerung eingeplant → gleichmäßiger Rhythmus, Akkorde exakt gleichzeitig.
+* **Klang neu: Salamander-Konzertflügel** (Alexander Holm, CC BY 3.0) in drei Anschlagstärken (leise/mittel/laut,
+  jede dritte Taste); die Tonhöhe wird beim Abspielen umgerechnet. Raumhall und ein weicher Kompressor statt
+  Übersteuerung bei Akkorden.
+* **Fehler beim Abspielen behoben**: Eingeplante Töne belegten schon Stimmen – bei mehr als 64 vorausgeplanten
+  Tönen (Editor: zwei Takte auf einmal) gingen Töne verloren. Ein wiederholter Ton wurde bis zu 0,12 s zu früh
+  abgedämpft. Die ersten Töne nach „Start“ kamen einen Frame zu spät. `PianoSoundTest` spielt alle Demos wie die
+  App ab: jeder Ton genau einmal, Abweichung ≤ 4 ms, keine Übersteuerung.
 * **MIDI-Keyboard** (USB/Bluetooth) als Eingang: exakt, mit Akkorden und Loslassen; Mikrofon wird dann nicht gebraucht.
 * **Fünf neue Demo-Stücke**: Twinkle Twinkle, Hänschen klein, Jingle Bells, Happy Birthday, Menuett in G.
 * **Begrüßungskarte** beim ersten Start, **Übungsstatistik** (heute / Woche / Tage in Folge) in der Bibliothek,

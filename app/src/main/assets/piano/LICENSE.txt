@@ -1,2 +1,3 @@
-Piano samples from the npm package tonejs-instrument-piano-mp3 (tonejs-instruments, MIT License,
-https://github.com/Makefully-Studios/tonejs-instruments), converted with tools/samples/make_piano.py.
+Salamander Grand Piano V3 by Alexander Holm, CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/),
+https://archive.org/details/SalamanderGrandPianoV3 - via the npm packages @audio-samples/piano-mp3-velocity*
+(MIT, Jan Forst). Shortened, mono, re-encoded with tools/samples/make_piano.py.

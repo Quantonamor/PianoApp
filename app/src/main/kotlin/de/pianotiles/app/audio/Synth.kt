@@ -44,24 +44,80 @@ class Synth(private val sampleRate: Int = 44100) {
         thread = null
     }
 
-    /** Loads the piano recordings from the app assets (call once, off the main thread). */
+    /** True once the piano recordings are decoded (until then a synthesizer stands in). */
+    val recordingsLoaded get() = tones.hasRecordings
+
+    /**
+     * Loads the piano recordings from the app assets (call once, off the main thread): `piano/<layer>_<midi>.mp3`,
+     * layer p/m/f = soft/medium/loud, decoded with the platform decoder.
+     */
     fun loadSamples(assets: android.content.res.AssetManager) {
-        val map = HashMap<Int, ShortArray>()
-        val names = runCatching { assets.list("piano") }.getOrNull().orEmpty()
-        for (name in names) {
-            val midi = name.removeSuffix(".pcm").toIntOrNull() ?: continue
-            runCatching {
-                val bytes = assets.open("piano/$name").use { it.readBytes() }
-                val sh = ShortArray(bytes.size / 2)
-                java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(sh)
-                map[midi] = sh
+        val names = runCatching { assets.list("piano") }.getOrNull().orEmpty().filter { it.endsWith(".mp3") }
+        val layers = names.groupBy { it.substringBefore('_') }.mapNotNull { (tag, files) ->
+            val velocity = LAYER_VELOCITY[tag] ?: return@mapNotNull null
+            val map = HashMap<Int, ShortArray>()
+            for (name in files) {
+                val midi = name.substringAfter('_').removeSuffix(".mp3").toIntOrNull() ?: continue
+                runCatching { decodeMono(assets, "piano/$name") }
+                    .onSuccess { map[midi] = PianoTones.trimOnset(it, sampleRate) }
+                    .onFailure { android.util.Log.w("Synth", "cannot decode $name", it) }
             }
+            PianoTones.Layer(velocity, map)
         }
-        tones.setRecordings(map)
+        tones.setRecordings(layers, sampleRate)
+        android.util.Log.i("Synth", "piano recordings: ${layers.sumOf { it.samples.size }} in ${layers.size} layers")
+    }
+
+    /** Decodes a compressed asset to mono 16-bit samples (the recordings are mono, 44.1 kHz). */
+    private fun decodeMono(assets: android.content.res.AssetManager, path: String): ShortArray {
+        val extractor = android.media.MediaExtractor()
+        val out = java.io.ByteArrayOutputStream(1 shl 18)
+        var channels = 1
+        assets.openFd(path).use { fd -> extractor.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length) }
+        try {
+            extractor.selectTrack(0)
+            val format = extractor.getTrackFormat(0)
+            channels = format.getInteger(android.media.MediaFormat.KEY_CHANNEL_COUNT)
+            val codec = android.media.MediaCodec.createDecoderByType(format.getString(android.media.MediaFormat.KEY_MIME)!!)
+            codec.configure(format, null, null, 0)
+            codec.start()
+            val info = android.media.MediaCodec.BufferInfo()
+            var inputDone = false
+            var chunk = ByteArray(0)
+            while (true) {
+                if (!inputDone) {
+                    val i = codec.dequeueInputBuffer(10_000)
+                    if (i >= 0) {
+                        val n = extractor.readSampleData(codec.getInputBuffer(i)!!, 0)
+                        if (n < 0) { codec.queueInputBuffer(i, 0, 0, 0, android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM); inputDone = true }
+                        else { codec.queueInputBuffer(i, 0, n, extractor.sampleTime, 0); extractor.advance() }
+                    }
+                }
+                val o = codec.dequeueOutputBuffer(info, 10_000)
+                if (o >= 0) {
+                    val buf = codec.getOutputBuffer(o)!!
+                    if (chunk.size < info.size) chunk = ByteArray(info.size)
+                    buf.position(info.offset); buf.get(chunk, 0, info.size)
+                    out.write(chunk, 0, info.size)
+                    codec.releaseOutputBuffer(o, false)
+                    if (info.flags and android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) break
+                } else if (o == android.media.MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    channels = codec.outputFormat.getInteger(android.media.MediaFormat.KEY_CHANNEL_COUNT)
+                }
+            }
+            codec.stop(); codec.release()
+        } finally {
+            extractor.release()
+        }
+        val bytes = out.toByteArray()
+        val all = ShortArray(bytes.size / 2)
+        java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(all)
+        if (channels <= 1) return all
+        return ShortArray(all.size / channels) { i -> var sum = 0; for (c in 0 until channels) sum += all[i * channels + c]; (sum / channels).toShort() }
     }
 
     /** Makes the tones of [pitches] ahead of time (call off the main thread, e.g. when a song is opened). */
-    fun prepare(pitches: Collection<Int>) { for (p in pitches) tones.tone(p) }
+    fun prepare(pitches: Collection<Int>) = tones.prepare(pitches)
 
     /**
      * Plays [pitch]. [delaySeconds] postpones the start (scheduled playback), [durationSeconds] is how long the key
@@ -103,6 +159,11 @@ class Synth(private val sampleRate: Int = 44100) {
         }
         at.stop()
         at.release()
+    }
+
+    private companion object {
+        /** MIDI velocity each recorded layer corresponds to (Salamander v4 / v9 / v14). */
+        val LAYER_VELOCITY = mapOf("p" to 40, "m" to 75, "f" to 110)
     }
 
     private val clickTone: ShortArray by lazy { renderClick(1320.0) }

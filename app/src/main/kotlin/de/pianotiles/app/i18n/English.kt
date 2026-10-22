@@ -343,6 +343,9 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Heute %s Min. · Woche %s Min." to "Today %s min · week %s min",
     " · %s Tage in Folge" to " · %s days in a row",
     "Willkommen!" to "Welcome!",
+    "Lizenzen" to "Licences",
+    "Klavierklang: Salamander Grand Piano V3 von Alexander Holm (CC BY 3.0), über die npm-Pakete @audio-samples/piano-mp3 (MIT, Jan Forst); gekürzt und neu kodiert.\nHand-Modell: WebXR Input Profiles „generic-hand“ (MIT, © 2019 Amazon).\nNotensymbole: Bravura (SIL Open Font License)." to
+        "Piano sound: Salamander Grand Piano V3 by Alexander Holm (CC BY 3.0), via the npm packages @audio-samples/piano-mp3 (MIT, Jan Forst); shortened and re-encoded.\nHand model: WebXR Input Profiles “generic-hand” (MIT, © 2019 Amazon).\nMusic symbols: Bravura (SIL Open Font License).",
     "Lege das Gerät auf das Notenpult. In ruhiger Umgebung funktioniert die Erkennung am besten. In den Einstellungen zeigt „Mikrofon testen“ live, welche Töne die App hört – dort stellst du auch die Empfindlichkeit ein." to
         "Put the device on the music stand. Detection works best in a quiet room. In the settings, “Test microphone” shows live which notes the app hears – that is also where you set the sensitivity.",
     "MIDI-Keyboard" to "MIDI keyboard",

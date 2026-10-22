@@ -20,19 +20,26 @@ import kotlin.test.assertTrue
  * once, at the right time, without overdriving the output. `-Paudio.out=<dir>` writes the results as WAV files.
  */
 class PianoSoundTest {
+    private companion object { val VELOCITY = mapOf("p" to 40, "m" to 75, "f" to 110) }
     private val rate = 44100
     private val block = 256
 
     private fun tones() = PianoTones(rate).apply {
-        val dir = File("../app/src/main/assets/piano")
-        val map = dir.listFiles().orEmpty().mapNotNull { f ->
-            val midi = f.name.removeSuffix(".pcm").toIntOrNull() ?: return@mapNotNull null
-            val b = f.readBytes()
-            val s = ShortArray(b.size / 2)
-            java.nio.ByteBuffer.wrap(b).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(s)
-            midi to s
-        }.toMap()
-        setRecordings(map)
+        val ffmpeg = runCatching { ProcessBuilder("ffmpeg", "-version").start().waitFor() == 0 }.getOrDefault(false)
+        org.junit.Assume.assumeTrue("ffmpeg needed to decode the piano recordings", ffmpeg)
+        val files = File("../app/src/main/assets/piano").listFiles().orEmpty().filter { it.name.endsWith(".mp3") }
+        val layers = files.groupBy { it.name.substringBefore('_') }.map { (tag, fs) ->
+            PianoTones.Layer(VELOCITY.getValue(tag), fs.associate { f -> f.name.substringAfter('_').removeSuffix(".mp3").toInt() to decode(f) })
+        }
+        setRecordings(layers, rate)
+    }
+
+    private fun decode(f: File): ShortArray {
+        val p = ProcessBuilder("ffmpeg", "-v", "quiet", "-i", f.path, "-ac", "1", "-ar", "$rate", "-f", "s16le", "-").start()
+        val b = p.inputStream.readBytes(); p.waitFor()
+        val s = ShortArray(b.size / 2)
+        java.nio.ByteBuffer.wrap(b).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(s)
+        return PianoTones.trimOnset(s, rate)
     }
 
     private class Result(val starts: List<Pair<Int, Long>>, val peak: Float, val loud: Double, val stolen: Long, val audio: FloatArray)

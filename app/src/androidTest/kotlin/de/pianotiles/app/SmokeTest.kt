@@ -28,6 +28,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import de.pianotiles.core.model.NoteNaming
 import java.io.File
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -142,6 +143,11 @@ class SmokeTest {
         compose.mainClock.autoAdvance = false
         ActivityScenario.launch(MainActivity::class.java).use {
             waitText("Meine Bibliothek")
+            // the piano recordings (MP3) are decoded with the platform decoder in the background
+            val app = context.applicationContext as PianoTilesApp
+            val until = System.currentTimeMillis() + 60_000
+            while (!app.synth.recordingsLoaded && System.currentTimeMillis() < until) Thread.sleep(200)
+            assertTrue("piano recordings decoded", app.synth.recordingsLoaded)
             waitText("Willkommen!")
             shot("01_library")
             // the welcome card is shown once; closing it keeps the library as before

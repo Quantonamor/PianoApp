@@ -52,6 +52,8 @@ private val topics = listOf(
         "Außer PDF und Fotos kannst du MIDI (.mid/.kar), MusicXML (.musicxml/.xml/.mxl), ABC (.abc), MuseScore (.mscz/.mscx) und MEI (.mei) importieren – diese Dateien werden ohne Erkennung exakt übernommen.",
     "Bibliothek, Abspielen & Teilen" to
         "▶ auf einer Karte spielt das Stück sofort vor. Lange drücken wählt mehrere Stücke aus (teilen oder löschen). Über ⋮ teilst du ein Stück als Paket (.pianotiles) – darin sind Noten (MusicXML), Original, Übungsdaten und Fingersatz; andere öffnen es einfach mit PianoTiles. Außerdem als MusicXML oder MIDI für andere Programme.",
+    "Lizenzen" to
+        "Klavierklang: Salamander Grand Piano V3 von Alexander Holm (CC BY 3.0), über die npm-Pakete @audio-samples/piano-mp3 (MIT, Jan Forst); gekürzt und neu kodiert.\nHand-Modell: WebXR Input Profiles „generic-hand“ (MIT, © 2019 Amazon).\nNotensymbole: Bravura (SIL Open Font License).",
     "Noten-Editor" to
         "Tippe eine Note an und ändere Tonhöhe, Position, Länge oder Hand. Im Modus „Hinzufügen“ setzt ein Tipp auf eine freie Stelle eine neue Note. Rückgängig ist jederzeit möglich.",
 )
