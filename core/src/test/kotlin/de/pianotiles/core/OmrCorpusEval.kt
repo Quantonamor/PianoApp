@@ -119,6 +119,7 @@ class OmrCorpusEval {
                     }
                 }
                 // error categories (by absolute time)
+                val local = java.util.TreeMap<String, Int>()
                 run {
                     val matched = pairs.map { it.first }.toHashSet()
                     for ((k, t) in tl.withIndex()) {
@@ -133,9 +134,12 @@ class OmrCorpusEval {
                             else -> "anders"
                         }
                         errors[cat] = (errors[cat] ?: 0) + 1
+                        local[cat] = (local[cat] ?: 0) + 1
                     }
                     val matchedG = pairs.map { it.second }.toHashSet()
-                    errors["extra"] = (errors["extra"] ?: 0) + gl.indices.count { it !in matchedG && tl.none { t -> abs(t.second - gl[it].second) < 0.05 } }
+                    val ex = gl.indices.count { it !in matchedG && tl.none { t -> abs(t.second - gl[it].second) < 0.05 } }
+                    errors["extra"] = (errors["extra"] ?: 0) + ex
+                    if (ex > 0) local["extra"] = ex
                 }
                 val r = pairs.size.toDouble() / tl.size          // notes found in the right order
                 val p = pairs.size.toDouble() / gl.size.coerceAtLeast(1)
@@ -143,7 +147,7 @@ class OmrCorpusEval {
                 sumR += r; sumP += p; sumPitch += pr; n++
                 rows.add(String.format("%-24s %-9s pages=%d truth=%4d got=%4d  noten=%5.1f%%  präzision=%5.1f%%  rhythmus=%5.1f%%  key=%d ts=%d/%d  %4dms  %s",
                     piece.name, eng, imgs.size, truth.size, got.size, r * 100, p * 100, pr * 100, result.keyFifths, result.beatsPerMeasure, result.beatUnit, ms,
-                    result.warnings.joinToString("; ").take(120)))
+                    result.warnings.joinToString("; ").take(60)) + " ERR$local")
             }
         }
         println("==== OMR CORPUS ====")

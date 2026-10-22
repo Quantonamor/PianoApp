@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 – in Arbeit
+
+* PDF-Erkennung stark verbessert (fester Testkorpus 69 % → 83 % Noten): Schlüssel inkl. Wechsel, Tonart per
+  Formerkennung mit Abstimmung, Balken auf Notenlinien, beliebige Taktarten, ganze Pausen, Haltebögen,
+  Triolen, verbundene Taktziffern, Vorzeichen über ganze Zeichen.
+* Testkorpus mit 14 Stücken × 2 Notensatz-Programmen als Regressionstest in der CI; Konvergenz-Werkzeuge in `tools/omr-eval`.
+* Emulator-Bedientest in der CI, robustere Audio-Threads.
+
 ## 0.1.0 – erste Version
 
 * Projektgerüst: `core` (Kotlin/JVM) + `app` (Android/Compose), GitHub-Actions-Build mit APK-Download.

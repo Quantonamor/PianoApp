@@ -12,7 +12,11 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 enum class StaffLayout { AUTO, PIANO, SINGLE_TREBLE, SINGLE_BASS }
-enum class Clef { TREBLE, BASS }
+enum class Clef(val bottomLineDiatonic: Int) {
+    TREBLE(30),      // bottom line E4
+    TREBLE_8VB(23),  // tenor clef "G with 8 below": one octave lower
+    BASS(18),        // bottom line G2
+}
 
 data class OmrOptions(
     val layout: StaffLayout = StaffLayout.AUTO,
@@ -539,11 +543,26 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         if (ink < ss * ss * 0.5) return
         val clef = when {
-            above >= 0.7 && below >= 0.7 -> Clef.TREBLE
+            above >= 0.7 && below >= 0.7 -> if (smallEightBelow(img, st)) Clef.TREBLE_8VB else Clef.TREBLE
             below < 0.4 && above < 0.6 && lowerInk < ink * 0.12 -> Clef.BASS
             else -> return
         }
+        if (System.getProperty("omr.trace") != null) println("HEADERCLEF $clef top=${st.top} above=$above below=$below")
         sd.clefs.add(st.xStart.toDouble() to clef)
+    }
+
+    /** A small "8" right below the treble clef (octave-transposing treble clef). */
+    private fun smallEightBelow(img: BitImage, st: Staff): Boolean {
+        val ss = st.space
+        val x0 = (st.xStart + ss * 0.2).roundToInt(); val x1 = (st.xStart + ss * 3.0).roundToInt()
+        val y0 = (st.bottom + ss * 0.9).roundToInt(); val y1 = (st.bottom + ss * 3.6).roundToInt()
+        val crop = img.crop(x0, y0, x1, y1)
+        if (System.getProperty("omr.trace") != null) Components.find(crop).forEach { b -> println("EIGHT? y=${b.minY + y0}-${b.maxY + y0} bottom=${st.bottom} w=${"%.2f".format(b.width / ss)} h=${"%.2f".format(b.height / ss)}") }
+        return Components.find(crop).any { b ->
+            val w = b.width / ss; val h = b.height / ss
+            h in 0.5..1.5 && w in 0.3..1.1 && b.minY > 0 && b.maxY < crop.height - 1 && b.minY + y0 > st.bottom + ss * 1.3 &&
+                Components.find(crop.crop(b.minX, b.minY, b.maxX + 1, b.maxY + 1), ink = false).count { it.minX > 0 && it.minY > 0 && it.maxX < b.width - 1 && it.maxY < b.height - 1 } >= 1
+        }
     }
 
     /**
@@ -1158,7 +1177,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     val nextOnset = onsets[si].getOrNull(ci + 1) ?: length
                     for (h in col.heads.sortedBy { it.cx }) {
                         h.accidental?.let { accidentals[h.step] = it }
-                        val base = if (sd.clefAt(h.cx) == Clef.TREBLE) 30 else 18 // diatonic index of the bottom line (E4 / G2)
+                        val base = sd.clefAt(h.cx).bottomLineDiatonic
                         val diatonic = base + h.step
                         val alter = accidentals[h.step]
                         h.pitch = Pitch.fromDiatonic(diatonic, keyFifths, alter).coerceIn(Pitch.LOWEST_PIANO, Pitch.HIGHEST_PIANO)

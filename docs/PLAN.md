@@ -59,19 +59,64 @@ Eine Android-App (Tablet & Handy, Querformat), die beim Klavierüben hilft:
 ### M4 – Feinschliff
 - [x] Statistik je Stück (Bestwert, geübte Zeit, schwierige Takte)
 - [x] App-Icon
+- [x] Automatischer Bedien-Test auf Emulator in der CI (`app/src/androidTest/.../SmokeTest.kt`)
 - [ ] **Test auf echtem Gerät durch den Nutzer** (Rückmeldung → Fehlerbehebung)
 - [ ] Mikrofon-Erkennung mit echtem Klavier feinjustieren (Schwellen, Latenz)
 - [ ] Performance: Notennamen-Texte zwischenspeichern, große Stücke flüssig zeichnen
-- [ ] OMR: Haltebögen, Triolen, Wiederholungszeichen, leicht schiefe Scans (Entzerrung)
 - [ ] MusicXML: Wiederholungen ausklappen, Tempowechsel
 - [ ] Originale PDF-Seite parallel zum Üben anzeigen (Taktmarkierung)
 - [ ] Export/Backup der Bibliothek, Englische Übersetzung
 
-## Stand
+### M5 – Noten-Editor 2.0 + „KI-nachbessern“ (Wunsch des Nutzers, **später angehen**)
 
-Alles bis M3 ist umgesetzt, der Core ist mit 23 Unit-Tests abgesichert (inkl. 100 % Erkennung
-auf drei echten Notensätzen) und die APK wird automatisch gebaut. Auf einem echten Gerät wurde die
-App noch **nicht** getestet – das ist der nächste wichtige Schritt.
+Für bereits importierte Stücke, mit denen man nicht zufrieden ist. Zwei Wege, beide aus dem Stück-Menü
+und aus dem Übungsbildschirm erreichbar („Noten korrigieren“):
+
+**A) Editor (händisch), intuitiv & schön**
+- [ ] Geteilte Ansicht: oben das Original-PDF (gespeichert unter `files/pdfs/<id>.pdf`) mit Takt-Markierung,
+      unten der Piano-Roll / die Notenansicht des gleichen Takts – man sieht sofort, was abweicht.
+- [ ] Takt-für-Takt-Navigation mit Kennzeichnung „verdächtiger“ Takte (Rhythmus geschätzt, Taktsumme falsch,
+      ungewöhnliche Sprünge) – Liste „Bitte prüfen“.
+- [ ] Direktes Bearbeiten: Note antippen → ziehen (Tonhöhe/Zeit), Griffe zum Verlängern, Akkord-Modus,
+      Vorzeichen-Buttons (♯ ♭ ♮), Takt kopieren/einfügen, Rückgängig/Wiederholen, Anhören ab Takt.
+- [ ] Takt-Werkzeuge: „Taktart/Tonart ab hier“, „Takt einfügen/löschen“, „Hand tauschen“.
+
+**B) „KI-nachbessern“ (ein Knopf)**
+- [ ] Einstellungen: API-Schlüssel eingeben (sicher gespeichert mit EncryptedSharedPreferences),
+      Anbieter/Modell wählbar (Standard: Anthropic Claude, aktuelles Modell; Schlüssel bleibt auf dem Gerät).
+- [ ] Ein Knopf „KI-nachbessern“: die App schickt pro Seite das **Bild der PDF-Seite** + die **erkannten Noten
+      als kompakten Text** (Takt, Hand, Tonhöhe, Dauer) + die Warnungen der Erkennung an die KI.
+- [ ] Fest hinterlegter, sorgfältig formulierter Prompt (Rolle „Notensatz-Korrektor“; Aufgabe: Abweichungen
+      zwischen Bild und Notenliste finden; Ausgabe **nur** als strukturiertes JSON mit Korrekturen pro Takt
+      `{measure, hand, notes:[{pitch, start, duration}]}` + kurzer Begründung; Taktsummen müssen aufgehen;
+      Tonart/Taktart prüfen). JSON-Schema-Validierung, bei Fehler automatisch nachfragen.
+- [ ] Fortschrittsanzeige: „Seite 2/4 wird geprüft … 3 Takte korrigiert“, Live-Protokoll was geändert wurde.
+- [ ] Ergebnis als **Vorschlag** (Vorher/Nachher je Takt, farbig markiert), einzeln oder alles übernehmen,
+      jederzeit rückgängig. Kosten-/Datenschutz-Hinweis vor dem ersten Senden.
+- [ ] Technik: Ktor/OkHttp-Client in `app/ai/`, Prompt + JSON-Schema in `core` (testbar), Bilder verkleinert
+      (z. B. 1600 px Breite, PNG/JPEG), Abbruch-Knopf, Wiederholung bei Netzwerkfehler.
+
+### Konvergenz-Schleife der PDF-Erkennung (Wunsch des Nutzers, **läuft**)
+
+Ziel: Zufallsrunden mit je 5 neuen Stücken (beide Notensatz-Programme), bis **5 Runden hintereinander alle
+Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `tools/omr-eval/README.md`.
+
+Stand (2026-10-22):
+- Runde 1 (Choräle BWV 4, 253, 370; Volkslieder Lancashire Clog, Salem Hornpipe): 1 von 10 PDFs bei 100 %,
+  Runde-1-Schnitt 93 % Noten / 93 % Rhythmus. **Noch keine Runde vollständig bestanden – Zähler: 0/5.**
+- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): 86 % Noten, 88 % Präzision, 89 % Rhythmus.
+- Bereits umgesetzt in dieser Schleife: Triolen (Ziffer „3“ + Taktsummen-Prüfung), verbundene
+  Taktangaben-Ziffern, verschmolzene Kreuze in der Tonart, Hilfslinien-Ausnahme nur bei gedruckter Linie,
+  Vorzeichen-Erkennung über ganze Zeichen, Fehlerarten-Statistik in der Auswertung.
+- **Nächste Schritte (in dieser Reihenfolge):**
+  1. Oktavierter Violinschlüssel (kleine 8 unten): `smallEightBelow()` in `OmrEngine.kt` findet die 8 noch
+     nicht (Trace zeigt Kandidat h≈0,9 w≈0,7 bei bottom+1,6 — Loch-Zählung prüfen). Betrifft „Lift Every Voice“ (31–35 Oktavfehler).
+  2. Zusätzliche Noten (extra) in Beach/Aloha (LilyPond): Herkunft prüfen (Text/Liedtext? Gesangszeilen?).
+  3. Choräle: zwei Stimmen pro Zeile (Sekunden-Akkorde, gemeinsame Köpfe), Vorzeichen in Akkorden.
+  4. Tremolo-Schrägstrich (Salem Hornpipe) als Balken fehlinterpretiert.
+  5. Lösung (`truth.py`) bei Auftakten musikalisch korrekt verschieben (music21 füllt Auftakte auf).
+- Ehrliche Einschätzung: 100 % auf *jedem* Zufallsstück ist für Sonderfälle (Verzierungen, N-tolen > 3,
+  Chorsätze) eventuell nicht erreichbar; dann Pool auf klaviertypische Literatur eingrenzen und dokumentieren.
 
 ## Bekannte Grenzen (ehrlich dokumentiert)
 
