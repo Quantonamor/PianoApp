@@ -340,4 +340,19 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Bibliothek, Abspielen & Teilen" to "Library, playing & sharing",
     "▶ auf einer Karte spielt das Stück sofort vor. Lange drücken wählt mehrere Stücke aus (teilen oder löschen). Über ⋮ teilst du ein Stück als Paket (.pianotiles) – darin sind Noten (MusicXML), Original, Übungsdaten und Fingersatz; andere öffnen es einfach mit PianoTiles. Außerdem als MusicXML oder MIDI für andere Programme." to
         "▶ on a card plays the piece right away. A long press selects several pieces (share or delete). Via ⋮ you share a piece as a package (.pianotiles) – it contains the notes (MusicXML), the original, practice data and fingering; others simply open it with PianoTiles. Also as MusicXML or MIDI for other programs.",
+    "Heute %s Min. · Woche %s Min." to "Today %s min · week %s min",
+    " · %s Tage in Folge" to " · %s days in a row",
+    "Willkommen!" to "Welcome!",
+    "Stück antippen – zum Start eignet sich „Alle meine Entchen“." to "Tap a piece – “Twinkle Twinkle Little Star” is a good start.",
+    "Warte-Modus (Sanduhr): Die Noten warten, bis du die richtige Taste spielst. Das Mikrofon hört zu – oder schließe ein MIDI-Keyboard an." to
+        "Wait mode (hourglass): the notes wait until you play the right key. The microphone listens – or connect a MIDI keyboard.",
+    "Eigene Noten: „Noten importieren“ liest PDFs, Fotos, MIDI und MusicXML." to "Your own music: “Import sheet music” reads PDFs, photos, MIDI and MusicXML.",
+    "Los geht's" to "Let's go",
+    "Test beenden" to "Stop test",
+    "Mikrofon testen" to "Test microphone",
+    "Spiel ein paar Töne …" to "Play a few notes …",
+    "Ich höre: %s" to "I hear: %s",
+    "Zuletzt: %s" to "Recently: %s",
+    "Erkennt die App falsche Töne, die Empfindlichkeit senken; überhört sie leise Töne, erhöhen." to
+        "If the app detects wrong notes, lower the sensitivity; if it misses quiet notes, raise it.",
 )

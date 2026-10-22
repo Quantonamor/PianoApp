@@ -353,7 +353,8 @@ private fun <T> Segmented(items: List<Triple<T, ImageVector, String>>, selected:
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(icon, label, Modifier.size(16.dp), tint = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim)
-                if (showLabels) {
+                // narrow screens: only the active mode is labelled, so its symbol is always explained
+                if (showLabels || sel) {
                     Spacer(Modifier.width(4.dp))
                     Text(label, fontSize = 12.sp, color = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim, fontWeight = FontWeight.Medium)
                 }

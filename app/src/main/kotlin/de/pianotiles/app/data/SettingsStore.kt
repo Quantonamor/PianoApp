@@ -3,6 +3,7 @@ package de.pianotiles.app.data
 import android.content.Context
 import de.pianotiles.app.i18n.I18n
 import de.pianotiles.core.model.NoteNaming
+import de.pianotiles.core.practice.PracticeLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -78,5 +79,30 @@ class SettingsStore(context: Context) {
             .putString("language", s.language)
             .apply()
         _settings.value = s
+    }
+}
+
+/** Practice time per day (statistics in the library header) and the one-time welcome card. */
+class PracticeLogStore(context: Context) {
+    private val prefs = context.getSharedPreferences("practice_log", Context.MODE_PRIVATE)
+    private val _log = MutableStateFlow(PracticeLog.decode(prefs.getString("days", null)))
+    val log: StateFlow<PracticeLog> = _log
+    private val _welcomeSeen = MutableStateFlow(prefs.getBoolean("welcomeSeen", false))
+    val welcomeSeen: StateFlow<Boolean> = _welcomeSeen
+
+    fun add(seconds: Long) {
+        if (seconds <= 0) return
+        val s = _log.value.add(today(), seconds.coerceAtMost(6 * 3600).toInt())
+        prefs.edit().putString("days", s.encode()).apply()
+        _log.value = s
+    }
+
+    fun dismissWelcome() {
+        prefs.edit().putBoolean("welcomeSeen", true).apply()
+        _welcomeSeen.value = true
+    }
+
+    companion object {
+        fun today(): Long = java.time.LocalDate.now().toEpochDay()
     }
 }

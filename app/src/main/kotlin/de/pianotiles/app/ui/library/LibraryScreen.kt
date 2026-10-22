@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -94,7 +95,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.pianotiles.app.PianoTilesApp
+import de.pianotiles.app.data.PracticeLogStore
 import de.pianotiles.app.data.Sharing
+import de.pianotiles.app.i18n.I18n
 import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 import de.pianotiles.core.model.Hand
@@ -140,6 +143,8 @@ fun LibraryScreen(
     val context = LocalContext.current
     val app = context.applicationContext as PianoTilesApp
     val songs by app.songs.songs.collectAsState()
+    val practiceLog by app.practiceLog.log.collectAsState()
+    val welcomeSeen by app.practiceLog.welcomeSeen.collectAsState()
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf(SortOrder.RECENT) }
@@ -212,7 +217,17 @@ fun LibraryScreen(
                     @Composable
                     fun heading(modifier: Modifier) = Column(modifier) {
                         Text(tr("Meine Bibliothek"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 1)
-                        Text(tr("%s Stücke", songs.size), style = MaterialTheme.typography.labelMedium, color = PtColors.TextDim)
+                        val day = PracticeLogStore.today()
+                        val week = practiceLog.week(day)
+                        Text(
+                            if (week < 60) tr("%s Stücke", songs.size)
+                            else buildString {
+                                append(tr("Heute %s Min. · Woche %s Min.", practiceLog.today(day) / 60, week / 60))
+                                val streak = practiceLog.streak(day)
+                                if (streak >= 2) append(tr(" · %s Tage in Folge", streak))
+                            },
+                            style = MaterialTheme.typography.labelMedium, color = PtColors.TextDim, maxLines = 1,
+                        )
                     }
                     if (narrow) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -256,6 +271,12 @@ fun LibraryScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    if (!welcomeSeen && query.isBlank() && !selecting) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            WelcomeCard(onStart = { app.practiceLog.dismissWelcome(); val first = if (I18n.english) "demo-twinkle" else "demo-entchen"; songs.firstOrNull { it.id == first }?.let { onOpen(it.id) } },
+                                onDismiss = { app.practiceLog.dismissWelcome() })
+                        }
+                    }
                     if (recent.size >= 2 && query.isBlank() && shelf == Shelf.ALL && !selecting) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             Column {
@@ -472,6 +493,38 @@ private fun MiniRoll(song: Song, modifier: Modifier) {
             val w = (n.duration / beats * size.width).toFloat().coerceAtLeast(2f)
             val y = (hi - n.pitch) * ph
             drawRect(if (n.hand == Hand.RIGHT) PtColors.RightHand else PtColors.LeftHand, Offset(x, y), Size(w, ph.coerceAtLeast(2f)))
+        }
+    }
+}
+
+/** Shown once on the first start: three steps to get going. */
+@Composable
+private fun WelcomeCard(onStart: () -> Unit, onDismiss: () -> Unit) {
+    Surface(color = PtColors.SurfaceHigh, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Willkommen!"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, tr("Schließen")) }
+            }
+            val steps = listOf(
+                tr("Stück antippen – zum Start eignet sich „Alle meine Entchen“."),
+                tr("Warte-Modus (Sanduhr): Die Noten warten, bis du die richtige Taste spielst. Das Mikrofon hört zu – oder schließe ein MIDI-Keyboard an."),
+                tr("Eigene Noten: „Noten importieren“ liest PDFs, Fotos, MIDI und MusicXML."),
+            )
+            steps.forEachIndexed { i, t ->
+                Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+                    Box(Modifier.size(24.dp).background(MaterialTheme.colorScheme.primary, CircleShape), contentAlignment = Alignment.Center) {
+                        Text("${i + 1}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(t, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row {
+                Spacer(Modifier.weight(1f))
+                Button(onClick = onStart) { Text(tr("Los geht's")) }
+            }
         }
     }
 }

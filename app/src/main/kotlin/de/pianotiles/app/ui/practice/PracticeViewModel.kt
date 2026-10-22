@@ -319,6 +319,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         engine.mistakesPerMeasure.forEach { (m, c) -> merged[m] = (merged[m] ?: 0) + c }
         val elapsed = (System.currentTimeMillis() - sessionStart) / 1000
         sessionStart = System.currentTimeMillis()
+        pt.practiceLog.add(elapsed)
         persist(song.copy(stats = song.stats.copy(
             bestAccuracy = max(song.stats.bestAccuracy, accuracy ?: 0),
             practiceSeconds = song.stats.practiceSeconds + elapsed,

@@ -11,6 +11,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -20,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -139,14 +141,18 @@ class SmokeTest {
         compose.mainClock.autoAdvance = false
         ActivityScenario.launch(MainActivity::class.java).use {
             waitText("Meine Bibliothek")
-            waitText("Alle meine Entchen")
+            waitText("Willkommen!")
             shot("01_library")
+            // the welcome card is shown once; closing it keeps the library as before
+            compose.onNodeWithContentDescription("Schließen").performClick()
+            waitText("Alle meine Entchen")
             it.onActivity { a -> a.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
             play(1500)
             shot("01b_library_landscape")
             it.onActivity { a -> a.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
             play(1500)
 
+            compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Ode an die Freude"))
             waitText("Ode an die Freude").performClick()
             waitText("Takt")
             shot("02_practice_paused")

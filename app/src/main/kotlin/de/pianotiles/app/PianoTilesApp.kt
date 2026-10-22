@@ -2,6 +2,7 @@ package de.pianotiles.app
 
 import android.app.Application
 import de.pianotiles.app.audio.Synth
+import de.pianotiles.app.data.PracticeLogStore
 import de.pianotiles.app.data.SecretStore
 import de.pianotiles.app.data.SettingsStore
 import de.pianotiles.app.data.SongRepository
@@ -18,6 +19,8 @@ class PianoTilesApp : Application() {
         private set
     lateinit var secrets: SecretStore
         private set
+    lateinit var practiceLog: PracticeLogStore
+        private set
     val synth: Synth by lazy { Synth() }
     /** Outlives screens; used for saving when a screen closes. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -28,6 +31,7 @@ class PianoTilesApp : Application() {
         settings = SettingsStore(this)
         applyLanguage()
         secrets = SecretStore(this)
+        practiceLog = PracticeLogStore(this)
         // the piano recordings (~6 MB) are read in the background; until then the synthesizer stands in
         Thread({ runCatching { synth.loadSamples(assets) } }, "PianoSamples").start()
     }
