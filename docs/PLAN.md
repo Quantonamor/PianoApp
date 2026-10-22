@@ -121,18 +121,18 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
 | Hand-Datei | `hands.json` | eigenes JSON | Fingersatz je Note + Quelle (automatisch/KI/von Hand) – dafür gibt es keinen Standard; zusätzlich in MusicXML |
 
 - [x] Plan
-- [ ] Core: MusicXML-Export (inkl. Fingersatz), Paket lesen/schreiben (`core/library/SongPackage.kt`), Tests
-- [ ] App: Bibliothek auf Ordner je Stück umstellen (+ automatische Übernahme der alten Dateien), Backup = Pakete
-- [ ] Import/Export einzelner Stücke als `.pianotiles` (Teilen, Öffnen aus Dateien/Mail); Import nimmt alle Teile mit
+- [x] Core: MusicXML-Export (inkl. Fingersatz), Paket lesen/schreiben (`core/library/SongPackage.kt`), Tests (`PackageTest`)
+- [x] App: Bibliothek auf Ordner je Stück umstellen (+ automatische Übernahme der alten Dateien), Backup = Pakete *(CI-Build noch ungeprüft)*
+- [x] Import/Export einzelner Stücke als `.pianotiles` (Teilen, Öffnen aus Dateien/Mail); Import nimmt alle Teile mit
 
 **B) Weitere Formate importieren** (außer PDF/MIDI/MusicXML)
-- [ ] ABC-Notation (`.abc`, viele Volkslieder im Netz), MuseScore (`.mscz`/`.mscx`), MEI (`.mei`), Karaoke-MIDI (`.kar`),
+- [x] ABC-Notation (Abgleich mit music21: `FormatCrossCheck`, Generator `tools/formats/gen.py`) (`.abc`, viele Volkslieder im Netz), MuseScore (`.mscz`/`.mscx`), MEI (`.mei`), Karaoke-MIDI (`.kar`),
       Bilder (`.png`/`.jpg` → Fotoerkennung), eigene Pakete (`.pianotiles`)
 
 **C) Noten abfotografieren (Alternative zu PDF)**
-- [ ] Core: Foto-Vorbereitung (Beleuchtung ausgleichen, Schräglage korrigieren, Rand abschneiden, auf Erkennungsgröße
+- [x] Core: Foto-Vorbereitung (`PhotoTest`: 88–97 % Übereinstimmung mit dem PDF) (Beleuchtung ausgleichen, Schräglage korrigieren, Rand abschneiden, auf Erkennungsgröße
       skalieren) – getestet mit künstlich „verfotografierten“ Korpus-Seiten
-- [ ] App: mehrere Fotos nacheinander aufnehmen oder aus der Galerie wählen, Reihenfolge ändern, dann wie beim PDF
+- [x] App *(CI ungeprüft)*: mehrere Fotos nacheinander aufnehmen oder aus der Galerie wählen, Reihenfolge ändern, dann wie beim PDF
       erkennen; Fotos werden als Original gespeichert
 
 **D) 3D-Hände** – ein-/ausblendbar über der Klaviatur, zeigen welcher Finger welche Taste spielt
@@ -143,8 +143,8 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
 - [ ] Optional „Fingersatz per KI“ (gleicher Schlüssel wie KI-nachbessern) und Fingersatz im Editor ändern
 
 **E) Abspielen & Bibliothek 2.0**
-- [ ] Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)
-- [ ] Schönere Bibliothek: Titelbild (Original-Seite bzw. Mini-Piano-Roll), Fortschrittsring, Filter nach Quelle,
+- [x] *(CI ungeprüft)* Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)
+- [x] *(CI ungeprüft)* Schönere Bibliothek: Titelbild (Original-Seite bzw. Mini-Piano-Roll), Fortschrittsring, Filter nach Quelle,
       Schwierigkeit, „zuletzt geübt“-Leiste, Mehrfachauswahl zum Exportieren
 - [ ] Notenbild `sheet.pdf` aus der Noten-Datei setzen (auch für MIDI/MusicXML-Stücke ohne Original)
 

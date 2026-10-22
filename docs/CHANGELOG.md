@@ -1,6 +1,19 @@
 # Changelog
 
-## 0.2.0 – in Arbeit
+## 0.3.0 – in Arbeit (M6)
+
+* **Stück-Pakete**: jedes Stück ist ein Ordner `files/library/<id>/` mit getrennten Teilen – `score.musicxml`
+  (Noten, MusicXML 4.0), `tiles.json` (Übungsdaten), `hands.json` (Fingersatz), `original.*`/`scan-NN.jpg`,
+  optional `sheet.pdf`, `manifest.json`. Austausch als `.pianotiles` (ZIP). Alte Bibliotheken werden automatisch
+  übernommen; Sicherung = ZIP aus Paketen (alte Sicherungen lassen sich weiter laden).
+* MusicXML-Export (Stimmen, Haltebögen, Triolen, Fingersatz, Tempo), Teilen als Paket/MusicXML/MIDI.
+* Neue Importformate: ABC, MuseScore (.mscz/.mscx), MEI, RIFF-MIDI/.kar, Fotos (.jpg/.png).
+* **Noten abfotografieren**: mehrere Fotos aufnehmen oder aus der Galerie wählen, Reihenfolge ändern; automatische
+  Aufbereitung (Papier finden, Licht ausgleichen, gerade drehen, zuschneiden, skalieren).
+* Bibliothek 2.0: Titelbild, ▶ Abspielen direkt auf der Karte, Fortschrittsring, Regale/Filter, Sortierung nach
+  Schwierigkeit, „Weiter üben“, Mehrfachauswahl (teilen/löschen).
+
+## 0.2.0
 
 * PDF-Erkennung stark verbessert (fester Testkorpus 69 % → 83 % Noten): Schlüssel inkl. Wechsel, Tonart per
   Formerkennung mit Abstimmung, Balken auf Notenlinien, beliebige Taktarten, ganze Pausen, Haltebögen,
