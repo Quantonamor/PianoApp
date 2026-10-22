@@ -35,7 +35,7 @@ private val topics = listOf(
     "Akkorde & Halten" to
         "Akkorde zählen nur, wenn ihre Tasten zusammen angeschlagen oder gemeinsam gehalten werden. Musst du eine Taste loslassen, während eine andere weiterklingt, wird sie weiß mit Pfeil nach oben markiert („Loslassen“). Lässt du eine Note zu früh los, leuchtet ihre Taste grün umrandet („Halten“) – das geht nur mit den Bildschirm-Tasten, weil das Mikrofon den Nachklang hört.",
     "Hände & Fingersatz" to
-        "Über das Auge (Menü „Ansicht“) blendest du Hände über der Klaviatur und den Fingersatz ein: Die Hände gleiten mit dem Stück mit, der spielende Finger drückt seine Taste; die Zahlen (1 = Daumen … 5 = kleiner Finger) stehen auch in den fallenden Noten. Hat ein Stück keinen Fingersatz, rechnet die App automatisch einen aus; Fingersätze aus MusicXML- oder MuseScore-Dateien bleiben erhalten.",
+        "Über das Auge (Menü „Ansicht“) blendest du Hände über der Klaviatur und den Fingersatz ein: Die Hände gleiten mit dem Stück mit, der spielende Finger leuchtet in der Farbe seiner Hand (rechts orange, links blau); die Zahlen (1 = Daumen … 5 = kleiner Finger) stehen auch in den fallenden Noten. Hat ein Stück keinen Fingersatz, rechnet die App automatisch einen aus; Fingersätze aus MusicXML- oder MuseScore-Dateien bleiben erhalten.",
     "Teile wiederholen (Schleife)" to
         "• Ziehe mit dem Finger über die Zeitleiste unten, um Takte zu markieren – die Schleife startet sofort.\n• Doppeltippe auf die fallenden Noten, um den aktuellen Takt zu wiederholen.\n• Über den Schleifen-Knopf: Anzahl Wiederholungen, Tempo-Treppe (wird nach jedem guten Durchgang schneller), Abschnitte speichern und schwierige Takte direkt üben.",
     "Steuerung" to

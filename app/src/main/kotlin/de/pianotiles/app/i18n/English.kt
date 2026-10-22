@@ -34,7 +34,7 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Finger –" to "Finger –",
     "Hände & Fingersatz" to "Hands & fingering",
     "Über das Auge (Menü „Ansicht“) blendest du Hände über der Klaviatur und den Fingersatz ein: Die Hände gleiten mit dem Stück mit, der spielende Finger drückt seine Taste; die Zahlen (1 = Daumen … 5 = kleiner Finger) stehen auch in den fallenden Noten. Hat ein Stück keinen Fingersatz, rechnet die App automatisch einen aus; Fingersätze aus MusicXML- oder MuseScore-Dateien bleiben erhalten." to
-        "The eye (menu \"View\") shows hands over the keyboard and the fingering: the hands move along with the piece, the playing finger presses its key; the numbers (1 = thumb … 5 = little finger) also appear in the falling notes. If a piece has no fingering, the app works one out automatically; fingerings from MusicXML or MuseScore files are kept.",
+        "The eye (menu \"View\") shows hands over the keyboard and the fingering: the hands move along with the piece, the playing finger lights up in its hand's colour (right orange, left blue); the numbers (1 = thumb … 5 = little finger) also appear in the falling notes. If a piece has no fingering, the app works one out automatically; fingerings from MusicXML or MuseScore files are kept.",
     "Hände über der Klaviatur" to "Hands over the keyboard",
     "Fingersatz auf den Noten" to "Fingering on the notes",
     "Vorschau / Zoom: %.1f s sichtbar" to "Preview / zoom: %.1f s visible",
