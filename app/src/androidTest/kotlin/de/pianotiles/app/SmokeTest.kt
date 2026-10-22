@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -93,7 +94,7 @@ class SmokeTest {
             compose.onNodeWithContentDescription("Pause").performClick()
 
             // Speed dialog
-            compose.onNodeWithText("100 %").performClick()
+            compose.onNode(hasText("100 %") and hasClickAction()).performClick()
             waitText("Tempo")
             shot("05_speed")
             compose.onNodeWithText("Fertig").performClick()
