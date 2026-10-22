@@ -33,7 +33,7 @@ private val topics = listOf(
     "Notenblatt" to
         "Das Buch-Symbol oben zeigt die Noten neben den fallenden Noten; der aktuelle Takt ist markiert, Antippen springt dorthin. Bei PDFs und Fotos siehst du das Original, bei allen anderen Stücken setzt die App das Notenblatt selbst aus den Noten (mit Fingersatz) und hält es nach Änderungen im Editor aktuell.",
     "Hände & Fingersatz" to
-        "Der Knopf ✋ blendet Hände über der Klaviatur ein: Sie gleiten mit dem Stück mit, der spielende Finger drückt seine Taste. Die Zahlen (1 = Daumen … 5 = kleiner Finger) stehen auch in den fallenden Noten. Hat ein Stück keinen Fingersatz, rechnet die App automatisch einen aus; Fingersätze aus MusicXML- oder MuseScore-Dateien bleiben erhalten. Abschalten geht auch in den Einstellungen.",
+        "Über das Auge (Menü „Ansicht“) blendest du Hände über der Klaviatur und den Fingersatz ein: Die Hände gleiten mit dem Stück mit, der spielende Finger drückt seine Taste; die Zahlen (1 = Daumen … 5 = kleiner Finger) stehen auch in den fallenden Noten. Hat ein Stück keinen Fingersatz, rechnet die App automatisch einen aus; Fingersätze aus MusicXML- oder MuseScore-Dateien bleiben erhalten.",
     "Teile wiederholen (Schleife)" to
         "• Ziehe mit dem Finger über die Zeitleiste unten, um Takte zu markieren – die Schleife startet sofort.\n• Doppeltippe auf die fallenden Noten, um den aktuellen Takt zu wiederholen.\n• Über den Schleifen-Knopf: Anzahl Wiederholungen, Tempo-Treppe (wird nach jedem guten Durchgang schneller), Abschnitte speichern und schwierige Takte direkt üben.",
     "Steuerung" to

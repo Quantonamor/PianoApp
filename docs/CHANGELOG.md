@@ -12,6 +12,12 @@
   Aufbereitung (Papier finden, Licht ausgleichen, gerade drehen, zuschneiden, skalieren).
 * Bibliothek 2.0: Titelbild, ▶ Abspielen direkt auf der Karte, Fortschrittsring, Regale/Filter, Sortierung nach
   Schwierigkeit, „Weiter üben“, Mehrfachauswahl (teilen/löschen).
+* **Klang neu**: klavierähnliche Töne (vorberechnet je Tonhöhe: Teiltöne mit Inharmonizität, zweistufiges
+  Abklingen, Saitenpaar, Hammeranschlag); Akkorde erklingen gleichzeitig, bis zu 48 Töne ohne Aussetzer, weiches
+  Dämpfen. Im Modus „Fließend“ ohne Mikrofon erklingt auch die geübte Hand.
+* **Aufgeräumter Übungsbildschirm**: Menü „Ansicht“ (Auge) für Hände, Fingersatz, Notennamen, Taktnummern,
+  Metronom; kompakte Kopfzeile auf Handys; Hinweise kleiner bzw. nur beim ersten Start; Hände, Fingersatz und
+  Tastennamen sind anfangs ausgeblendet.
 * **Notenblatt für jedes Stück**: Stücke ohne Original (MIDI, MusicXML, ABC, MuseScore, MEI, Demos) bekommen ein
   selbst gesetztes Notenblatt (`sheet.pdf`, mit Fingersatz und Takt-Positionen) neben den fallenden Noten.
 * PDF-Erkennung: Kreuz der Tonart, das beim Entfernen der Notenlinien in zwei Hälften zerfällt, wird erkannt.
