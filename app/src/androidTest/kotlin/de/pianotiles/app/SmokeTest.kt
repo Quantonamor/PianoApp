@@ -50,8 +50,8 @@ class SmokeTest {
     @Before
     fun forceGerman() {
         val app = context.applicationContext as PianoTilesApp
-        // hands off: their many half-transparent shapes crash the emulator's software renderer now and then
-        app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN, showHands = false) }
+        // hands on: they are one rendered bitmap now (the earlier stroke-drawn hands crashed the emulator renderer)
+        app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN, showHands = true) }
         app.applyLanguage()
     }
 
