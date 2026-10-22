@@ -1,9 +1,5 @@
 package de.pianotiles.app.ui.practice
 
-import android.graphics.Bitmap
-import android.graphics.Color as AColor
-import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,6 +35,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import de.pianotiles.app.data.SheetDocument
 import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 import de.pianotiles.core.model.SheetMeasure
@@ -52,7 +49,8 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun SheetPanel(
-    pdf: File,
+    /** One PDF or the photo pages ([de.pianotiles.app.data.SongRepository.sheetPages]). */
+    pages: List<File>,
     measures: List<SheetMeasure>,
     currentMeasure: Int,
     loopMeasures: IntRange?,
@@ -61,33 +59,21 @@ fun SheetPanel(
     /** Measures to mark in orange (e.g. "Bitte prüfen" in the editor). */
     marked: Set<Int> = emptySet(),
 ) {
-    val renderer = remember(pdf) {
-        runCatching { PdfRenderer(ParcelFileDescriptor.open(pdf, ParcelFileDescriptor.MODE_READ_ONLY)) }.getOrNull()
-    }
+    val renderer = remember(pages) { SheetDocument.open(pages) }
     DisposableEffect(renderer) { onDispose { runCatching { renderer?.close() } } }
-    val pages = remember(pdf) { mutableStateMapOf<Int, ImageBitmap>() }
+    val rendered = remember(pages) { mutableStateMapOf<Int, ImageBitmap>() }
     var page by remember { mutableIntStateOf(0) }
     measures.firstOrNull { it.measure == currentMeasure }?.let { if (it.page != page) page = it.page }
 
     LaunchedEffect(page, renderer) {
         val r = renderer ?: return@LaunchedEffect
-        if (pages.containsKey(page) || page >= r.pageCount) return@LaunchedEffect
-        val bmp = withContext(Dispatchers.IO) {
-            synchronized(r) {
-                r.openPage(page).use { p ->
-                    val w = 1400
-                    val b = Bitmap.createBitmap(w, (w.toDouble() * p.height / p.width).toInt(), Bitmap.Config.ARGB_8888)
-                    b.eraseColor(AColor.WHITE)
-                    p.render(b, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    b
-                }
-            }
-        }
-        pages[page] = bmp.asImageBitmap()
+        if (rendered.containsKey(page) || page >= r.pageCount) return@LaunchedEffect
+        val bmp = withContext(Dispatchers.IO) { runCatching { r.render(page, 1400) }.getOrNull() } ?: return@LaunchedEffect
+        rendered[page] = bmp.asImageBitmap()
     }
 
     BoxWithConstraints(modifier.background(Color.White)) {
-        val img = pages[page]
+        val img = rendered[page]
         if (renderer == null) {
             Text(tr("Notenblatt nicht verfügbar"), Modifier.align(Alignment.Center).padding(16.dp), color = Color.DarkGray)
             return@BoxWithConstraints

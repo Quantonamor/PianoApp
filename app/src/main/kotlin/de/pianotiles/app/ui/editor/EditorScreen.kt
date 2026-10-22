@@ -212,7 +212,7 @@ fun EditorScreen(songId: String, onBack: () -> Unit, onOpenSettings: () -> Unit 
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 vm.pdf?.let { pdf ->
                     SheetPanel(
-                        pdf = pdf, measures = song.sheetMeasures, currentMeasure = vm.measure, loopMeasures = null,
+                        pages = pdf, measures = song.sheetMeasures, currentMeasure = vm.measure, loopMeasures = null,
                         onSeekMeasure = { vm.measure = it }, modifier = Modifier.fillMaxWidth().weight(0.42f),
                         marked = vm.issues.mapTo(HashSet()) { it.measure },
                     )

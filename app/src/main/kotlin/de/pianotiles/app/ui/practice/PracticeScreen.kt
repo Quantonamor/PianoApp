@@ -120,7 +120,7 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit)
     DisposableEffect(Unit) { onDispose { vm.setMic(false) } }
 
     var showSpeed by remember { mutableStateOf(false) }
-    val sheetFile = remember(song.id) { (app as PianoTilesApp).songs.pdfFile(song.id).takeIf { it.exists() && song.sheetMeasures.isNotEmpty() } }
+    val sheetFile = remember(song.id) { (app as PianoTilesApp).songs.sheetPages(song.id).takeIf { it.isNotEmpty() && song.sheetMeasures.isNotEmpty() } }
     var showSheet by remember { mutableStateOf(false) }
     var showLoop by remember { mutableStateOf(false) }
 
@@ -134,7 +134,7 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit)
             Row(Modifier.fillMaxWidth().weight(1f)) {
             if (showSheet && sheetFile != null) {
                 SheetPanel(
-                    pdf = sheetFile, measures = song.sheetMeasures, currentMeasure = vm.engine.currentMeasure.also { vm.frame },
+                    pages = sheetFile, measures = song.sheetMeasures, currentMeasure = vm.engine.currentMeasure.also { vm.frame },
                     loopMeasures = if (vm.loop.enabled) vm.loopStartMeasure..vm.loopEndMeasure else null,
                     onSeekMeasure = { vm.seekBeat(song.measureStart(it)) },
                     modifier = Modifier.weight(0.42f).fillMaxHeight(),

@@ -2,9 +2,7 @@ package de.pianotiles.app.ui.editor
 
 import android.app.Application
 import android.graphics.Bitmap
-import android.graphics.Color as AColor
-import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
+import de.pianotiles.app.data.SheetDocument
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -69,7 +67,8 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         private set
     private var playJob: Job? = null
 
-    val pdf = pt.songs.pdfFile(songId).takeIf { it.exists() && song.sheetMeasures.isNotEmpty() }
+    /** Original sheet pages (PDF or prepared photos), if the measure positions are known. */
+    val pdf = pt.songs.sheetPages(songId).takeIf { it.isNotEmpty() && song.sheetMeasures.isNotEmpty() }
 
     private fun afterChange() {
         dirty = true
@@ -195,8 +194,8 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         aiJob = viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
-                        PdfRenderer(fd).use { renderer ->
+                    (SheetDocument.open(file) ?: error(tr("Notenblatt nicht verfügbar"))).use { renderer ->
+                        run {
                             ClaudeReviewer(key, model, language = I18n.aiLanguage).use { reviewer ->
                                 AiFixRunner(reviewer).run(
                                     snapshot, aiPages,
@@ -232,15 +231,12 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         }
     }
 
-    private fun renderPage(r: PdfRenderer, page: Int): PageImage = r.openPage(page).use { p ->
-        val w = 1600
-        val bmp = Bitmap.createBitmap(w, (w.toDouble() * p.height / p.width).toInt(), Bitmap.Config.ARGB_8888)
-        bmp.eraseColor(AColor.WHITE)
-        p.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+    private fun renderPage(r: SheetDocument, page: Int): PageImage {
+        val bmp = r.render(page, 1600)
         val out = ByteArrayOutputStream()
         bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
         bmp.recycle()
-        PageImage(page, out.toByteArray(), jpeg = true)
+        return PageImage(page, out.toByteArray(), jpeg = true)
     }
 
     fun accept(p: Proposal) {
