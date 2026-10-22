@@ -25,7 +25,7 @@ vieles sollte ausblendbar / standardmäßig aus sein.“ Umgesetzt (`429e7c1`):
 Danach (Referenz-Screenshots des Nutzers: „Artie“/„fallingnoteapp“): neue Optik der fallenden Noten und der
 Klaviatur, Leisten blenden sich beim Spielen aus, Hoch- **und** Querformat (`fullUser`), Bibliothek/Editor schmal.
 **Bilder ansehen:** `mcp__github__get_job_logs` (ui-test-Job, `tail_lines` 500) speichert das Log als Datei →
-`python3 /tmp/claude-0/extract.py <datei>` (Skript: SHOT-Zeilen base64 → JPEG; siehe Verlauf, neu schreiben falls weg)
+`python3 tools/ci/extract_shots.py <datei> <zielordner>`
 → JPEGs mit Read ansehen. Der Test läuft im Hochformat mit 130 % Schrift und macht zusätzlich Querformat-Bilder.
 **Offen:** Hände-Zeichnung ist noch unschön (standardmäßig aus); Nutzer um erneuten Gerätetest bitten.
 
