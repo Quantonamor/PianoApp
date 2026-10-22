@@ -401,6 +401,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         fun upperDigit(b: Blob) = abs(b.minY + top - st.top) < ss * 0.6 && abs(b.maxY + top - st.middle) < ss * 0.7
         fun lowerDigit(b: Blob) = abs(b.maxY + top - st.bottom) < ss * 0.6 && abs(b.minY + top - st.middle) < ss * 0.7
+        if (System.getProperty("omr.trace") != null) Components.find(noStaffCrop).filter { it.cx + left < st.xStart + ss * 14 && it.height / ss > 1.0 }.forEach {
+            println("TSCAND x=${it.minX + left}-${it.maxX + left} y=${it.minY + top}-${it.maxY + top} top=${st.top} mid=${st.middle} bot=${st.bottom} h=${"%.2f".format(it.height / ss)} w=${"%.2f".format(it.width / ss)}")
+        }
         val timeSigBoxes = ArrayList<IntArray>()
         for (a in glyphs) if (upperDigit(a)) for (c in glyphs) if (lowerDigit(c) && abs(a.cx - c.cx) < ss * 0.8) {
             timeSigBoxes.add(intArrayOf(min(a.minX, c.minX), a.minY, max(a.maxX, c.maxX), c.maxY))
@@ -412,7 +415,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // Both digits joined into one glyph (connected through the middle staff line): tall, centred, wider
         // than a quarter rest, before the first note.
         if (timeSigBoxes.isEmpty()) {
-            val firstNoteX = sd.heads.minOfOrNull { it.x0 } ?: Int.MAX_VALUE
+            // (heads without a stem do not count: a meter digit's bowl can itself look like a whole note)
+            val firstNoteX = sd.heads.filter { it.hasStem }.minOfOrNull { it.x0 } ?: Int.MAX_VALUE
             Components.find(noStaffCrop).filter {
                 val h = it.height / ss; val w = it.width / ss
                 h in 2.6..4.7 && w in 1.1..2.4 && abs(it.cy + top - st.middle) < ss * 0.6 &&
@@ -1163,7 +1167,13 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (xEnd - edges.last() > ss * 2.0) edges.add(xEnd)
             for (m in 0 until edges.size - 1) {
                 val l = edges[m]; val r = edges[m + 1]
-                val per = sys.staves.map { sd -> columnsOf(sd.heads.filter { it.cx > l && it.cx < r }, sd.rests.filter { it.cx > l && it.cx < r }, ss) }
+                val per = sys.staves.map { sd ->
+                    val cols = columnsOf(sd.heads.filter { it.cx > l && it.cx < r }, sd.rests.filter { it.cx > l && it.cx < r }, ss)
+                    // a whole(-measure) rest next to notes of the same staff cannot be: it is a misread glyph
+                    // (e.g. the foot of a meter digit "2")
+                    fun wholeRest(c: Column) = c.heads.isEmpty() && c.restDuration >= 4.0
+                    if (cols.any { !wholeRest(it) }) cols.filterNot { wholeRest(it) } else cols
+                }
                 // header-only area at the start / empty staff after the final bar line
                 if (per.all { cols -> cols.all { it.heads.isEmpty() } } && (m == 0 || m == edges.size - 2)) continue
                 slots.add(MeasureSlot(si, l, r, per, sys.staves))
@@ -1237,7 +1247,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     if (si in good) sequential(cols) else cols.map { quantize(interpolate(it.x, anchorsX, anchorsT), 0.25) }
                 }
             } else {
-                val nonEmpty = slot.perStaff.indices.filter { slot.perStaff[it].isNotEmpty() }
+                // a lone whole rest means "nothing in this measure" whatever its length (also in a pickup measure)
+                fun measureRest(si: Int) = slot.perStaff[si].all { it.heads.isEmpty() && it.restDuration >= 4.0 }
+                val nonEmpty = slot.perStaff.indices.filter { slot.perStaff[it].isNotEmpty() && !measureRest(it) }
                 val consistent = nonEmpty.isNotEmpty() && nonEmpty.all { abs(sums[it] - sums[nonEmpty[0]]) < 0.05 }
                 if (mi == 0 && consistent && sums[nonEmpty[0]] < measureLen - 0.05) {
                     pickup = sums[nonEmpty[0]]
