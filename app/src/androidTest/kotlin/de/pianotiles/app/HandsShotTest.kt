@@ -19,9 +19,11 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import de.pianotiles.core.model.NoteNaming
 import java.io.File
+import java.util.concurrent.TimeUnit
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.Timeout
 import org.junit.runner.RunWith
 
 /**
@@ -31,6 +33,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class HandsShotTest {
     @get:Rule val compose = createEmptyComposeRule()
+    /** A hanging test fails after 5 minutes with the stack of the stuck thread instead of blocking the CI job. */
+    @get:Rule val timeout: Timeout = Timeout.builder().withTimeout(300, TimeUnit.SECONDS).withLookingForStuckThread(true).build()
     @get:Rule val mic: GrantPermissionRule = GrantPermissionRule.grant(Manifest.permission.RECORD_AUDIO)
 
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
