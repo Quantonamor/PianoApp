@@ -87,6 +87,14 @@ class SongRepository(private val context: Context) {
 
     fun get(id: String): Song? = _songs.value.firstOrNull { it.id == id }
 
+    /** Makes sure a piece of the learning path is in the library (exercises, or a demo the user deleted). */
+    suspend fun ensureCourseSong(id: String): Boolean {
+        if (get(id) != null) return true
+        val song = (de.pianotiles.core.model.DemoSongs.all() + de.pianotiles.core.practice.Course.exerciseSongs()).firstOrNull { it.id == id } ?: return false
+        save(song)
+        return true
+    }
+
     /** Stores [song]; songs without an original also get their sheet engraved from the notes. Returns what was stored. */
     suspend fun save(song: Song): Song = withContext(Dispatchers.IO) {
         val s = runCatching { withEngravedSheet(song) }.getOrDefault(song)

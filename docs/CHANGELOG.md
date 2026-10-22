@@ -2,6 +2,11 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **Lernpfad**: 13 Lektionen vom ersten Ton (fünf Finger je Hand) über Kinderlieder und beide Hände bis „Für Elise“;
+  jede Lektion stellt Hand, Modus und Tempo ein, 1–3 Sterne je nach Treffsicherheit, „Nächste Lektion“ im
+  Abschluss-Dialog. Karte oben in der Bibliothek, „Los geht's“ der Begrüßung öffnet ihn (`core/practice/Course.kt`).
+* PDF-Erkennung: Alla-breve-Zeichen (¢) ergibt 2/2, eine „6“ als obere Taktziffer 6/8.
+
 * **Hände überarbeitet** (Nahaufnahmen in `HandRenderTest`): vollere Finger (16–20 mm wie echte), glatte
   Oberfläche (Unterteilung), Fingernägel, Kontaktschatten zwischen den Fingern, matte Haut statt Plastikglanz,
   weichere Kanten; natürliche Haltung (Mittelfinger am weitesten auf der Taste, Daumen vorne, keine Krallen-

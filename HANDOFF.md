@@ -28,6 +28,9 @@ jedem Frame lässt den Software-Renderer des Emulators abstürzen („Failed to 
   scheitern (Screenshots `08*` im Log). Nahaufnahmen: `HandRenderTest` → `closeup.png`, `closeup_left.png`.
 - **Hochformat**: `fullSensor`; **Ausblenden**: beim Spielen und nach 6 s ohne Berührung.
 - **MIDI**: `app/.../audio/MidiInput.kt`, verdrahtet in `PracticeViewModel` (`midiPitches`, `midiDevices`).
+- **Lernpfad**: `core/practice/Course.kt` (Lektionen, Sterne, Übungsstücke `ex-*`), `ui/library/CourseScreen.kt`
+  (Liste + `CourseCard` in der Bibliothek), Sterne in `PracticeLogStore`, `Screen.Practice(lessonId)`;
+  Test `CourseTest`, UI-Test `learningPath`.
 - **Review**: `docs/USER_REVIEW.md`; umgesetzt: Demos (9), Begrüßungskarte, Statistik
   (`core/practice/PracticeLog.kt` + `PracticeLogStore`), Mikrofon-Test (Einstellungen), Modus-Beschriftung.
 

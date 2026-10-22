@@ -90,10 +90,13 @@ import de.pianotiles.core.practice.PracticeMode
 import kotlinx.coroutines.delay
 
 @Composable
-fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit, listen: Boolean = false) {
+fun PracticeScreen(
+    songId: String, onBack: () -> Unit, onEdit: (String) -> Unit, listen: Boolean = false, lessonId: String? = null,
+    onLesson: (de.pianotiles.core.practice.Lesson) -> Unit = {},
+) {
     val context = LocalContext.current
     val app = context.applicationContext as Application
-    val vm: PracticeViewModel = viewModel(key = "practice-$songId") { PracticeViewModel(app, songId, listen) }
+    val vm: PracticeViewModel = viewModel(key = "practice-$songId-${lessonId.orEmpty()}") { PracticeViewModel(app, songId, listen, lessonId) }
     val settings by (app as PianoTilesApp).settings.settings.collectAsState()
     val song = vm.song
     val engine = vm.engine
@@ -194,7 +197,7 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit,
 
         if (showSpeed) SpeedDialog(vm, onDismiss = { showSpeed = false })
         if (showLoop) LoopPanel(vm, onDismiss = { showLoop = false })
-        vm.finished?.let { FinishedDialog(vm, it, onBack) }
+        vm.finished?.let { FinishedDialog(vm, it, onBack, onLesson) }
     }
 }
 

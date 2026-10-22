@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.pianotiles.app.i18n.tr
@@ -165,7 +166,7 @@ fun LoopPanel(vm: PracticeViewModel, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun FinishedDialog(vm: PracticeViewModel, info: FinishInfo, onBack: () -> Unit) {
+fun FinishedDialog(vm: PracticeViewModel, info: FinishInfo, onBack: () -> Unit, onLesson: (de.pianotiles.core.practice.Lesson) -> Unit = {}) {
     val praise = when {
         info.accuracy >= 95 -> tr("Großartig! 🎉")
         info.accuracy >= 80 -> tr("Sehr gut!")
@@ -177,6 +178,14 @@ fun FinishedDialog(vm: PracticeViewModel, info: FinishInfo, onBack: () -> Unit) 
         title = { Text(praise) },
         text = {
             Column {
+                info.lesson?.let { l ->
+                    Text(l.title, style = MaterialTheme.typography.titleSmall, color = PtColors.TextDim)
+                    Text("★".repeat(info.stars) + "☆".repeat(3 - info.stars), style = MaterialTheme.typography.headlineMedium, color = Color(0xFFFFC94D))
+                    Text(
+                        if (info.stars > 0) tr("Lektion geschafft!") else tr("Ziel: %s %% richtig – versuch es noch einmal.", l.goal),
+                        color = if (info.stars > 0) PtColors.Hit else PtColors.TextDim,
+                    )
+                }
                 Text(tr("%s %% richtig", info.accuracy), style = MaterialTheme.typography.headlineMedium, color = PtColors.Hit)
                 Text(tr("Dauer: %s:%s min", info.seconds / 60, "%02d".format(info.seconds % 60)), color = PtColors.TextDim)
                 info.worstMeasure?.let { Text(tr("Die meisten Fehler in Takt %s.", it + 1), color = PtColors.TextDim) }
@@ -192,7 +201,9 @@ fun FinishedDialog(vm: PracticeViewModel, info: FinishInfo, onBack: () -> Unit) 
                         vm.updateLoop(vm.loop.copy(tempoRamp = true, rampTarget = 1.0))
                     }) { Text(tr("Takt %s üben", m + 1)) }
                 }
-                TextButton(onClick = { vm.finished = null; onBack() }) { Text(tr("Bibliothek")) }
+                val next = info.nextLesson
+                if (next != null && info.stars > 0) TextButton(onClick = { vm.finished = null; onLesson(next) }) { Text(tr("Nächste Lektion")) }
+                else TextButton(onClick = { vm.finished = null; onBack() }) { Text(tr("Bibliothek")) }
             }
         },
     )

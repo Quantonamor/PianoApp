@@ -295,6 +295,23 @@ class SmokeTest {
         }
     }
 
+    /** The learning path: open it from the library and start the first lesson (right hand, waiting mode). */
+    @Test
+    fun learningPath() {
+        compose.mainClock.autoAdvance = false
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitText("Meine Bibliothek")
+            waitText("Lernpfad").performClick()
+            waitText("Fünf Finger, rechte Hand")
+            shot("14_course")
+            compose.onAllNodesWithText("Fünf Finger, rechte Hand")[0].performClick()
+            waitText("Takt")
+            shot("15_lesson")
+            compose.onNodeWithContentDescription("Zurück").performClick()
+            waitText("Lernpfad")
+        }
+    }
+
     /** ABC notation opened from another app lands directly in the practice screen. */
     @Test
     fun importAbc() {

@@ -97,7 +97,6 @@ import androidx.compose.ui.unit.sp
 import de.pianotiles.app.PianoTilesApp
 import de.pianotiles.app.data.PracticeLogStore
 import de.pianotiles.app.data.Sharing
-import de.pianotiles.app.i18n.I18n
 import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 import de.pianotiles.core.model.Hand
@@ -139,6 +138,7 @@ fun LibraryScreen(
     onEdit: (String) -> Unit,
     onSettings: () -> Unit,
     onHelp: () -> Unit,
+    onCourse: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as PianoTilesApp
@@ -273,9 +273,12 @@ fun LibraryScreen(
                 ) {
                     if (!welcomeSeen && query.isBlank() && !selecting) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
-                            WelcomeCard(onStart = { app.practiceLog.dismissWelcome(); val first = if (I18n.english) "demo-twinkle" else "demo-entchen"; songs.firstOrNull { it.id == first }?.let { onOpen(it.id) } },
+                            WelcomeCard(onStart = { app.practiceLog.dismissWelcome(); onCourse() },
                                 onDismiss = { app.practiceLog.dismissWelcome() })
                         }
+                    }
+                    if (query.isBlank() && shelf == Shelf.ALL && !selecting) {
+                        item(span = { GridItemSpan(maxLineSpan) }) { CourseCard(onClick = onCourse) }
                     }
                     if (recent.size >= 2 && query.isBlank() && shelf == Shelf.ALL && !selecting) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -507,7 +510,7 @@ private fun WelcomeCard(onStart: () -> Unit, onDismiss: () -> Unit) {
                 IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, tr("Schließen")) }
             }
             val steps = listOf(
-                tr("Stück antippen – zum Start eignet sich „Alle meine Entchen“."),
+                tr("Der Lernpfad führt Schritt für Schritt vom ersten Ton zum ersten Stück – oder tippe einfach ein Stück an."),
                 tr("Warte-Modus (Sanduhr): Die Noten warten, bis du die richtige Taste spielst. Das Mikrofon hört zu – oder schließe ein MIDI-Keyboard an."),
                 tr("Eigene Noten: „Noten importieren“ liest PDFs, Fotos, MIDI und MusicXML."),
             )

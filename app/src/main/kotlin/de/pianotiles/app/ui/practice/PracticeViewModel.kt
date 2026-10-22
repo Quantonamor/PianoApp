@@ -17,7 +17,9 @@ import de.pianotiles.core.hands.AutoFingering
 import de.pianotiles.core.hands.HandMotion
 import de.pianotiles.core.model.Section
 import de.pianotiles.core.model.Song
+import de.pianotiles.core.practice.Course
 import de.pianotiles.core.practice.EngineEvent
+import de.pianotiles.core.practice.Lesson
 import de.pianotiles.core.practice.HandSelection
 import de.pianotiles.core.practice.LoopSettings
 import de.pianotiles.core.practice.PracticeEngine
@@ -27,9 +29,15 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 data class PassInfo(val pass: Int, val accuracy: Int, val newSpeed: Double?, val at: Long = System.currentTimeMillis())
-data class FinishInfo(val accuracy: Int, val seconds: Int, val worstMeasure: Int?)
+data class FinishInfo(
+    val accuracy: Int, val seconds: Int, val worstMeasure: Int?,
+    /** Learning path: the lesson, the stars reached and the lesson after it. */
+    val lesson: Lesson? = null, val stars: Int = 0, val nextLesson: Lesson? = null,
+)
 
-class PracticeViewModel(app: Application, songId: String, listen: Boolean = false) : AndroidViewModel(app) {
+class PracticeViewModel(app: Application, songId: String, listen: Boolean = false, lessonId: String? = null) : AndroidViewModel(app) {
+    /** The lesson of the learning path being practised, if any. */
+    val lesson: Lesson? = lessonId?.let { Course.lesson(it) }
     private val pt = app as PianoTilesApp
     private val synth = pt.synth
     val settings get() = pt.settings.settings.value
@@ -46,9 +54,9 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
     var isPlaying by mutableStateOf(false); private set
     /** Becomes true at the first start; the gesture hint is only shown before that. */
     var hasStarted by mutableStateOf(listen); private set
-    var mode by mutableStateOf(if (listen) PracticeMode.LISTEN else PracticeMode.WAIT); private set
-    var hands by mutableStateOf(HandSelection.BOTH); private set
-    var speed by mutableFloatStateOf(1f); private set
+    var mode by mutableStateOf(if (listen) PracticeMode.LISTEN else lesson?.mode ?: PracticeMode.WAIT); private set
+    var hands by mutableStateOf(lesson?.hands ?: HandSelection.BOTH); private set
+    var speed by mutableFloatStateOf(lesson?.speed ?: 1f); private set
     var loop by mutableStateOf(LoopSettings()); private set
     var metronome by mutableStateOf(settings.metronome); private set
     var micActive by mutableStateOf(false); private set
@@ -85,6 +93,8 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         engine.octaveTolerant = settings.octaveTolerant
         engine.metronome = metronome
         engine.mode = mode
+        engine.hands = hands
+        engine.speed = speed.toDouble()
         engine.seek(-engine.song.measureLength * 0.5)
         synth.volume = settings.volume
         mic.sensitivity = settings.micSensitivity.toDouble()
@@ -134,7 +144,17 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
     private fun onFinished(accuracy: Int) {
         val worst = engine.mistakesPerMeasure.maxByOrNull { it.value }?.key
         val seconds = engine.practiceSeconds.roundToInt()
-        if (mode != PracticeMode.LISTEN) finished = FinishInfo(accuracy, seconds, worst)
+        val l = lesson
+        if (mode != PracticeMode.LISTEN) {
+            if (l != null) {
+                // without microphone or MIDI keyboard the flowing mode cannot count mistakes: finishing counts
+                val measurable = mode == PracticeMode.WAIT || micActive || midiDevices.isNotEmpty()
+                val stars = if (measurable) l.stars(accuracy) else 1
+                pt.practiceLog.setStars(l.id, stars)
+                val next = Course.lessons.getOrNull(Course.lessons.indexOf(l) + 1)
+                finished = FinishInfo(accuracy, seconds, worst, l, stars, next)
+            } else finished = FinishInfo(accuracy, seconds, worst)
+        }
         saveStats(accuracy.takeIf { mode != PracticeMode.LISTEN && (mode == PracticeMode.WAIT || micActive) })
     }
 

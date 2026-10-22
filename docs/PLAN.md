@@ -146,7 +146,8 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
 
 **F) Nutzer-Review (50 Personas, `docs/USER_REVIEW.md`)**
 - [x] MIDI-Eingang, mehr Demos, Begrüßung, Modus-Beschriftung, Mikrofon-Test, Übungsstatistik
-- [ ] Später: Lernpfad mit Lektionen, Pedal/Dynamik-Anzeige, Lehrer-Modus
+- [x] Lernpfad (13 Lektionen, Sterne, `Course.kt`, `CourseScreen.kt`)
+- [ ] Später: Pedal/Dynamik-Anzeige, Lehrer-Modus
 
 **E) Abspielen & Bibliothek 2.0**
 - [x] Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)

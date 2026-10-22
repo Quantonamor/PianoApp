@@ -63,6 +63,6 @@ was umgesetzt wurde (✅) und was bewusst offen bleibt (⏳).
 | Mikrofon-Test in den Einstellungen (zeigt erkannte Töne live) | B, F | ✅ |
 | Übungsstatistik: heute / diese Woche / Tage in Folge | A, C, G | ✅ |
 | Realistischere Hände, besserer Klang, Hoch-/Querformat | alle | ✅ |
-| Lernpfad mit Levels und Lektionen | A, C | ⏳ (größeres Projekt) |
+| Lernpfad mit Levels und Lektionen | A, C | ✅ (13 Lektionen, Sterne) |
 | Pedal-Anzeige / Dynamik | D, E | ⏳ |
 | Lehrer-Modus (Aufgaben verteilen) | E | ⏳ |

@@ -26,6 +26,8 @@ import de.pianotiles.app.ui.theme.PtColors
 
 /** Help topics as (title, text); translated when shown. */
 private val topics = listOf(
+    "Lernpfad" to
+        "Oben in der Bibliothek führt der Lernpfad in 13 Lektionen vom ersten Ton bis „Für Elise“: erst jede Hand einzeln mit fünf Fingern, dann einfache Lieder, beide Hände, die Tonleiter mit Daumenuntersatz. Jede Lektion stellt Hand, Modus und Tempo passend ein. Ab dem Ziel (meist 80 % richtig) gibt es einen Stern, ab 90 % zwei, ab 98 % drei. Alle Lektionen sind jederzeit offen; die nächste wird hervorgehoben.",
     "Die drei Modi" to
         "• Warten: Die Noten bleiben an der Linie stehen, bis du die richtigen Tasten spielst. Ideal zum Lernen – du bestimmst das Tempo.\n• Fließend: Die Noten laufen im eingestellten Tempo durch. Mit Mikrofon wird mitgezählt, wie viele du triffst.\n• Anhören: Die App spielt das Stück vor.",
     "Hände getrennt üben" to

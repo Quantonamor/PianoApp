@@ -351,7 +351,8 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "MIDI-Keyboard" to "MIDI keyboard",
     "Hat dein Digitalpiano oder Keyboard USB- oder Bluetooth-MIDI, verbinde es mit dem Gerät (USB-Kabel mit Adapter bzw. in den Bluetooth-Einstellungen koppeln). Die App erkennt es automatisch (Klavier-Symbol oben statt Mikrofon) – jede Taste wird exakt und ohne Verzögerung erkannt, auch Akkorde und das Loslassen." to
         "If your digital piano or keyboard has USB or Bluetooth MIDI, connect it to the device (USB cable with adapter, or pair it in the Bluetooth settings). The app detects it automatically (piano symbol at the top instead of the microphone) – every key is recognised exactly and without delay, including chords and releasing keys.",
-    "Stück antippen – zum Start eignet sich „Alle meine Entchen“." to "Tap a piece – “Twinkle Twinkle Little Star” is a good start.",
+    "Der Lernpfad führt Schritt für Schritt vom ersten Ton zum ersten Stück – oder tippe einfach ein Stück an." to
+        "The learning path takes you step by step from the first note to your first piece – or simply tap a piece.",
     "Warte-Modus (Sanduhr): Die Noten warten, bis du die richtige Taste spielst. Das Mikrofon hört zu – oder schließe ein MIDI-Keyboard an." to
         "Wait mode (hourglass): the notes wait until you play the right key. The microphone listens – or connect a MIDI keyboard.",
     "Eigene Noten: „Noten importieren“ liest PDFs, Fotos, MIDI und MusicXML." to "Your own music: “Import sheet music” reads PDFs, photos, MIDI and MusicXML.",
@@ -363,4 +364,17 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Zuletzt: %s" to "Recently: %s",
     "Erkennt die App falsche Töne, die Empfindlichkeit senken; überhört sie leise Töne, erhöhen." to
         "If the app detects wrong notes, lower the sensitivity; if it misses quiet notes, raise it.",
+    "Lernpfad" to "Learning path",
+    "Oben in der Bibliothek führt der Lernpfad in 13 Lektionen vom ersten Ton bis „Für Elise“: erst jede Hand einzeln mit fünf Fingern, dann einfache Lieder, beide Hände, die Tonleiter mit Daumenuntersatz. Jede Lektion stellt Hand, Modus und Tempo passend ein. Ab dem Ziel (meist 80 % richtig) gibt es einen Stern, ab 90 % zwei, ab 98 % drei. Alle Lektionen sind jederzeit offen; die nächste wird hervorgehoben." to
+        "At the top of the library the learning path leads in 13 lessons from the first note to “Für Elise”: first each hand alone with five fingers, then simple songs, both hands, the scale with the thumb passing under. Every lesson sets hand, mode and tempo. Reaching the goal (usually 80 % correct) gives one star, 90 % two, 98 % three. All lessons are open at any time; the next one is highlighted.",
+    "%s von %s Sternen" to "%s of %s stars",
+    "rechte Hand" to "right hand",
+    "linke Hand" to "left hand",
+    "beide Hände" to "both hands",
+    "Ziel %s %%" to "Goal %s %%",
+    "Lektion starten" to "Start lesson",
+    "Lektion %s: %s" to "Lesson %s: %s",
+    "Lektion geschafft!" to "Lesson passed!",
+    "Ziel: %s %% richtig – versuch es noch einmal." to "Goal: %s %% correct – try again.",
+    "Nächste Lektion" to "Next lesson",
 )

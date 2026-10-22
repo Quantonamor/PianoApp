@@ -102,6 +102,19 @@ class PracticeLogStore(context: Context) {
         _welcomeSeen.value = true
     }
 
+    private val _stars = MutableStateFlow(
+        prefs.all.filterKeys { it.startsWith("stars_") }.mapNotNull { (k, v) -> (v as? Int)?.let { k.removePrefix("stars_") to it } }.toMap()
+    )
+    /** Stars (0–3) per lesson of the learning path. */
+    val stars: StateFlow<Map<String, Int>> = _stars
+
+    /** Records a lesson result; the best result counts. */
+    fun setStars(lessonId: String, stars: Int) {
+        if (stars <= (_stars.value[lessonId] ?: 0)) return
+        prefs.edit().putInt("stars_$lessonId", stars).apply()
+        _stars.value = _stars.value + (lessonId to stars)
+    }
+
     /** Shows the welcome card again (help screen, tests). */
     fun showWelcomeAgain() {
         prefs.edit().putBoolean("welcomeSeen", false).apply()
