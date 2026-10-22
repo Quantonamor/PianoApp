@@ -127,6 +127,8 @@ object HandRenderer {
      */
     @Synchronized
     fun render(hands: List<Geometry>, out: IntArray, width: Int, height: Int, scale: Float, keysBottom: Float, alphaOverKeys: Float = 0.55f) {
+        // the rigged 3D hand model when it is available, the drawn shapes as fallback
+        if (hands.isNotEmpty() && Hand3D.render(hands, hands[0].fingerWidth / 0.66f, out, width, height, scale, keysBottom, alphaOverKeys)) return
         java.util.Arrays.fill(out, 0)
         for (g in hands) renderHand(g, out, width, height, scale, keysBottom, alphaOverKeys)
     }

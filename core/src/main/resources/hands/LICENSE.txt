@@ -1,0 +1,3 @@
+hand_left.bin / hand_right.bin are converted from the "generic-hand" models of the WebXR input profiles
+(npm @webxr-input-profiles/assets), MIT License, Copyright (c) 2019 Amazon.
+Converted with tools/hands/convert_hand.py.
