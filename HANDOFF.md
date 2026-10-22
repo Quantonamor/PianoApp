@@ -27,7 +27,11 @@ Klaviatur, Leisten blenden sich beim Spielen aus, Hoch- **und** Querformat (`ful
 **Bilder ansehen:** `mcp__github__get_job_logs` (ui-test-Job, `tail_lines` 500) speichert das Log als Datei →
 `python3 tools/ci/extract_shots.py <datei> <zielordner>`
 → JPEGs mit Read ansehen. Der Test läuft im Hochformat mit 130 % Schrift und macht zusätzlich Querformat-Bilder.
-**Offen:** Hände-Zeichnung ist noch unschön (standardmäßig aus); Nutzer um erneuten Gerätetest bitten.
+Danach (Wunsch: „Finger halbtransparent + 3D, mehr Abstand, ausblendbar; parallele Tasten und Loslassen
+erkennen“): `PracticeEngine` – Akkorde nur zusammen (0,6 s oder gehalten), `heldPitches`, `holdHints()`
+(Loslassen/Halten, Tests in `EngineTest`); Tastatur markiert Loslassen (weiß, Pfeil) / Halten (grün); Hände
+halbtransparent (Alpha in den Farben – **keine Offscreen-Ebene**, die ließ den Emulator abstürzen), Handflächen in
+einem Streifen unter der Klaviatur. **Offen:** Nutzer um erneuten Gerätetest bitten.
 
 ## Danach (Reihenfolge, Details in `docs/PLAN.md` → M6)
 1. Optional „Fingersatz per KI“ (wie `core/ai/AiFixer.kt`, gleicher Schlüssel).

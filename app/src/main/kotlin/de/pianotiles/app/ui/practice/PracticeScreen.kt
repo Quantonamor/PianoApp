@@ -34,7 +34,7 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.HourglassTop
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
@@ -267,7 +267,7 @@ private fun TopBar(
             @Composable
             fun actions() {
                 MicButton(vm.micActive, vm.micLevel, onMic)
-                if (sheetAvailable) ToggleIcon(Icons.Filled.MenuBook, tr("Notenblatt"), sheetShown, onSheet)
+                if (sheetAvailable) ToggleIcon(Icons.AutoMirrored.Filled.MenuBook, tr("Notenblatt"), sheetShown, onSheet)
                 ViewMenu(vm)
                 IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, tr("Noten bearbeiten")) }
             }
