@@ -21,6 +21,7 @@ import de.pianotiles.core.ai.PageImage
 import de.pianotiles.core.edit.MeasureIssue
 import de.pianotiles.core.edit.MeasureOps
 import de.pianotiles.core.edit.RelNote
+import de.pianotiles.core.model.FingeringSource
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
 import de.pianotiles.core.model.Song
@@ -115,6 +116,15 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         pt.synth.noteOn(song.notes[i].pitch, 80, 0.4)
     }
 
+    /** Sets the finger of the selected note by hand (1–5); the song's fingering then counts as edited by hand. */
+    fun setFinger(finger: Int) {
+        val i = selected
+        if (i !in song.notes.indices) return
+        edit(keepSelection = true) { s ->
+            s.copy(notes = s.notes.toMutableList().also { it[i] = it[i].copy(finger = finger) }, fingeringSource = FingeringSource.MANUAL)
+        }
+    }
+
     fun addNote(n: Note) {
         edit { it.copy(notes = it.notes + n) }
         selected = song.notes.lastIndex
@@ -130,7 +140,9 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
     fun pasteMeasure() { clipboard?.let { c -> edit { MeasureOps.replace(it, measure, c) } } }
 
     fun save(then: () -> Unit = {}) {
-        val s = song.copy(notes = SongUtils.dedupe(song.notes))
+        var s = song.copy(notes = SongUtils.dedupe(song.notes))
+        // an automatic fingering is worked out again for the edited notes when practising
+        if (s.fingeringSource == FingeringSource.AUTO) s = s.copy(notes = s.notes.map { it.copy(finger = 0) })
         pt.appScope.launch { pt.songs.save(s); dirty = false; then() }
     }
 

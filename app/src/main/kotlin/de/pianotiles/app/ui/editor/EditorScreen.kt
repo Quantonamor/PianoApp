@@ -434,6 +434,9 @@ private fun SelectionBar(vm: EditorViewModel, grid: Double, naming: de.pianotile
                 }
                 FilterChip(selected = true, onClick = { vm.modifySelected { it.copy(hand = if (it.hand == Hand.RIGHT) Hand.LEFT else Hand.RIGHT) } },
                     label = { Text(if (sel.hand == Hand.RIGHT) tr("Rechte Hand") else tr("Linke Hand")) })
+                // fingering: tap cycles 1 → 5
+                FilterChip(selected = sel.finger in 1..5, onClick = { vm.setFinger(sel.finger % 5 + 1) },
+                    label = { Text(if (sel.finger in 1..5) tr("Finger %s", sel.finger) else tr("Finger –")) })
                 IconButton(onClick = {
                     scope.launch { song.notes.filter { abs(it.start - sel.start) < 0.02 }.forEach { vm.preview(it.pitch) } }
                 }) { Icon(Icons.Filled.PlayArrow, tr("Anhören")) }
