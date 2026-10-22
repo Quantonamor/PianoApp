@@ -558,10 +558,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val y0 = (st.bottom + ss * 0.9).roundToInt(); val y1 = (st.bottom + ss * 3.6).roundToInt()
         val crop = img.crop(x0, y0, x1, y1)
         if (System.getProperty("omr.trace") != null) Components.find(crop).forEach { b -> println("EIGHT? y=${b.minY + y0}-${b.maxY + y0} bottom=${st.bottom} w=${"%.2f".format(b.width / ss)} h=${"%.2f".format(b.height / ss)}") }
+        // a small, compact glyph clearly below the clef's tail (holes of tiny digits are often filled in)
         return Components.find(crop).any { b ->
             val w = b.width / ss; val h = b.height / ss
-            h in 0.5..1.5 && w in 0.3..1.1 && b.minY > 0 && b.maxY < crop.height - 1 && b.minY + y0 > st.bottom + ss * 1.3 &&
-                Components.find(crop.crop(b.minX, b.minY, b.maxX + 1, b.maxY + 1), ink = false).count { it.minX > 0 && it.minY > 0 && it.maxX < b.width - 1 && it.maxY < b.height - 1 } >= 1
+            h in 0.5..1.25 && w in 0.35..0.95 && b.minY > 0 && b.maxY < crop.height - 1 &&
+                b.minY + y0 > st.bottom + ss * 1.3 && b.fill in 0.3..0.85
         }
     }
 
