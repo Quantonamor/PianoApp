@@ -11,6 +11,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -41,7 +42,10 @@ class SmokeTest {
 
     private fun shot(name: String) {
         val dir = File(context.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
-        val bmp = compose.onRoot().captureToImage().asAndroidBitmap()
+        // With a dialog open there are several roots; capture the top-most one.
+        val roots = compose.onAllNodes(isRoot())
+        val count = roots.fetchSemanticsNodes(atLeastOneRootRequired = false).size
+        val bmp = roots[(count - 1).coerceAtLeast(0)].captureToImage().asAndroidBitmap()
         File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
