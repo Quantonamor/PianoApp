@@ -139,6 +139,7 @@ class SmokeTest {
             waitText("Notennamen")
             shot("08_settings")
             compose.onNodeWithContentDescription("Zurück").performClick()
+            waitText("Meine Bibliothek")
             compose.onNodeWithContentDescription("Hilfe").performClick()
             waitText("Die drei Modi")
             compose.onNodeWithContentDescription("Zurück").performClick()
