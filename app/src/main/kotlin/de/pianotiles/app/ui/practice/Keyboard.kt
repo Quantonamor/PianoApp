@@ -9,7 +9,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -60,41 +60,56 @@ fun Keyboard(
             },
     ) {
         val layout = KeyLayout(range.first, range.last, size.width)
+        val felt = 5f
         val h = size.height
-        val blackH = h * 0.62f
-        fun keyColor(p: Int, base: Color): Color = when {
+        val blackH = (h - felt) * 0.62f
+        fun activeColor(p: Int): Color? = when {
             p == wrong && p in pressed -> PtColors.Miss
             p in pressed -> Color(0xFFB0BEC5)
             expected.containsKey(p) -> handColor(expected.getValue(p))
-            sounding.containsKey(p) -> handColor(sounding.getValue(p)).copy(alpha = 0.85f)
-            else -> base
+            sounding.containsKey(p) -> handColor(sounding.getValue(p))
+            else -> null
         }
-        // white keys
+        // white keys: light body, darker front lip, thin gaps
         for (p in layout.whites) {
             val x = layout.left(p)
-            val c = keyColor(p, PtColors.WhiteKey)
-            drawRoundRect(
-                Brush.verticalGradient(listOf(c, if (c == PtColors.WhiteKey) Color(0xFFDADDEA) else c.copy(alpha = 0.8f))),
-                Offset(x + 1f, 0f), Size(layout.whiteWidth - 2f, h), CornerRadius(6f, 6f),
-            )
-            if (showNames && naming != NoteNaming.NONE && (p % 12 == 0 || layout.whiteWidth > 34)) {
-                val label = if (p % 12 == 0) Pitch.name(p, naming) + Pitch.octave(p) else Pitch.name(p, naming)
-                drawLabel(measurer, label, Offset(x + 4f, h - 26f), Color(0xFF4A5070), if (layout.whiteWidth > 30) 11 else 9, maxWidth = layout.whiteWidth - 4)
+            val c = activeColor(p)
+            val w = layout.whiteWidth - 1.5f
+            val body = if (c == null) Brush.verticalGradient(listOf(Color(0xFFDCDDE3), Color(0xFFF7F7FA), Color(0xFFFFFFFF)), startY = felt, endY = h * 0.9f)
+            else Brush.verticalGradient(listOf(lerp(c, Color.White, 0.25f), c), startY = felt, endY = h)
+            drawRoundRect(body, Offset(x + 0.75f, felt), Size(w, h - felt), CornerRadius(5f, 5f))
+            // front lip
+            drawRoundRect(Color.Black.copy(alpha = 0.16f), Offset(x + 0.75f, h - h * 0.06f), Size(w, h * 0.06f), CornerRadius(5f, 5f))
+            if (p in heard) drawCircle(PtColors.Hit, radius = layout.whiteWidth * 0.18f, center = Offset(x + layout.whiteWidth / 2, h - h * 0.2f))
+            val label = when {
+                showNames && naming != NoteNaming.NONE && layout.whiteWidth > 22 -> if (p % 12 == 0) Pitch.name(p, naming) + Pitch.octave(p) else Pitch.name(p, naming)
+                p % 12 == 0 -> "C" + Pitch.octave(p) // octave marks like on a real keyboard sticker
+                else -> null
             }
-            if (p in heard) drawCircle(PtColors.Hit, radius = layout.whiteWidth * 0.18f, center = Offset(x + layout.whiteWidth / 2, h - 40f))
+            if (label != null) drawLabel(measurer, label, Offset(x + 3f, h - h * 0.06f - 16f), Color(0xFF6A6F86), if (layout.whiteWidth > 30) 10 else 8, maxWidth = layout.whiteWidth - 2)
         }
-        // black keys
+        // shadow of the felt on the keys
+        drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent), startY = felt, endY = felt + 14f), Offset(0f, felt), Size(size.width, 14f))
+        // black keys: dark glossy body with a lighter front face
         for (p in range) if (layout.isBlack(p)) {
             val x = layout.left(p)
-            val c = keyColor(p, PtColors.BlackKey)
+            val w = layout.blackWidth
+            val c = activeColor(p)
+            // shadow on the white keys
+            drawRoundRect(Color.Black.copy(alpha = 0.28f), Offset(x + 2f, felt), Size(w, blackH + 4f), CornerRadius(3f, 3f))
+            val top = c?.let { lerp(it, Color.Black, 0.35f) } ?: Color(0xFF1B1C22)
+            val bottom = c ?: Color(0xFF34353F)
+            drawRoundRect(Brush.verticalGradient(listOf(top, bottom), startY = felt, endY = felt + blackH), Offset(x, felt), Size(w, blackH), CornerRadius(3f, 3f))
+            // front face (the key's slope towards the player)
             drawRoundRect(
-                Brush.verticalGradient(listOf(c, if (c == PtColors.BlackKey) Color(0xFF3A3F55) else c.copy(alpha = 0.75f))),
-                Offset(x, 0f), Size(layout.blackWidth, blackH), CornerRadius(4f, 4f),
+                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.22f)), startY = felt + blackH * 0.86f, endY = felt + blackH),
+                Offset(x + w * 0.08f, felt + blackH * 0.86f), Size(w * 0.84f, blackH * 0.14f), CornerRadius(2f, 2f),
             )
-            if (p in heard) drawCircle(PtColors.Hit, radius = layout.blackWidth * 0.25f, center = Offset(x + layout.blackWidth / 2, blackH - 16f))
+            // side highlight
+            drawLine(Color.White.copy(alpha = 0.12f), Offset(x + w * 0.18f, felt + 3f), Offset(x + w * 0.18f, felt + blackH * 0.82f), 1.2f)
+            if (p in heard) drawCircle(PtColors.Hit, radius = w * 0.25f, center = Offset(x + w / 2, felt + blackH - 14f))
         }
-        // top shadow line
-        drawRect(Brush.verticalGradient(listOf(Color(0x66000000), Color.Transparent)), Offset.Zero, Size(size.width, 10f))
-        drawRect(Color(0x55000000), Offset.Zero, Size(size.width, h), style = Stroke(1f))
+        // red felt strip above the keys
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF8E1218), Color(0xFF4A070B))), Offset.Zero, Size(size.width, felt))
     }
 }

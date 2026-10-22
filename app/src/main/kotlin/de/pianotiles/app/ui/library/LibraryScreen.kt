@@ -14,6 +14,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -44,7 +46,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
@@ -182,31 +183,52 @@ fun LibraryScreen(
                     }
                 }
             } else {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column {
-                        Text(tr("Meine Bibliothek"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                        Text(tr("%s Stücke", songs.size), style = MaterialTheme.typography.labelMedium, color = PtColors.TextDim)
-                    }
-                    Spacer(Modifier.width(24.dp))
-                    TextField(
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    // narrow (portrait phone): title and buttons on one line, search below
+                    val narrow = maxWidth < 600.dp
+                    @Composable
+                    fun search(modifier: Modifier) = TextField(
                         value = query, onValueChange = { query = it }, singleLine = true,
                         placeholder = { Text(tr("Suchen …")) }, leadingIcon = { Icon(Icons.Filled.Search, null) },
-                        modifier = Modifier.weight(1f).height(52.dp),
+                        modifier = modifier.height(52.dp),
                         shape = RoundedCornerShape(26.dp),
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
                             focusedContainerColor = PtColors.SurfaceHigh, unfocusedContainerColor = PtColors.Surface,
                         ),
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Box {
-                        TextButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Filled.Sort, null); Spacer(Modifier.width(4.dp)); Text(tr(sort.label)) }
-                        DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
-                            for (o in SortOrder.entries) DropdownMenuItem(text = { Text(tr(o.label)) }, onClick = { sort = o; sortMenu = false })
+                    @Composable
+                    fun buttons() {
+                        Box {
+                            if (narrow) IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Filled.Sort, tr(sort.label)) }
+                            else TextButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Filled.Sort, null); Spacer(Modifier.width(4.dp)); Text(tr(sort.label)) }
+                            DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                                for (o in SortOrder.entries) DropdownMenuItem(text = { Text(tr(o.label)) }, onClick = { sort = o; sortMenu = false })
+                            }
+                        }
+                        IconButton(onClick = onHelp) { Icon(Icons.AutoMirrored.Filled.HelpOutline, tr("Hilfe")) }
+                        IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, tr("Einstellungen")) }
+                    }
+                    @Composable
+                    fun heading(modifier: Modifier) = Column(modifier) {
+                        Text(tr("Meine Bibliothek"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(tr("%s Stücke", songs.size), style = MaterialTheme.typography.labelMedium, color = PtColors.TextDim)
+                    }
+                    if (narrow) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) { heading(Modifier.weight(1f)); buttons() }
+                            Spacer(Modifier.height(6.dp))
+                            search(Modifier.fillMaxWidth())
+                        }
+                    } else {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            heading(Modifier)
+                            Spacer(Modifier.width(24.dp))
+                            search(Modifier.weight(1f))
+                            Spacer(Modifier.width(8.dp))
+                            buttons()
                         }
                     }
-                    IconButton(onClick = onHelp) { Icon(Icons.Filled.HelpOutline, tr("Hilfe")) }
-                    IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, tr("Einstellungen")) }
                 }
             }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -229,7 +251,7 @@ fun LibraryScreen(
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(230.dp),
+                    columns = GridCells.Adaptive(170.dp),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp, top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),

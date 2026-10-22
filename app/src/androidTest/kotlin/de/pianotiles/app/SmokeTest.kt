@@ -127,6 +127,16 @@ class SmokeTest {
         throw AssertionError("Text '$text' not shown within $timeout ms")
     }
 
+    private fun waitDesc(desc: String, timeout: Long = 15_000) {
+        val end = System.currentTimeMillis() + timeout
+        while (System.currentTimeMillis() < end) {
+            compose.mainClock.advanceTimeBy(100)
+            if (compose.onAllNodesWithContentDescription(desc).fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty()) return
+            Thread.sleep(50)
+        }
+        throw AssertionError("'$desc' not shown within $timeout ms")
+    }
+
     private fun play(ms: Long) {
         var t = 0L
         while (t < ms) { compose.mainClock.advanceTimeBy(50); Thread.sleep(25); t += 50 }
@@ -139,6 +149,11 @@ class SmokeTest {
             waitText("Meine Bibliothek")
             waitText("Alle meine Entchen")
             shot("01_library")
+            it.onActivity { a -> a.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
+            play(1500)
+            shot("01b_library_landscape")
+            it.onActivity { a -> a.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
+            play(1500)
 
             waitText("Ode an die Freude").performClick()
             waitText("Takt")
@@ -168,6 +183,18 @@ class SmokeTest {
             compose.onNodeWithContentDescription("Ansicht").performClick()
             waitText("Hände über der Klaviatur").performClick()
             play(300)
+
+            // the same screen in landscape (the app follows the device orientation)
+            it.onActivity { a -> a.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
+            play(1500)
+            compose.onAllNodesWithContentDescription("Start")[0].performClick()
+            play(2500)
+            shot("03d_landscape_playing")
+            compose.onNodeWithContentDescription("Pause").performClick()
+            play(300)
+            shot("03e_landscape_paused")
+            it.onActivity { a -> a.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
+            play(1500)
 
             // Hands, wait mode with on-screen keys
             compose.onNodeWithText("R").performClick()
@@ -246,7 +273,7 @@ class SmokeTest {
             waitText("Meine Bibliothek")
             waitText("Alle meine Entchen")
             compose.onAllNodesWithContentDescription("Abspielen")[0].performClick()
-            waitText("Takt")
+            waitDesc("Pause") // playing: only notes, keys and the small back/pause buttons
             play(1500)
             shot("12_play_from_library")
             compose.onNodeWithContentDescription("Zurück").performClick()
