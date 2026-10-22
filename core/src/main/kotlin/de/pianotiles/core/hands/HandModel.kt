@@ -254,7 +254,7 @@ object Hand3D {
      * Joint transforms so that the fingertips land on [tips] (screen pixels, index 0 = thumb).
      * Returns the per-joint affine transforms (model space) and the view.
      */
-    private fun pose(model: HandModel, hand: Hand, tips: Array<FloatArray>, keyW: Float, down: FloatArray): Pair<Array<Affine>, View> {
+    private fun pose(model: HandModel, hand: Hand, tips: Array<FloatArray>, keyW: Float, down: FloatArray, centerX: Float): Pair<Array<Affine>, View> {
         val side = if (hand == Hand.RIGHT) 1f else -1f // right: thumb at -z is on the left; left hand is mirrored
         val jp = model.jointPos
         fun p(i: Int, k: Int) = jp[i * 3 + k]
@@ -271,6 +271,11 @@ object Hand3D {
         val midLen = abs(p(tipsJ[1], 1) - p(prox[1], 1))
         val targetTipY = (1..4).map { tips[it][1] }.average().toFloat()
         val ox = targetKx - modelKx * scale
+        // the forearm comes from the player's body (screen centre, about 55 cm in front of the keys): a hand away
+        // from the middle turns inwards; the wrist takes up half of the forearm's angle
+        val yaw = 0.5f * kotlin.math.atan((targetKx - centerX) / (0.55f * scale))
+        val pivot = FloatArray(3) { k -> prox.map { p(it, k) }.average().toFloat() }
+        val base = Affine.rotation(pivot[0], pivot[1], pivot[2], 1f, 0f, 0f, -side * yaw)
         // the hand moves towards the keys (fingers more curved) until the thumb and little finger reach as well
         var lift = 0f
         var result: Pair<Array<Affine>, View>? = null
@@ -279,7 +284,7 @@ object Hand3D {
             val oy = knuckleY - prox.map { p(it, 1) }.average().toFloat() * scale
             val view = View(side, scale, ox, oy)
             var worst = 0f
-            val xf = solve(model, view, tips, side) { f, err -> if (f == 0 || f == 4) worst = maxOf(worst, err) }
+            val xf = solve(model, view, tips, side, base) { f, err -> if (f == 0 || f == 4) worst = maxOf(worst, err) }
             result = xf to view
             if (worst < keyW * 0.12f || lift > midLen * scale * 0.18f) break
             lift += worst * 0.9f
@@ -287,11 +292,11 @@ object Hand3D {
         return result!!
     }
 
-    private fun solve(model: HandModel, view: View, tips: Array<FloatArray>, side: Float, report: (Int, Float) -> Unit): Array<Affine> {
+    private fun solve(model: HandModel, view: View, tips: Array<FloatArray>, side: Float, base: Affine, report: (Int, Float) -> Unit): Array<Affine> {
         val jp = model.jointPos
         fun p(i: Int, k: Int) = jp[i * 3 + k]
         val nx = side; val ny = 0f; val nz = 0f
-        val xf = Array(model.names.size) { Affine() }
+        val xf = Array(model.names.size) { base }
         val tmp = FloatArray(3)
         for (f in 0 until 5) {
             val chain = FINGERS[f].map { model.joint(it) }
@@ -306,7 +311,7 @@ object Hand3D {
             fun build(spread: Float, curl: Float): Array<Affine> {
                 // curl bends towards the palm (away from the viewer); distribution over the joints like a relaxed hand
                 val c0 = curl * (if (f == 0) 0.5f else 0.45f); val c1 = curl * (if (f == 0) 0.5f else 0.35f); val c2 = curl * 0.25f
-                val a0 = Affine.rotation(p(j0, 0), p(j0, 1), p(j0, 2), nx, ny, nz, spread).times(
+                val a0 = base.times(Affine.rotation(p(j0, 0), p(j0, 1), p(j0, 2), nx, ny, nz, spread)).times(
                     Affine.rotation(p(j0, 0), p(j0, 1), p(j0, 2), ax, ay, az, c0))
                 val a1 = a0.times(Affine.rotation(p(j1, 0), p(j1, 1), p(j1, 2), ax, ay, az, c1))
                 val a2 = a1.times(Affine.rotation(p(j2, 0), p(j2, 1), p(j2, 2), ax, ay, az, c2))
@@ -386,7 +391,7 @@ object Hand3D {
         rowMin = height; rowMax = -1
         for (g in hands) {
             val model = HandModel.get(g.hand) ?: return false
-            val (xf, view) = pose(model, g.hand, g.tips, keyW, g.down)
+            val (xf, view) = pose(model, g.hand, g.tips, keyW, g.down, width / scale / 2f)
             rasterize(model, xf, view, width, height, scale, g.down, if (g.hand == Hand.RIGHT) 0 else 1)
         }
         shade(out, width, height, scale, keysBottom, alphaOverKeys, keyW)
