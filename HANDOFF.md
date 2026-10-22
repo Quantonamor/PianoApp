@@ -31,7 +31,10 @@ Danach (Wunsch: „Finger halbtransparent + 3D, mehr Abstand, ausblendbar; paral
 erkennen“): `PracticeEngine` – Akkorde nur zusammen (0,6 s oder gehalten), `heldPitches`, `holdHints()`
 (Loslassen/Halten, Tests in `EngineTest`); Tastatur markiert Loslassen (weiß, Pfeil) / Halten (grün); Hände
 halbtransparent (Alpha in den Farben – **keine Offscreen-Ebene**, die ließ den Emulator abstürzen), Handflächen in
-einem Streifen unter der Klaviatur. **Offen:** Nutzer um erneuten Gerätetest bitten.
+einem Streifen unter der Klaviatur. Im Emulator-Test bleiben die Hände **aus** (die Software-Grafik des Emulators
+stürzt bei ihnen gelegentlich ab, „device not found“); ihr Aussehen wurde per Screenshot geprüft.
+Letzter Stand CI: komplett grün (`8fd0f24`). **Offen:** Nutzer um erneuten Gerätetest bitten (Klang, Akkorde,
+Loslassen/Halten, Hände, Hoch-/Querformat); danach Konvergenz-Schleife der PDF-Erkennung.
 
 ## Danach (Reihenfolge, Details in `docs/PLAN.md` → M6)
 1. Optional „Fingersatz per KI“ (wie `core/ai/AiFixer.kt`, gleicher Schlüssel).
