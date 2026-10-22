@@ -14,8 +14,8 @@ Emulator-Test. Betroffene Dateien:
 (`listen`-Parameter), `ui/editor/EditorViewModel.kt` (SheetDocument statt PdfRenderer), `MainActivity.kt`
 (Screen.Import(uris), Screen.Photos, Practice(listen)), `AndroidManifest.xml`, `res/xml/file_paths.xml`.
 Neue Smoke-Tests in `SmokeTest.kt`: `playFromLibrary`, `importAbc`, `importPhoto`, `packageRoundTrip`.
-Außerdem: **englische Übersetzungen** für alle neuen `tr("…")`-Texte fehlen noch in `app/.../i18n/English.kt`
-(fallen auf Deutsch zurück) – Liste per grep der neuen Dateien erstellen und eintragen.
+Englische Übersetzungen der neuen Texte sind eingetragen (`English.kt`, Abschnitt „M6“); bei neuen `tr("…")`-Texten
+weiterhin dort ergänzen.
 
 ## Danach (Reihenfolge, Details in `docs/PLAN.md` → M6)
 1. **D) 3D-Hände**: Core `core/hands/` – automatischer Fingersatz (DP: Spannweite, Daumen-Unter-/Übersatz,
