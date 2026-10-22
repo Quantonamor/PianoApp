@@ -36,6 +36,12 @@ Jeder Test hat 5 Min. Timeout; bei Fehlern stehen alle Thread-Stacks im Log („
 - **Lernpfad**: `core/practice/Course.kt` (Lektionen, Sterne, Übungsstücke `ex-*`), `ui/library/CourseScreen.kt`
   (Liste + `CourseCard` in der Bibliothek), Sterne in `PracticeLogStore`, `Screen.Practice(lessonId)`;
   Test `CourseTest`, UI-Test `learningPath`.
+- **Pedal & Dynamik**: `Song.pedal` (`PedalSpan`, `soundingEnd`), Import aus MIDI (CC64), MusicXML (`<pedal>`,
+  `<dynamics>`), MuseScore (Pedal-Spanner, `Dynamic`, Velocity); Anzeige „Ped.“ in `FallingNotes`; `PedalTest`.
+- **OMR (diese Session)**: oktavierter Violinschlüssel (verschmolzene 8), Alla breve, „6“ → 6/8, Auftakt mit
+  Ganztaktpause, Ganzpause neben Noten verworfen, unvollständige Takte nacheinander, Punkt der einen Takt
+  überfüllt wird verworfen, **Stimmentrennung nach Halsrichtung** (`splitVoices`). Runde 2 gespeichert
+  (`tools/omr-eval/rounds/r2`, 4/10 bei 100 %). `truth.py`/`round.py` entfernen das music21-Auftakt-Polster.
 - **Review**: `docs/USER_REVIEW.md`; umgesetzt: Demos (9), Begrüßungskarte, Statistik
   (`core/practice/PracticeLog.kt` + `PracticeLogStore`), Mikrofon-Test (Einstellungen), Modus-Beschriftung.
 
