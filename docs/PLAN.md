@@ -163,7 +163,7 @@ Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `to
 Stand (2026-10-22):
 - Runde 1 (Choräle BWV 4, 253, 370; Volkslieder Lancashire Clog, Salem Hornpipe): 1 von 10 PDFs bei 100 %,
   Runde-1-Schnitt 93 % Noten / 93 % Rhythmus. **Noch keine Runde vollständig bestanden – Zähler: 0/5.**
-- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **89,3 % Noten, 93,1 % Präzision, 89,7 % Rhythmus**
+- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **89,3 % Noten, 93,1 % Präzision, 89,8 % Rhythmus**
   (vorher 87,6/91,1/89,5, davor 86/88/89).
 - Bereits umgesetzt in dieser Schleife: Triolen (Ziffer „3“ + Taktsummen-Prüfung), verbundene
   Taktangaben-Ziffern, verschmolzene Kreuze in der Tonart, Hilfslinien-Ausnahme nur bei gedruckter Linie,
@@ -176,7 +176,8 @@ Stand (2026-10-22):
   2b. ✅ Tonart: Schlüssel-Auswahl ignoriert dünnen Systemstrich; obere/untere Zeilen stimmen getrennt ab.
   3. Choräle: zwei Stimmen pro Zeile (Sekunden-Akkorde, gemeinsame Köpfe), Vorzeichen in Akkorden.
   4. Tremolo-Schrägstrich (Salem Hornpipe) als Balken fehlinterpretiert.
-  5. Lösung (`truth.py`) bei Auftakten musikalisch korrekt verschieben (music21 füllt Auftakte auf).
+  5. ✅ Lösung (`truth.py`) bei Auftakten korrigiert (music21 füllt Auftakte auf; 6 Choräle nachgezogen).
+  6. ✅ Auftakt mit Ganztaktpause in der anderen Hand; Ganzpause neben Noten wird verworfen (Rundlauf Happy Birthday 10 → 100 %).
 - Ehrliche Einschätzung: 100 % auf *jedem* Zufallsstück ist für Sonderfälle (Verzierungen, N-tolen > 3,
   Chorsätze) eventuell nicht erreichbar; dann Pool auf klaviertypische Literatur eingrenzen und dokumentieren.
 

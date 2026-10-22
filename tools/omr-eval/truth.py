@@ -13,5 +13,15 @@ for n in sorted(os.listdir(D)):
             if nn.duration.isGrace: continue
             for pitch in (nn.pitches):
                 lines.append(f"{pitch.midi} {float(nn.offset):.4f} {float(nn.quarterLength):.4f} {hand}")
+    # music21 pads a pickup measure to a full bar (gap after the first notes); the app counts the pickup as
+    # its real length, so the gap is removed
+    rows=[l.split() for l in lines]
+    if rows:
+        on=sorted(set(float(r[1]) for r in rows))
+        first_end=max(float(r[1])+float(r[2]) for r in rows if float(r[1])<on[0]+1e-6)
+        nxt=min((o for o in on if o>=first_end-1e-6), default=None)
+        if nxt is not None and on[0]==0 and nxt-first_end>0.9:
+            gap=nxt-first_end
+            lines=[f"{r[0]} {float(r[1])-(gap if float(r[1])>=nxt-1e-6 else 0):.4f} {r[2]} {r[3]}" for r in rows]
     open(os.path.join(D,n,'truth.txt'),'w').write('\n'.join(lines))
     print(n, len(parts), '->', len(sel), len(lines), 'notes')
