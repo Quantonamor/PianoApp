@@ -10,6 +10,7 @@ import de.pianotiles.core.model.SongUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -32,7 +33,9 @@ class SongRepository(private val context: Context) {
             DemoSongs.all().forEach { writeSong(it) }
             prefs.edit().putBoolean("demos_installed_v1", true).apply()
         }
-        _songs.value = readAll()
+        val all = readAll()
+        // a song saved while the library was being read (e.g. an import right after start) wins over the disk copy
+        _songs.update { cur -> cur + all.filter { a -> cur.none { it.id == a.id } } }
     }
 
     fun dir(id: String) = File(libraryDir, id)
@@ -73,12 +76,12 @@ class SongRepository(private val context: Context) {
 
     suspend fun save(song: Song) = withContext(Dispatchers.IO) {
         writeSong(song)
-        _songs.value = _songs.value.filter { it.id != song.id } + song
+        _songs.update { cur -> cur.filter { it.id != song.id } + song }
     }
 
     suspend fun delete(id: String) = withContext(Dispatchers.IO) {
         dir(id).deleteRecursively()
-        _songs.value = _songs.value.filter { it.id != id }
+        _songs.update { cur -> cur.filter { it.id != id } }
     }
 
     /**
@@ -148,7 +151,7 @@ class SongRepository(private val context: Context) {
         for ((name, data) in pkg.originals) if (!name.contains('/')) writeAtomic(File(d, name), data)
         pkg.sheetPdf?.let { writeAtomic(sheetFile(song.id), it) }
         writeSong(song)
-        _songs.value = _songs.value.filter { it.id != song.id } + song
+        _songs.update { cur -> cur.filter { it.id != song.id } + song }
         song
     }
 
