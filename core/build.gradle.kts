@@ -26,6 +26,8 @@ tasks.test {
     useJUnit()
     (project.findProperty("omr.debugDir") as String?)?.let { systemProperty("omr.debugDir", it) }
     (project.findProperty("omr.corpus") as String?)?.let { systemProperty("omr.corpus", it); outputs.upToDateWhen { false } }
+    (project.findProperty("formats.dir") as String?)?.let { systemProperty("formats.dir", it); outputs.upToDateWhen { false } }
+    (project.findProperty("formats.diff") as String?)?.let { systemProperty("formats.diff", it) }
     (project.findProperty("omr.only") as String?)?.let { systemProperty("omr.only", it) }
     maxHeapSize = "3g"
     (project.findProperty("omr.trace") as String?)?.let { systemProperty("omr.trace", it) }

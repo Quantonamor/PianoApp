@@ -120,7 +120,8 @@ object MusicXmlExporter {
                 }
                 cursor = c0.start + c0.dur
             }
-            if (li == 0 && cursor < len) gap(sb, len - cursor, voice, staff, rests = true)
+            // every lane ends at the bar line, so the following <backup> is exact
+            if (cursor < len) gap(sb, len - cursor, voice, staff, rests = li == 0)
         }
     }
 
