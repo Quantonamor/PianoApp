@@ -36,6 +36,17 @@ object AutoFingering {
         return song.copy(notes = out, fingeringSource = source)
     }
 
+    /**
+     * Fingering for practising: null if every note already has a finger. Otherwise automatic fingerings are
+     * recomputed completely (notes may have been edited); fingerings from a file, the AI or the user are kept and
+     * only the gaps are filled.
+     */
+    fun ensure(song: Song): Song? {
+        if (song.notes.all { it.finger in 1..5 }) return null
+        val keep = song.fingeringSource != FingeringSource.AUTO && song.fingeringSource != FingeringSource.NONE
+        return apply(song, keepExisting = keep)
+    }
+
     private fun key(n: Note) = Triple(n.pitch, Math.round(n.start * 960), n.hand)
 
     /** Fingering of the notes of one hand. */

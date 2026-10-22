@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -148,6 +149,7 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit,
                             engine = engine, range = range, frame = vm.frame,
                             lookaheadSeconds = settings.lookaheadSeconds, naming = settings.noteNaming,
                             showNames = settings.showNamesOnTiles, showMeasureNumbers = settings.showMeasureNumbers,
+                            showFingers = settings.showFingers,
                             onScrub = vm::scrubBy, onTap = vm::togglePlay, onDoubleTap = vm::loopCurrentMeasure,
                         )
                         Overlays(vm)
@@ -166,6 +168,9 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit,
                             pressed = vm.tappedPitches, wrong = vm.wrongPitch, naming = settings.noteNaming,
                             showNames = settings.showNamesOnKeys, onKeyDown = vm::keyDown, onKeyUp = vm::keyUp,
                         )
+                        if (settings.showHands) {
+                            HandsOverlay(vm.handMotion, engine.position, vm.frame, range, showNumbers = settings.showFingers)
+                        }
                     }
                 }
             }
@@ -213,6 +218,7 @@ private fun TopBar(
             Chip(text = "${(vm.speed * 100).toInt()} %", icon = Icons.Filled.Tune, active = vm.speed != 1f, onClick = onSpeed)
             ToggleIcon(Icons.Filled.Timer, tr("Metronom"), vm.metronome, vm::toggleMetronome)
             MicButton(vm.micActive, vm.micLevel, onMic)
+            ToggleIcon(Icons.Filled.PanTool, tr("Hände"), vm.settings.showHands, vm::toggleHands)
             if (sheetAvailable) ToggleIcon(Icons.Filled.MenuBook, tr("Notenblatt"), sheetShown, onSheet)
             IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, tr("Noten bearbeiten")) }
         }

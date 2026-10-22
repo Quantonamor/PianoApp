@@ -88,6 +88,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             Toggle(tr("Namen auf den fallenden Noten"), s.showNamesOnTiles) { v -> upd { it.copy(showNamesOnTiles = v) } }
             Toggle(tr("Namen auf den Tasten"), s.showNamesOnKeys) { v -> upd { it.copy(showNamesOnKeys = v) } }
             Toggle(tr("Taktnummern"), s.showMeasureNumbers) { v -> upd { it.copy(showMeasureNumbers = v) } }
+            Toggle(tr("Hände über der Klaviatur"), s.showHands) { v -> upd { it.copy(showHands = v) } }
+            Toggle(tr("Fingersatz auf den Noten"), s.showFingers) { v -> upd { it.copy(showFingers = v) } }
             SliderRow(tr("Vorschau / Zoom: %.1f s sichtbar", s.lookaheadSeconds), s.lookaheadSeconds, 1.5f..8f) { v -> upd { it.copy(lookaheadSeconds = v) } }
 
             Header(tr("Üben"))

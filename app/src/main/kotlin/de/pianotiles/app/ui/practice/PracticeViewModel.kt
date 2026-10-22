@@ -12,6 +12,8 @@ import de.pianotiles.app.PianoTilesApp
 import de.pianotiles.app.audio.MicInput
 import de.pianotiles.app.i18n.tr
 import de.pianotiles.core.audio.DetectionFrame
+import de.pianotiles.core.hands.AutoFingering
+import de.pianotiles.core.hands.HandMotion
 import de.pianotiles.core.model.Section
 import de.pianotiles.core.model.Song
 import de.pianotiles.core.practice.EngineEvent
@@ -31,9 +33,11 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
     private val synth = pt.synth
     val settings get() = pt.settings.settings.value
 
-    var song: Song by mutableStateOf(pt.songs.get(songId) ?: error("Song $songId not found"))
+    var song: Song by mutableStateOf(withFingering(pt.songs.get(songId) ?: error("Song $songId not found")))
         private set
     val engine = PracticeEngine(song)
+    /** Hand positions over time for the hands over the keyboard. */
+    val handMotion = HandMotion(song)
 
     /** Incremented every frame / state change so Compose redraws. */
     var frame by mutableLongStateOf(0L)
@@ -245,6 +249,15 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         engine.mistakesPerMeasure.forEach { (m, c) -> all[m] = (all[m] ?: 0) + c }
         return all.entries.sortedByDescending { it.value }.filter { it.value > 0 }.take(3).map { it.key }
     }
+
+    /** Songs without (complete) fingering get the automatic one, saved to the hand file. */
+    private fun withFingering(s: Song): Song {
+        val fingered = runCatching { AutoFingering.ensure(s) }.getOrNull() ?: return s
+        pt.appScope.launch { pt.songs.save(fingered) }
+        return fingered
+    }
+
+    fun toggleHands() { pt.settings.update { it.copy(showHands = !it.showHands) } }
 
     private fun persist(s: Song) {
         song = s

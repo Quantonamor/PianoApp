@@ -81,4 +81,17 @@ class HandsTest {
         assertEquals(KeyX.of(64) + 1f, KeyX.of(65), 1e-6f)   // E → F next white key
         assertEquals(KeyX.of(60) + 7f, KeyX.of(72), 1e-6f)
     }
+
+    @Test
+    fun ensureRecomputesAutoAndKeepsFile() {
+        val auto = AutoFingering.apply(DemoSongs.odeToJoy())
+        assertEquals(null, AutoFingering.ensure(auto))
+        val edited = auto.copy(notes = auto.notes + Note(72, 100.0, 1.0, Hand.RIGHT))
+        val again = assertNotNull(AutoFingering.ensure(edited))
+        assertTrue(again.notes.all { it.finger in 1..5 })
+        assertEquals(FingeringSource.AUTO, again.fingeringSource)
+        val file = edited.copy(fingeringSource = FingeringSource.FILE)
+        val kept = assertNotNull(AutoFingering.ensure(file))
+        assertEquals(edited.notes.dropLast(1).map { it.finger }, kept.notes.dropLast(1).map { it.finger })
+    }
 }

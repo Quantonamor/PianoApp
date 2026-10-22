@@ -21,6 +21,10 @@ data class AppSettings(
     val octaveTolerant: Boolean = true,
     val volume: Float = 0.8f,
     val showMeasureNumbers: Boolean = true,
+    /** Shaded hands over the keyboard showing which finger plays which key. */
+    val showHands: Boolean = true,
+    /** Finger numbers on the falling notes. */
+    val showFingers: Boolean = true,
     /** UI language: "auto" (device language), "de" or "en". */
     val language: String = "auto",
 )
@@ -47,6 +51,8 @@ class SettingsStore(context: Context) {
             octaveTolerant = prefs.getBoolean("octaveTolerant", true),
             volume = prefs.getFloat("volume", 0.8f),
             showMeasureNumbers = prefs.getBoolean("measureNumbers", true),
+            showHands = prefs.getBoolean("hands", true),
+            showFingers = prefs.getBoolean("fingers", true),
             language = language,
         )
     }
@@ -66,6 +72,8 @@ class SettingsStore(context: Context) {
             .putBoolean("octaveTolerant", s.octaveTolerant)
             .putFloat("volume", s.volume)
             .putBoolean("measureNumbers", s.showMeasureNumbers)
+            .putBoolean("hands", s.showHands)
+            .putBoolean("fingers", s.showFingers)
             .putString("language", s.language)
             .apply()
         _settings.value = s

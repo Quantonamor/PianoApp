@@ -48,6 +48,7 @@ fun FallingNotes(
     naming: NoteNaming,
     showNames: Boolean,
     showMeasureNumbers: Boolean,
+    showFingers: Boolean,
     onScrub: (beats: Double) -> Unit,
     onTap: () -> Unit,
     onDoubleTap: () -> Unit,
@@ -157,6 +158,13 @@ fun FallingNotes(
                     val label = Pitch.name(n.pitch, naming)
                     val fs = if (w > 34) 13 else 10
                     drawLabel(measurer, label, Offset(x + 3f, bottom - fs * 2.2f), Color(0xEE0B0F1C), fs, bold = true, maxWidth = w - 4f)
+                }
+                if (showFingers && n.finger in 1..5 && tileH > 34 && w > 12) {
+                    // finger number in a small circle at the top of the tile
+                    val r = min(w * 0.36f, 11f)
+                    val c = Offset(x + w / 2, top + r + 3f)
+                    drawCircle(Color.White.copy(alpha = 0.85f * alpha), r, c)
+                    drawLabel(measurer, "${n.finger}", Offset(c.x - r * 0.42f, c.y - r * 0.95f), handColorDark(n.hand), if (r > 9f) 12 else 9, bold = true)
                 }
             }
         }

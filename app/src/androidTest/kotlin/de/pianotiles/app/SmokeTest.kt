@@ -102,6 +102,13 @@ class SmokeTest {
             shot("03_practice_playing")
             compose.onNodeWithContentDescription("Pause").performClick()
 
+            // 3D hands over the keyboard: off and on again
+            compose.onNodeWithContentDescription("Hände").performClick()
+            play(300)
+            shot("03b_hands_off")
+            compose.onNodeWithContentDescription("Hände").performClick()
+            play(300)
+
             // Hands, wait mode with on-screen keys
             compose.onNodeWithText("R").performClick()
             compose.onNodeWithText("Warten").performClick()
