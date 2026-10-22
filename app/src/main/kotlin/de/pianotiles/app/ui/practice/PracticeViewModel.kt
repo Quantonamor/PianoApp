@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import de.pianotiles.app.PianoTilesApp
 import de.pianotiles.app.audio.MicInput
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.core.audio.DetectionFrame
 import de.pianotiles.core.model.Section
 import de.pianotiles.core.model.Song
@@ -18,9 +19,9 @@ import de.pianotiles.core.practice.HandSelection
 import de.pianotiles.core.practice.LoopSettings
 import de.pianotiles.core.practice.PracticeEngine
 import de.pianotiles.core.practice.PracticeMode
-import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 data class PassInfo(val pass: Int, val accuracy: Int, val newSpeed: Double?, val at: Long = System.currentTimeMillis())
 data class FinishInfo(val accuracy: Int, val seconds: Int, val worstMeasure: Int?)
@@ -92,7 +93,7 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
                 lastPass = PassInfo(e.pass, e.accuracy, e.newSpeed)
                 e.newSpeed?.let { speed = it.toFloat() }
             }
-            is EngineEvent.LoopFinished -> message = "Schleife fertig: ${e.passes} Durchgänge"
+            is EngineEvent.LoopFinished -> message = tr("Schleife fertig: %s Durchgänge", e.passes)
             is EngineEvent.SongFinished -> onFinished(e.accuracy)
             is EngineEvent.StepHit -> hitFlash = System.currentTimeMillis()
             is EngineEvent.WrongNote -> { wrongPitch = e.pitch; hitFlash = 0 }
@@ -161,7 +162,7 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
         if (on) {
             mic.sensitivity = settings.micSensitivity.toDouble()
             micActive = mic.start()
-            if (!micActive) message = "Mikrofon konnte nicht gestartet werden"
+            if (!micActive) message = tr("Mikrofon konnte nicht gestartet werden")
         } else {
             mic.stop(); micActive = false; heardPitches = emptySet(); micLevel = 0f
         }
@@ -198,7 +199,7 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
     fun loopCurrentMeasure() {
         val m = engine.currentMeasure
         setLoopMeasures(m, m)
-        message = "Schleife: Takt ${m + 1}"
+        message = tr("Schleife: Takt %s", m + 1)
     }
 
     fun toggleLoop() {
@@ -225,9 +226,9 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
 
     fun saveLoopAsSection(name: String) {
         if (loop.endBeat <= loop.startBeat) return
-        val s = Section(name.ifBlank { "Abschnitt ${song.sections.size + 1}" }, loop.startBeat, loop.endBeat)
+        val s = Section(name.ifBlank { tr("Abschnitt %s", song.sections.size + 1) }, loop.startBeat, loop.endBeat)
         persist(song.copy(sections = song.sections + s))
-        message = "Abschnitt „${s.name}“ gespeichert"
+        message = tr("Abschnitt „%s“ gespeichert", s.name)
     }
 
     fun deleteSection(s: Section) = persist(song.copy(sections = song.sections - s))

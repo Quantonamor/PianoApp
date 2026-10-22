@@ -1,5 +1,6 @@
 package de.pianotiles.core.io
 
+import de.pianotiles.core.i18n.CoreText.t
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
 import de.pianotiles.core.model.Song
@@ -20,7 +21,7 @@ object MidiImporter {
 
     fun import(bytes: ByteArray, fallbackTitle: String): Song {
         val r = Reader(bytes)
-        if (r.ascii(4) != "MThd") throw ImportException("Keine gültige MIDI-Datei (MThd fehlt)")
+        if (r.ascii(4) != "MThd") throw ImportException(t("Keine gültige MIDI-Datei (MThd fehlt)", "Not a valid MIDI file (MThd missing)"))
         val headerLen = r.u32()
         r.u16() // format (0 or 1, both handled the same way)
         val trackCount = r.u16()
@@ -100,7 +101,7 @@ object MidiImporter {
             open.values.forEach { q -> q.forEach { if (it.endTick < 0) it.endTick = tick } }
             r.pos = end
         }
-        if (notes.isEmpty()) throw ImportException("Die MIDI-Datei enthält keine Noten")
+        if (notes.isEmpty()) throw ImportException(t("Die MIDI-Datei enthält keine Noten", "The MIDI file contains no notes"))
 
         val hands = assignHands(notes)
         val result = notes.map {

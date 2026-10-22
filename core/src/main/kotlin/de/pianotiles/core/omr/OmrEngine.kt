@@ -1,5 +1,6 @@
 package de.pianotiles.core.omr
 
+import de.pianotiles.core.i18n.CoreText.t
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
 import de.pianotiles.core.model.Pitch
@@ -169,7 +170,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val bit = BitImage.fromGray(gray)
             val staves = StaffDetector.detect(bit)
             if (staves.isEmpty()) {
-                warnings.add("Seite ${pageIdx + 1}: keine Notenlinien gefunden")
+                warnings.add(t("Seite ${pageIdx + 1}: keine Notenlinien gefunden", "Page ${pageIdx + 1}: no staff lines found"))
                 pageStaves.add(emptyList())
                 continue
             }
@@ -222,7 +223,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 ),
             )
         }
-        if (song.notes.isEmpty()) warnings.add("Es wurden keine Noten erkannt")
+        if (song.notes.isEmpty()) warnings.add(t("Es wurden keine Noten erkannt", "No notes were recognized"))
         return OmrResult(song, diagnostics, warnings.toList(), keyFifths, song.beatsPerMeasure, song.beatUnit, estimated)
     }
 
@@ -245,7 +246,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // Pages with piano systems (connected staff pairs): single unconnected staves are vocal/instrument parts.
         val hasPiano = chains.any { it.size >= 2 }
         if (hasPiano && chains.any { it.size == 1 }) {
-            warnings.add("Einzelne Notenzeilen (z. B. Gesang) wurden ignoriert – nur das Klavier wird übernommen")
+            warnings.add(t("Einzelne Notenzeilen (z. B. Gesang) wurden ignoriert – nur das Klavier wird übernommen", "Single staves (e.g. vocals) were ignored – only the piano part is used"))
             chains.removeAll { it.size == 1 }
         }
         return chains.map { chain ->
@@ -253,7 +254,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 chain.size == 1 -> listOf(chain[0] to Clef.TREBLE)
                 chain.size == 2 -> listOf(chain[0] to Clef.TREBLE, chain[1] to Clef.BASS)
                 else -> {
-                    warnings.add("System mit ${chain.size} Notenzeilen: nur die unteren zwei (Klavier) werden verwendet")
+                    warnings.add(t("System mit ${chain.size} Notenzeilen: nur die unteren zwei (Klavier) werden verwendet", "System with ${chain.size} staves: only the lower two (piano) are used"))
                     listOf(chain[chain.size - 2] to Clef.TREBLE, chain[chain.size - 1] to Clef.BASS)
                 }
             }
@@ -1235,7 +1236,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             }
             measureStart += length
         }
-        if (estimated.isNotEmpty()) warnings.add("Rhythmus geschätzt in Takt ${estimated.joinToString(", ")} – bitte prüfen")
+        if (estimated.isNotEmpty()) warnings.add(t("Rhythmus geschätzt in Takt ${estimated.joinToString(", ")} – bitte prüfen", "Rhythm estimated in measure ${estimated.joinToString(", ")} – please check"))
 
         val sheet = slots.mapIndexedNotNull { mi, slot ->
             val page = slot.staves.first().page

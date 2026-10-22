@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 import de.pianotiles.core.edit.RelNote
 import de.pianotiles.core.model.NoteNaming
@@ -45,22 +46,22 @@ fun AiPanel(vm: EditorViewModel, naming: NoteNaming, onClose: () -> Unit, onRest
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.AutoAwesome, null, tint = PtColors.Loop)
                 Spacer(Modifier.width(6.dp))
-                Text("KI-nachbessern", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Schließen") }
+                Text(tr("KI-nachbessern"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) { Icon(Icons.Filled.Close, tr("Schließen")) }
             }
             LinearProgressIndicator(progress = { vm.aiProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
             Text(vm.aiStatus, style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
             Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (vm.aiRunning) OutlinedButton(onClick = vm::cancelAi) { Text("Abbrechen") }
-                else OutlinedButton(onClick = onRestart) { Text("Erneut prüfen") }
+                if (vm.aiRunning) OutlinedButton(onClick = vm::cancelAi) { Text(tr("Abbrechen")) }
+                else OutlinedButton(onClick = onRestart) { Text(tr("Erneut prüfen")) }
                 val open = vm.proposals.count { it.status == Proposal.Status.OPEN }
-                if (open > 0) Button(onClick = vm::acceptAll) { Text("Alle übernehmen ($open)") }
+                if (open > 0) Button(onClick = vm::acceptAll) { Text(tr("Alle übernehmen (%s)", open)) }
             }
             HorizontalDivider()
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (vm.proposals.isNotEmpty()) item { Text("Vorschläge", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp)) }
+                if (vm.proposals.isNotEmpty()) item { Text(tr("Vorschläge"), fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp)) }
                 items(vm.proposals, key = { it.id }) { p -> ProposalCard(vm, p, naming) }
-                item { Text("Protokoll", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
+                item { Text(tr("Protokoll"), fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
                 items(vm.aiLog.toList().asReversed()) { line ->
                     Text("• $line", style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
                 }
@@ -85,24 +86,24 @@ private fun ProposalCard(vm: EditorViewModel, p: Proposal, naming: NoteNaming) {
             .clickable { vm.measure = c.measure; vm.previewProposal = if (previewing) null else p }
             .padding(8.dp),
     ) {
-        Text("Takt ${c.measure + 1} · ${vm.handName(c.hand)}", fontWeight = FontWeight.Bold)
+        Text(tr("Takt %s · %s", c.measure + 1, vm.handName(c.hand)), fontWeight = FontWeight.Bold)
         if (c.reason.isNotBlank()) Text(c.reason, style = MaterialTheme.typography.bodySmall)
-        Text("Vorher: ${notesText(p.before, naming)}", style = MaterialTheme.typography.bodySmall, color = PtColors.Miss.copy(alpha = 0.9f))
-        Text("Nachher: ${notesText(c.notes, naming)}", style = MaterialTheme.typography.bodySmall, color = PtColors.Hit)
+        Text(tr("Vorher: %s", notesText(p.before, naming)), style = MaterialTheme.typography.bodySmall, color = PtColors.Miss.copy(alpha = 0.9f))
+        Text(tr("Nachher: %s", notesText(c.notes, naming)), style = MaterialTheme.typography.bodySmall, color = PtColors.Hit)
         when (p.status) {
             Proposal.Status.OPEN -> Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = { vm.measure = c.measure; vm.previewProposal = if (previewing) null else p }) { Text(if (previewing) "Vorschau aus" else "Ansehen") }
-                TextButton(onClick = { vm.accept(p) }) { Icon(Icons.Filled.Check, null); Text("Übernehmen") }
-                TextButton(onClick = { vm.reject(p) }) { Text("Verwerfen", color = Color(0xFFBBBBBB)) }
+                TextButton(onClick = { vm.measure = c.measure; vm.previewProposal = if (previewing) null else p }) { Text(if (previewing) tr("Vorschau aus") else tr("Ansehen")) }
+                TextButton(onClick = { vm.accept(p) }) { Icon(Icons.Filled.Check, null); Text(tr("Übernehmen")) }
+                TextButton(onClick = { vm.reject(p) }) { Text(tr("Verwerfen"), color = Color(0xFFBBBBBB)) }
             }
-            Proposal.Status.ACCEPTED -> Text("✓ übernommen (Rückgängig oben möglich)", style = MaterialTheme.typography.bodySmall, color = PtColors.Hit)
-            Proposal.Status.REJECTED -> Text("verworfen", style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
+            Proposal.Status.ACCEPTED -> Text(tr("✓ übernommen (Rückgängig oben möglich)"), style = MaterialTheme.typography.bodySmall, color = PtColors.Hit)
+            Proposal.Status.REJECTED -> Text(tr("verworfen"), style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
         }
     }
 }
 
 private fun notesText(ns: List<RelNote>, naming: NoteNaming): String {
-    if (ns.isEmpty()) return "(leer)"
+    if (ns.isEmpty()) return tr("(leer)")
     return ns.sortedWith(compareBy({ it.start }, { it.pitch })).groupBy { Math.round(it.start * 48) }.values.joinToString("  ") { chord ->
         chord.joinToString("+") { Pitch.fullName(it.pitch, naming) } + " " + durationSymbol(chord.maxOf { it.duration })
     }

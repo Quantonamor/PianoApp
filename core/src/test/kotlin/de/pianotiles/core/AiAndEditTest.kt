@@ -56,6 +56,13 @@ class AiAndEditTest {
     }
 
     @Test
+    fun promptLanguage() {
+        assertTrue("explanation in German" in AiPrompt.SYSTEM && "Fis statt F" in AiPrompt.SYSTEM)
+        val en = AiPrompt.system("English")
+        assertTrue("explanation in English" in en && "two English sentences" in en && "Fis statt F" !in en, en)
+    }
+
+    @Test
     fun promptAndParse() {
         val s = song()
         val text = AiPrompt.pageText(s, 1, 2, "C-Dur", emptyList())

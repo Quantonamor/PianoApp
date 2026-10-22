@@ -49,3 +49,13 @@ Bauen: `./gradlew :core:test` (ohne Android-SDK möglich) · `./gradlew :app:ass
 - [Architektur](docs/ARCHITECTURE.md)
 - [PDF-Notenerkennung (OMR)](docs/OMR.md)
 - [Changelog](docs/CHANGELOG.md)
+
+## English
+
+PianoTiles is an Android app (tablet & phone, landscape) for practicing the piano with falling notes.
+It **listens through the microphone** and waits until you play the right notes (*Wait* mode), or runs at
+a tempo of your choice (*Flow*), or plays the piece for you (*Listen*). Practice hands separately, loop
+measures with a tempo ladder, and track your mistakes per measure. Your own pieces come in via **PDF import
+with offline sheet music recognition** (or MIDI/MusicXML) and can be corrected in the built-in notes editor,
+optionally with an AI fix (Claude, own API key). The UI is available in German and English: German devices
+get German, all others English – changeable under Settings → "Sprache / Language". All data stays on the device.

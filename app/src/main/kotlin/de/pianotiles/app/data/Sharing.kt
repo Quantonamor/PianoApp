@@ -3,6 +3,7 @@ package de.pianotiles.app.data
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.core.io.MidiExporter
 import de.pianotiles.core.model.Song
 import java.io.File
@@ -20,6 +21,6 @@ object Sharing {
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Als MIDI teilen").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(Intent.createChooser(intent, tr("Als MIDI teilen")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

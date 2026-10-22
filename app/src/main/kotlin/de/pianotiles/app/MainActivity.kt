@@ -39,6 +39,10 @@ sealed interface Screen {
 }
 
 class MainActivity : ComponentActivity() {
+    private companion object {
+        const val KEY_SETTINGS_OPEN = "settingsOpen"
+    }
+
     private val backStack = mutableStateListOf<Screen>(Screen.Library)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,14 +53,22 @@ class MainActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-        handleIntent(intent)
+        if (savedInstanceState == null) handleIntent(intent)
+        // After a language change the activity is re-created from the settings screen: stay there.
+        if (savedInstanceState?.getBoolean(KEY_SETTINGS_OPEN) == true) backStack.add(Screen.Settings)
         val app = application as PianoTilesApp
+        app.applyLanguage() // "auto" follows the device language, which may have changed since the app started
         setContent {
             PianoTilesTheme {
                 LaunchedEffect(Unit) { app.songs.load() }
                 Box(Modifier.fillMaxSize().background(PtColors.Background).safeDrawingPadding()) { Navigation() }
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_SETTINGS_OPEN, backStack.lastOrNull() == Screen.Settings)
     }
 
     override fun onNewIntent(intent: Intent) {

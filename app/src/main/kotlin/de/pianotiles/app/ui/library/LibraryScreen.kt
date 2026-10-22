@@ -68,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.pianotiles.app.PianoTilesApp
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Song
@@ -116,13 +117,13 @@ fun LibraryScreen(
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("Meine Bibliothek", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Text("${songs.size} Stücke", style = MaterialTheme.typography.labelMedium, color = PtColors.TextDim)
+                    Text(tr("Meine Bibliothek"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(tr("%s Stücke", songs.size), style = MaterialTheme.typography.labelMedium, color = PtColors.TextDim)
                 }
                 Spacer(Modifier.width(24.dp))
                 TextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
-                    placeholder = { Text("Suchen …") }, leadingIcon = { Icon(Icons.Filled.Search, null) },
+                    placeholder = { Text(tr("Suchen …")) }, leadingIcon = { Icon(Icons.Filled.Search, null) },
                     modifier = Modifier.weight(1f).height(52.dp),
                     shape = RoundedCornerShape(26.dp),
                     colors = TextFieldDefaults.colors(
@@ -132,17 +133,17 @@ fun LibraryScreen(
                 )
                 Spacer(Modifier.width(12.dp))
                 for (o in SortOrder.entries) {
-                    FilterChip(selected = sort == o, onClick = { sort = o }, label = { Text(o.label) }, modifier = Modifier.padding(end = 6.dp))
+                    FilterChip(selected = sort == o, onClick = { sort = o }, label = { Text(tr(o.label)) }, modifier = Modifier.padding(end = 6.dp))
                 }
-                FilterChip(selected = favoritesOnly, onClick = { favoritesOnly = !favoritesOnly }, label = { Text("Favoriten") },
+                FilterChip(selected = favoritesOnly, onClick = { favoritesOnly = !favoritesOnly }, label = { Text(tr("Favoriten")) },
                     leadingIcon = { Icon(Icons.Filled.Favorite, null, Modifier.size(16.dp)) })
-                IconButton(onClick = onHelp) { Icon(Icons.Filled.HelpOutline, "Hilfe") }
-                IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "Einstellungen") }
+                IconButton(onClick = onHelp) { Icon(Icons.Filled.HelpOutline, tr("Hilfe")) }
+                IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, tr("Einstellungen")) }
             }
             if (visible.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        if (songs.isEmpty()) "Noch keine Stücke – importiere ein PDF, eine MIDI- oder MusicXML-Datei." else "Nichts gefunden.",
+                        if (songs.isEmpty()) tr("Noch keine Stücke – importiere ein PDF, eine MIDI- oder MusicXML-Datei.") else tr("Nichts gefunden."),
                         color = PtColors.TextDim,
                     )
                 }
@@ -169,7 +170,7 @@ fun LibraryScreen(
         ExtendedFloatingActionButton(
             onClick = { picker.launch(IMPORT_MIME_TYPES) },
             icon = { Icon(Icons.Filled.Add, null) },
-            text = { Text("Noten importieren") },
+            text = { Text(tr("Noten importieren")) },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
             containerColor = MaterialTheme.colorScheme.primary,
         )
@@ -180,24 +181,24 @@ fun LibraryScreen(
         var composer by remember(s.id) { mutableStateOf(s.composer) }
         AlertDialog(
             onDismissRequest = { renaming = null },
-            title = { Text("Umbenennen") },
+            title = { Text(tr("Umbenennen")) },
             text = {
                 Column {
-                    OutlinedTextField(title, { title = it }, label = { Text("Titel") }, singleLine = true)
-                    OutlinedTextField(composer, { composer = it }, label = { Text("Komponist") }, singleLine = true)
+                    OutlinedTextField(title, { title = it }, label = { Text(tr("Titel")) }, singleLine = true)
+                    OutlinedTextField(composer, { composer = it }, label = { Text(tr("Komponist")) }, singleLine = true)
                 }
             },
-            confirmButton = { TextButton(onClick = { scope.launch { app.songs.save(s.copy(title = title.trim().ifEmpty { s.title }, composer = composer.trim())) }; renaming = null }) { Text("Speichern") } },
-            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Abbrechen") } },
+            confirmButton = { TextButton(onClick = { scope.launch { app.songs.save(s.copy(title = title.trim().ifEmpty { s.title }, composer = composer.trim())) }; renaming = null }) { Text(tr("Speichern")) } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text(tr("Abbrechen")) } },
         )
     }
     deleting?.let { s ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("„${s.title}“ löschen?") },
-            text = { Text("Das Stück und seine Übungsstatistik werden entfernt.") },
-            confirmButton = { TextButton(onClick = { scope.launch { app.songs.delete(s.id) }; deleting = null }) { Text("Löschen", color = PtColors.Miss) } },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Abbrechen") } },
+            title = { Text(tr("„%s“ löschen?", s.title)) },
+            text = { Text(tr("Das Stück und seine Übungsstatistik werden entfernt.")) },
+            confirmButton = { TextButton(onClick = { scope.launch { app.songs.delete(s.id) }; deleting = null }) { Text(tr("Löschen"), color = PtColors.Miss) } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(tr("Abbrechen")) } },
         )
     }
 }
@@ -212,17 +213,17 @@ private fun SongCard(song: Song, onClick: () -> Unit, onFavorite: () -> Unit, on
                 MiniRoll(song, Modifier.fillMaxSize().padding(8.dp))
                 Row(Modifier.align(Alignment.TopEnd)) {
                     IconButton(onClick = onFavorite) {
-                        Icon(if (song.favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, "Favorit", tint = if (song.favorite) PtColors.Miss else PtColors.TextDim)
+                        Icon(if (song.favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, tr("Favorit"), tint = if (song.favorite) PtColors.Miss else PtColors.TextDim)
                     }
                     Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Mehr") }
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, tr("Mehr")) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            DropdownMenuItem(text = { Text("Umbenennen") }, leadingIcon = { Icon(Icons.Filled.TextFields, null) }, onClick = { menu = false; onRename() })
-                            DropdownMenuItem(text = { Text("Noten bearbeiten") }, leadingIcon = { Icon(Icons.Filled.Edit, null) }, onClick = { menu = false; onEdit() })
-                            DropdownMenuItem(text = { Text("Als MIDI teilen") }, leadingIcon = { Icon(Icons.Filled.Share, null) }, onClick = {
+                            DropdownMenuItem(text = { Text(tr("Umbenennen")) }, leadingIcon = { Icon(Icons.Filled.TextFields, null) }, onClick = { menu = false; onRename() })
+                            DropdownMenuItem(text = { Text(tr("Noten bearbeiten")) }, leadingIcon = { Icon(Icons.Filled.Edit, null) }, onClick = { menu = false; onEdit() })
+                            DropdownMenuItem(text = { Text(tr("Als MIDI teilen")) }, leadingIcon = { Icon(Icons.Filled.Share, null) }, onClick = {
                                 menu = false; de.pianotiles.app.data.Sharing.shareMidi(context, song)
                             })
-                            DropdownMenuItem(text = { Text("Löschen") }, leadingIcon = { Icon(Icons.Filled.Delete, null) }, onClick = { menu = false; onDelete() })
+                            DropdownMenuItem(text = { Text(tr("Löschen")) }, leadingIcon = { Icon(Icons.Filled.Delete, null) }, onClick = { menu = false; onDelete() })
                         }
                     }
                 }
@@ -238,7 +239,7 @@ private fun SongCard(song: Song, onClick: () -> Unit, onFavorite: () -> Unit, on
                         Spacer(Modifier.width(3.dp))
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text("${song.measureCount} Takte", fontSize = 11.sp, color = PtColors.TextDim)
+                    Text(tr("%s Takte", song.measureCount), fontSize = 11.sp, color = PtColors.TextDim)
                     Spacer(Modifier.weight(1f))
                     if (song.stats.bestAccuracy > 0) Text("Best: ${song.stats.bestAccuracy} %", fontSize = 11.sp, color = PtColors.Hit)
                 }
@@ -251,7 +252,7 @@ private fun SongCard(song: Song, onClick: () -> Unit, onFavorite: () -> Unit, on
 private fun SourceBadge(source: SongSource, modifier: Modifier) {
     val label = when (source) {
         SongSource.DEMO -> "Demo"; SongSource.MIDI -> "MIDI"; SongSource.MUSICXML -> "MusicXML"
-        SongSource.PDF -> "PDF"; SongSource.MANUAL -> "Eigen"
+        SongSource.PDF -> "PDF"; SongSource.MANUAL -> tr("Eigen")
     }
     Text(label, modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xAA222944)).padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.sp, color = Color.White)
 }

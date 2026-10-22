@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.pianotiles.app.PianoTilesApp
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.importing.LoadedFile
 import de.pianotiles.app.importing.ScoreImporter
 import de.pianotiles.app.importing.ScoreType
@@ -31,7 +32,7 @@ sealed interface ImportState {
 
 class ImportViewModel(app: Application, private val uri: Uri) : AndroidViewModel(app) {
     private val pt = app as PianoTilesApp
-    var state by mutableStateOf<ImportState>(ImportState.Working("Datei wird gelesen …", null))
+    var state by mutableStateOf<ImportState>(ImportState.Working(tr("Datei wird gelesen …"), null))
         private set
 
     private var file: LoadedFile? = null
@@ -49,14 +50,14 @@ class ImportViewModel(app: Application, private val uri: Uri) : AndroidViewModel
                 when (f.type) {
                     ScoreType.PDF -> {
                         val rendered = ScoreImporter.renderPdf(getApplication(), f.bytes) { i, n ->
-                            state = ImportState.Working("Seite ${i + 1} von $n wird gerendert …", i.toFloat() / n)
+                            state = ImportState.Working(tr("Seite %s von %s wird gerendert …", i + 1, n), i.toFloat() / n)
                         }
                         pages = rendered.pages
                         previews = rendered.previews
                         recognize(OmrOptions(title = f.baseName))
                     }
                     else -> {
-                        state = ImportState.Working("Noten werden eingelesen …", null)
+                        state = ImportState.Working(tr("Noten werden eingelesen …"), null)
                         val song = ScoreImporter.importDirect(f)
                         pt.songs.save(song)
                         state = ImportState.Done(song.id, edit = false)
@@ -65,7 +66,7 @@ class ImportViewModel(app: Application, private val uri: Uri) : AndroidViewModel
             } catch (e: Exception) {
                 state = ImportState.Failed(e.message ?: e.javaClass.simpleName)
             } catch (e: OutOfMemoryError) {
-                state = ImportState.Failed("Nicht genug Speicher für dieses PDF. Versuche ein PDF mit weniger Seiten.")
+                state = ImportState.Failed(tr("Nicht genug Speicher für dieses PDF. Versuche ein PDF mit weniger Seiten."))
             }
         }
     }
@@ -73,24 +74,24 @@ class ImportViewModel(app: Application, private val uri: Uri) : AndroidViewModel
     fun recognize(options: OmrOptions) {
         job?.cancel()
         job = viewModelScope.launch {
-            state = ImportState.Working("Noten werden erkannt …", 0f)
+            state = ImportState.Working(tr("Noten werden erkannt …"), 0f)
             try {
                 val result = withContext(Dispatchers.Default) {
                     OmrEngine(options).recognize(pages) { i, n ->
                         val p = if (n == 0) 1f else i.toFloat() / n
-                        viewModelScope.launch(Dispatchers.Main) { state = ImportState.Working("Noten werden erkannt … Seite ${minOf(i + 1, n)} von $n", p) }
+                        viewModelScope.launch(Dispatchers.Main) { state = ImportState.Working(tr("Noten werden erkannt … Seite %s von %s", minOf(i + 1, n), n), p) }
                     }
                 }
                 state = ImportState.Review(result, previews, options)
             } catch (e: Exception) {
-                state = ImportState.Failed("Erkennung fehlgeschlagen: ${e.message}")
+                state = ImportState.Failed(tr("Erkennung fehlgeschlagen: %s", e.message))
             }
         }
     }
 
     fun save(review: ImportState.Review, title: String, bpm: Double, edit: Boolean) {
         viewModelScope.launch {
-            val song: Song = review.result.song.copy(title = title.trim().ifEmpty { "PDF-Import" }, bpm = bpm)
+            val song: Song = review.result.song.copy(title = title.trim().ifEmpty { tr("PDF-Import") }, bpm = bpm)
             file?.let { pt.songs.storePdf(song.id, it.bytes) }
             pt.songs.save(song)
             state = ImportState.Done(song.id, edit)

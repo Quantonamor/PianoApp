@@ -58,6 +58,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 import de.pianotiles.core.model.Pitch
 import de.pianotiles.core.omr.Clef
@@ -74,8 +75,8 @@ fun ImportScreen(uri: Uri, onBack: () -> Unit, onDone: (songId: String, edit: Bo
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück") }
-            Text("Noten importieren", style = MaterialTheme.typography.titleMedium)
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
+            Text(tr("Noten importieren"), style = MaterialTheme.typography.titleMedium)
         }
         when (state) {
             is ImportState.Working -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -92,7 +93,7 @@ fun ImportScreen(uri: Uri, onBack: () -> Unit, onDone: (songId: String, edit: Bo
                     Spacer(Modifier.height(8.dp))
                     Text(state.message)
                     Spacer(Modifier.height(16.dp))
-                    Button(onClick = onBack) { Text("Zurück") }
+                    Button(onClick = onBack) { Text(tr("Zurück")) }
                 }
             }
             is ImportState.Review -> ReviewContent(vm, state)
@@ -114,7 +115,7 @@ private fun ReviewContent(vm: ImportViewModel, review: ImportState.Review) {
         LazyColumn(Modifier.weight(0.62f).fillMaxHeight().padding(8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             itemsIndexed(review.previews) { i, bmp ->
                 Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color.White)) {
-                    Image(bmp.asImageBitmap(), "Seite ${i + 1}", Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+                    Image(bmp.asImageBitmap(), tr("Seite %s", i + 1), Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                     result.pages.getOrNull(i)?.let { page -> Overlay(page, Modifier.matchParentSize()) }
                 }
             }
@@ -123,10 +124,9 @@ private fun ReviewContent(vm: ImportViewModel, review: ImportState.Review) {
         Surface(Modifier.weight(0.38f).fillMaxHeight(), color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
                 val notes = result.song.notes.size
-                Text("$notes Noten in ${result.song.measureCount} Takten erkannt", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(tr("%s Noten in %s Takten erkannt", notes, result.song.measureCount), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Blau = rechte Hand (Violinschlüssel), Orange = linke Hand (Bassschlüssel). Fehlt etwas oder ist falsch, " +
-                        "kannst du es nach dem Speichern im Noten-Editor korrigieren.",
+                    tr("Blau = rechte Hand (Violinschlüssel), Orange = linke Hand (Bassschlüssel). Fehlt etwas oder ist falsch, kannst du es nach dem Speichern im Noten-Editor korrigieren."),
                     style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim,
                 )
                 if (result.warnings.isNotEmpty()) {
@@ -134,42 +134,41 @@ private fun ReviewContent(vm: ImportViewModel, review: ImportState.Review) {
                     for (w in result.warnings) Text("⚠ $w", style = MaterialTheme.typography.bodySmall, color = PtColors.LeftHand)
                 }
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(title, { title = it }, label = { Text("Titel") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(title, { title = it }, label = { Text(tr("Titel")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
-                Text("Tempo: ${bpm.toInt()} BPM (Viertel)")
+                Text(tr("Tempo: %s BPM (Viertel)", bpm.toInt()))
                 Slider(bpm, { bpm = it }, valueRange = 30f..200f)
 
-                Section("Notensystem")
+                Section(tr("Notensystem"))
                 ChipRow(
-                    listOf(StaffLayout.AUTO to "Automatisch", StaffLayout.PIANO to "Klavier (2 Zeilen)", StaffLayout.SINGLE_TREBLE to "Nur Violinschl.", StaffLayout.SINGLE_BASS to "Nur Bassschl."),
+                    listOf(StaffLayout.AUTO to tr("Automatisch"), StaffLayout.PIANO to tr("Klavier (2 Zeilen)"), StaffLayout.SINGLE_TREBLE to tr("Nur Violinschl."), StaffLayout.SINGLE_BASS to tr("Nur Bassschl.")),
                     options.layout,
                 ) { options = options.copy(layout = it) }
 
-                Section("Tonart (erkannt: ${Pitch.keyName(result.keyFifths)})")
+                Section(tr("Tonart (erkannt: %s)", Pitch.keyName(result.keyFifths)))
                 ChipRow(
-                    listOf<Pair<Int?, String>>(null to "Automatisch") + (-6..6).map { it to keyShort(it) },
+                    listOf<Pair<Int?, String>>(null to tr("Automatisch")) + (-6..6).map { it to keyShort(it) },
                     options.keyFifths,
                 ) { options = options.copy(keyFifths = it) }
 
-                Section("Taktart (erkannt: ${result.beatsPerMeasure}/${result.beatUnit})")
+                Section(tr("Taktart (erkannt: %s/%s)", result.beatsPerMeasure, result.beatUnit))
                 ChipRow(
-                    listOf<Pair<Pair<Int, Int>?, String>>(null to "Automatisch", (2 to 4) to "2/4", (3 to 4) to "3/4", (4 to 4) to "4/4", (3 to 8) to "3/8", (6 to 8) to "6/8"),
+                    listOf<Pair<Pair<Int, Int>?, String>>(null to tr("Automatisch"), (2 to 4) to "2/4", (3 to 4) to "3/4", (4 to 4) to "4/4", (3 to 8) to "3/8", (6 to 8) to "6/8"),
                     options.beatsPerMeasure?.let { it to options.beatUnit },
                 ) { options = if (it == null) options.copy(beatsPerMeasure = null, beatUnit = 4) else options.copy(beatsPerMeasure = it.first, beatUnit = it.second) }
 
                 Spacer(Modifier.height(12.dp))
                 OutlinedButton(onClick = { vm.recognize(options.copy(title = title, bpm = bpm.toDouble())) }, enabled = changed, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.Refresh, null); Spacer(Modifier.width(6.dp)); Text("Mit diesen Einstellungen neu erkennen")
+                    Icon(Icons.Filled.Refresh, null); Spacer(Modifier.width(6.dp)); Text(tr("Mit diesen Einstellungen neu erkennen"))
                 }
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { vm.save(review, title, bpm.toDouble(), edit = true) }, enabled = notes > 0, modifier = Modifier.weight(1f)) { Text("Speichern & korrigieren") }
-                    Button(onClick = { vm.save(review, title, bpm.toDouble(), edit = false) }, enabled = notes > 0, modifier = Modifier.weight(1f)) { Text("Speichern & üben") }
+                    OutlinedButton(onClick = { vm.save(review, title, bpm.toDouble(), edit = true) }, enabled = notes > 0, modifier = Modifier.weight(1f)) { Text(tr("Speichern & korrigieren")) }
+                    Button(onClick = { vm.save(review, title, bpm.toDouble(), edit = false) }, enabled = notes > 0, modifier = Modifier.weight(1f)) { Text(tr("Speichern & üben")) }
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Am besten funktionieren sauber gesetzte Noten (z. B. aus MuseScore, LilyPond oder Verlagsausgaben). " +
-                        "Bei Scans: gerade und kontrastreich scannen. Für perfekte Ergebnisse kannst du auch MusicXML oder MIDI importieren.",
+                    tr("Am besten funktionieren sauber gesetzte Noten (z. B. aus MuseScore, LilyPond oder Verlagsausgaben). Bei Scans: gerade und kontrastreich scannen. Für perfekte Ergebnisse kannst du auch MusicXML oder MIDI importieren."),
                     style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim,
                 )
             }

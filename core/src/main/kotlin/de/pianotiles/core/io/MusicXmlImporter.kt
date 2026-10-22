@@ -1,16 +1,17 @@
 package de.pianotiles.core.io
 
+import de.pianotiles.core.i18n.CoreText.t
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
 import de.pianotiles.core.model.Song
 import de.pianotiles.core.model.SongSource
 import de.pianotiles.core.model.SongUtils
-import org.w3c.dom.Element
-import org.xml.sax.InputSource
 import java.io.ByteArrayInputStream
 import java.io.StringReader
 import java.util.zip.ZipInputStream
 import javax.xml.parsers.DocumentBuilderFactory
+import org.w3c.dom.Element
+import org.xml.sax.InputSource
 
 /**
  * Reads MusicXML (score-partwise), plain (.xml/.musicxml) or compressed (.mxl).
@@ -35,11 +36,11 @@ object MusicXmlImporter {
         val doc = try {
             builder.parse(ByteArrayInputStream(xmlBytes))
         } catch (e: Exception) {
-            throw ImportException("MusicXML konnte nicht gelesen werden: ${e.message}", e)
+            throw ImportException(t("MusicXML konnte nicht gelesen werden: ${e.message}", "Could not read MusicXML: ${e.message}"), e)
         }
         val root = doc.documentElement
-        if (root.tagName == "score-timewise") throw ImportException("MusicXML 'timewise' wird nicht unterstützt – bitte als 'partwise' exportieren")
-        if (root.tagName != "score-partwise") throw ImportException("Keine MusicXML-Partitur")
+        if (root.tagName == "score-timewise") throw ImportException(t("MusicXML 'timewise' wird nicht unterstützt – bitte als 'partwise' exportieren", "MusicXML 'timewise' is not supported – please export as 'partwise'"))
+        if (root.tagName != "score-partwise") throw ImportException(t("Keine MusicXML-Partitur", "Not a MusicXML score"))
 
         val title = root.child("work")?.child("work-title")?.text()
             ?: root.child("movement-title")?.text()
@@ -150,7 +151,7 @@ object MusicXmlImporter {
         val allNotes = ArrayList<Note>()
         val pianoParts = notesByPart.filter { it.isNotEmpty() }
         when {
-            pianoParts.isEmpty() -> throw ImportException("Die MusicXML-Datei enthält keine Noten")
+            pianoParts.isEmpty() -> throw ImportException(t("Die MusicXML-Datei enthält keine Noten", "The MusicXML file contains no notes"))
             pianoParts.size == 1 && maxStaves >= 2 ->
                 pianoParts[0].forEach { (n, staff) -> allNotes.add(n.copy(hand = if (staff >= 2) Hand.LEFT else Hand.RIGHT)) }
             pianoParts.size == 2 -> {
@@ -244,7 +245,7 @@ object MusicXmlImporter {
         val rootPath = container?.let { Regex("full-path=\"([^\"]+)\"").find(it)?.groupValues?.get(1) }
         return rootPath?.let { entries[it] }
             ?: entries.entries.firstOrNull { !it.key.startsWith("META-INF") && (it.key.endsWith(".xml") || it.key.endsWith(".musicxml")) }?.value
-            ?: throw ImportException("In der .mxl-Datei wurde keine Partitur gefunden")
+            ?: throw ImportException(t("In der .mxl-Datei wurde keine Partitur gefunden", "No score found in the .mxl file"))
     }
 
     // --- small DOM helpers ---
