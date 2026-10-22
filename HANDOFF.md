@@ -1,26 +1,43 @@
 # Übergabe für die nächste Session („weiter“)
 
-**Wenn der Nutzer nur „weiter“ schreibt:** zuerst Rückmeldungen vom Gerätetest bearbeiten (falls vorhanden),
-sonst `docs/PLAN.md` lesen und den obersten offenen Punkt der **Konvergenz-Schleife** fortsetzen
-(Anleitung: `tools/omr-eval/README.md`). M1–M5 inkl. Editor 2.0, KI-nachbessern und englischer Oberfläche sind
-fertig (Stand 2026-10-22, CI komplett grün); offen sind nur Dinge, die der Nutzer selbst testen muss
-(echtes Gerät, Mikrofon am Klavier, KI-nachbessern mit eigenem API-Schlüssel).
+Stand: **2026-10-22**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI komplett grün**
+(Core-Tests, APK-Build, Emulator-Bedientest). Allgemeine Regeln und Befehle stehen in `CLAUDE.md`.
 
-## Wichtigste Fakten
-- Repo: `quantonamor/pianoapp`, Branch `ccr-257ad710-x5upqq` (alles committed & gepusht).
-- Lokale Umgebung hat **kein Android-SDK** (dl.google.com gesperrt). `./gradlew :core:test` läuft lokal
-  (Core = reines Kotlin). Die App baut **GitHub Actions** (`.github/workflows/android.yml`): Core-Tests,
-  APK (Artefakt `PianoTiles-apk`), Emulator-Bedientest (`ui-test`, Screenshots als Artefakt).
-  Ergebnisse über die GitHub-MCP-Tools (`actions_list`, `get_job_logs`) lesen.
-- App-Quellen syntaktisch prüfen ohne SDK: `tools/omr-eval/kcheck.sh` (braucht Kotlin-Compiler aus dem Gradle-Cache).
-- Doku: `README.md`, `docs/PLAN.md` (Plan/To-dos/Stand), `docs/ARCHITECTURE.md`, `docs/OMR.md`
-  (Erkennung + Qualitätszahlen), `docs/USER_GUIDE.md`, `docs/CHANGELOG.md`.
+## Was als Nächstes zu tun ist (Reihenfolge)
 
-## Offene Punkte direkt vor der Übergabe
-- Emulator-Bedientest ist grün (manuell gesteuerte Compose-Uhr; nach Klicks Uhr vorstellen, z. B. `waitText`/`play`).
-  Bei Fehlern druckt die CI unter „==== FAILED TESTS ====“ die Fehlermeldung.
-- KI-nachbessern nutzt das offizielle Anthropic-Java-SDK im `core`-Modul (`core/ai/`), Modell `claude-opus-5-5`;
-  ohne API-Schlüssel nicht live getestet (nur mit Fake-Reviewer in `AiAndEditTest`).
-- Texte: `tr("deutscher Text")` (App, Wörterbuch `app/i18n/English.kt`) bzw. `CoreText.t(de, en)` (Core).
-  Neue Texte immer mit Übersetzung anlegen.
-- Nutzer testet die App auf seinem Gerät → Rückmeldungen haben Vorrang vor der Schleife.
+1. **Rückmeldungen des Nutzers vom Gerätetest** haben immer Vorrang (Fehler beheben, CI grün halten, dokumentieren).
+2. Sonst: **Konvergenz-Schleife der PDF-Erkennung** fortsetzen (`docs/PLAN.md` → „Konvergenz-Schleife“,
+   Anleitung `tools/omr-eval/README.md`). Konkret:
+   ```bash
+   bash tools/omr-eval/setup.sh                                   # einmal pro Session
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Ausgangswert: 87,6 / 91,1 / 89,5 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r1           # Runde 1: nur 1–2 von 10 PDFs bei 100 %
+   ```
+   Offene Punkte dort (in dieser Reihenfolge): Choräle mit zwei Stimmen pro Notenzeile (Sekunden, gemeinsame
+   Köpfe, Vorzeichen in Akkorden) → Tremolo-Schrägstrich (Salem Hornpipe) → Auftakt in `truth.py` →
+   kleine „8“ am Violinschlüssel bei Verovio. Erst wenn Runde 1 sauber ist: neue Runde
+   (`/tmp/omr-work/lyenv/bin/python tools/omr-eval/round.py 2 <seed>`), **Runde danach ins Repo sichern**
+   (Befehl im README). Zähler „5 Runden hintereinander 100 %“: **0/5**.
+3. Kleinere Ideen, falls Zeit bleibt: Verovio-PDFs mit sehr kleinen Notenköpfen, Hilfe-Text um Editor/KI ergänzen,
+   Deprecation-Warnungen (`Icons.Filled.MenuBook` → AutoMirrored) aufräumen.
+
+## Fertig (nicht neu anfangen)
+- M1–M4 (Fundament, Core, App, Feinschliff) inkl. Backup/Restore, MIDI-Export, PDF neben dem Üben,
+  MusicXML-Wiederholungen/Tempo, Performance.
+- M5: **Editor 2.0** (`app/.../ui/editor/EditorScreen.kt`, `EditorViewModel.kt`, `core/edit/MeasureOps.kt`) und
+  **KI-nachbessern** (`core/ai/AiPrompt.kt`, `core/ai/AiFixer.kt`, `app/.../ui/editor/AiPanel.kt`,
+  Schlüssel in `app/.../data/SecretStore.kt`). Live mit echtem API-Schlüssel noch nie getestet – das macht der
+  Nutzer; bei Fehlermeldungen von ihm dort ansetzen (SDK `com.anthropic:anthropic-java:2.34.0`,
+  Modell `claude-opus-5-5`, strukturierte JSON-Ausgabe, `fallbacks: "default"`).
+- Englische Oberfläche (`app/.../i18n/`, `core/i18n/CoreText.kt`), Umschalter in den Einstellungen.
+
+## Was nur der Nutzer kann
+- Test auf echtem Gerät (APK: GitHub Actions → letzter Lauf → Artefakt `PianoTiles-apk`).
+- Mikrofon mit echtem Klavier feinjustieren (Schwellen in `core/audio/NoteDetector.kt`, Einstellungen).
+- KI-nachbessern mit eigenem Anthropic-API-Schlüssel ausprobieren.
+
+## Umgebung (wichtig)
+- Lokal **kein Android-SDK** → App nur über die CI bauen; `./gradlew :core:test` läuft lokal.
+- GitHub nur über die MCP-Tools (`mcp__github__*`); Job-Logs: `get_job_logs` mit `tail_lines`.
+  Laufstatus geht auch per `curl https://api.github.com/repos/Quantonamor/PianoApp/actions/runs?branch=<branch>`.
+- Hilfsdateien der Auswertung liegen in `/tmp/omr-work` (geht mit dem Container verloren → `setup.sh` legt sie neu an).
