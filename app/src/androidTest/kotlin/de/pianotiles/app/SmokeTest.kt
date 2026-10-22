@@ -61,6 +61,11 @@ class SmokeTest {
         val count = roots.fetchSemanticsNodes(atLeastOneRootRequired = false).size
         val bmp = roots[(count - 1).coerceAtLeast(0)].captureToImage().asAndroidBitmap()
         File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        // small JPEG for the CI log (the full PNGs are only in the artifact)
+        val w = 640
+        Bitmap.createScaledBitmap(bmp, w, (bmp.height * w / bmp.width).coerceAtLeast(1), true).let { small ->
+            File(dir, "$name.small.jpg").outputStream().use { small.compress(Bitmap.CompressFormat.JPEG, 45, it) }
+        }
         reportLayoutProblems(name, File(dir, "layout.txt"))
     }
 
@@ -85,7 +90,7 @@ class SmokeTest {
                         val results = ArrayList<androidx.compose.ui.text.TextLayoutResult>()
                         runCatching { get(results) }
                         results.firstOrNull()?.let { r ->
-                            val cut = r.hasVisualOverflow || (0 until r.lineCount).any { r.isLineEllipsized(it) }
+                            val cut = r.didOverflowWidth || (0 until r.lineCount).any { r.isLineEllipsized(it) }
                             if (cut) lines.add("$screen: CUT '${label.take(40)}' ${b.width.toInt()}x${b.height.toInt()}")
                         }
                     }

@@ -76,6 +76,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
+            adb shell settings put system font_scale 1.3
             ./gradlew :app:connectedDebugAndroidTest --console=plain -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true || (timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots; timeout 60 adb logcat -d | grep -E "AndroidRuntime|FATAL|ANR|Fatal signal" | tail -60; echo "==== FAILED TESTS ===="; find app/build/outputs/androidTest-results -name "*.xml" -exec grep -h -A14 "<failure" {} + | head -80; exit 1)
             timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots || true
       - name: Upload screenshots
@@ -90,10 +91,15 @@ jobs:
         run: |
           [ -d screenshots ] || exit 0
           echo "==== LAYOUT ===="; cat screenshots/layout.txt || true; echo "==== END LAYOUT ===="
-          for f in screenshots/01_library.png screenshots/03_practice_playing.png screenshots/07_editor.png; do
-            [ -f "$f" ] || continue
-            convert "$f" -resize 560x560 -quality 40 /tmp/shot.jpg || continue
-            echo "==== SHOT $(basename "$f") ===="; base64 -w 0 /tmp/shot.jpg; echo; echo "==== END ===="
+          # the most important screens come last: the end of the log is what can be fetched cheaply
+          key="07_editor 01_library 04_wait_mode 03_practice_playing"
+          for f in screenshots/*.small.jpg; do
+            n=$(basename "$f" .small.jpg); case " $key " in *" $n "*) continue;; esac
+            echo "==== SHOT $n ===="; base64 -w 0 "$f"; echo
+          done
+          for n in $key; do
+            [ -f "screenshots/$n.small.jpg" ] || continue
+            echo "==== SHOT $n ===="; base64 -w 0 "screenshots/$n.small.jpg"; echo
           done
       - name: Upload UI test report
         if: always()
