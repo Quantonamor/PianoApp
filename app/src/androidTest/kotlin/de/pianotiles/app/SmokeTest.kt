@@ -105,7 +105,9 @@ class SmokeTest {
 
             // Loop panel
             compose.onNodeWithContentDescription("Schleife an/aus").performClick()
-            compose.onAllNodesWithText("T. ", substring = true)[0].performClick()
+            play(300) // let the manual clock recompose after the toggle
+            val loopChip = compose.onAllNodes(hasText("T. ", substring = true) or hasText("Schleife", substring = false))
+            loopChip[0].performClick()
             waitText("Übungsschleife")
             shot("06_loop")
             compose.onNodeWithText("Fertig").performClick()
