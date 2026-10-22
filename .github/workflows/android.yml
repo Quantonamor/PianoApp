@@ -94,6 +94,7 @@ jobs:
         run: |
           [ -d screenshots ] || exit 0
           echo "==== LAYOUT ===="; cat screenshots/layout.txt || true; echo "==== END LAYOUT ===="
+          [ -f screenshots/threads.txt ] && { echo "==== THREADS ===="; cat screenshots/threads.txt; echo "==== END THREADS ===="; } || true
           # the most important screens come last: the end of the log is what can be fetched cheaply
           key="08c_hands_landscape 08b_hands_playing 07_editor 01_library 01b_library_landscape 03e_landscape_paused 03d_landscape_playing 04_wait_mode 03_practice_playing"
           for f in screenshots/*.small.jpg; do

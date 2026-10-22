@@ -35,6 +35,22 @@ class HandsShotTest {
     @get:Rule val compose = createEmptyComposeRule()
     /** A hanging test fails after 5 minutes with the stack of the stuck thread instead of blocking the CI job. */
     @get:Rule val timeout: Timeout = Timeout.builder().withTimeout(300, TimeUnit.SECONDS).withLookingForStuckThread(true).build()
+    /** On a failure all thread stacks (above all the app's main thread) go to screenshots/threads.txt for the CI log. */
+    @get:Rule val threadDump = object : org.junit.rules.TestWatcher() {
+        override fun failed(e: Throwable?, description: org.junit.runner.Description) {
+            runCatching {
+                val dir = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
+                val text = buildString {
+                    append("== ${description.methodName}: $e\n")
+                    for ((t, st) in Thread.getAllStackTraces()) {
+                        append("-- ${t.name} (${t.state})\n")
+                        st.take(25).forEach { append("    at $it\n") }
+                    }
+                }
+                File(dir, "threads.txt").appendText(text)
+            }
+        }
+    }
     @get:Rule val mic: GrantPermissionRule = GrantPermissionRule.grant(Manifest.permission.RECORD_AUDIO)
 
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
@@ -76,7 +92,10 @@ class HandsShotTest {
         compose.mainClock.autoAdvance = false
         ActivityScenario.launch(MainActivity::class.java).use {
             waitText("Meine Bibliothek")
+            // scrolling needs frames: let the clock run meanwhile (with a paused clock the test waits for idle forever)
+            compose.mainClock.autoAdvance = true
             compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Ode an die Freude"))
+            compose.mainClock.autoAdvance = false
             compose.onAllNodesWithText("Ode an die Freude")[0].performClick()
             waitText("Takt")
             play(1500)
