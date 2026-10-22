@@ -1144,6 +1144,25 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         return (headCols + extra).sortedBy { it.x }
     }
 
+    /**
+     * Two voices on one staff (choral writing: upper voice with stems up, lower voice with stems down, often
+     * sounding together): the columns of each voice, or null when the staff has one voice (where stems simply
+     * turn with the pitch).
+     */
+    private fun splitVoices(cols: List<Column>): Pair<List<Column>, List<Column>>? {
+        val headCols = cols.filter { it.heads.isNotEmpty() }
+        if (headCols.size < 2) return null
+        val together = headCols.count { c -> c.heads.any { it.hasStem && it.stemUp } && c.heads.any { it.hasStem && !it.stemUp } }
+        // one voice never has both stem directions at the same moment
+        if (together < 1 || together < headCols.size * 0.25) return null
+        fun voice(up: Boolean) = headCols.mapNotNull { c ->
+            val hs = c.heads.filter { if (up) !it.hasStem || it.stemUp else it.hasStem && !it.stemUp }
+            if (hs.isEmpty()) null else Column(c.x, hs).also { it.factor = c.factor } // same x as the shared column
+        }
+        val upper = voice(true); val lower = voice(false)
+        return if (upper.isEmpty() || lower.isEmpty()) null else upper to lower
+    }
+
     private fun assemble(systems: List<SystemData>, keyFifths: Int): Pair<Song, List<Int>> {
         val slots = ArrayList<MeasureSlot>()
         for ((si, sys) in systems.withIndex()) {
@@ -1189,7 +1208,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             measureLen = num * 4.0 / den
         } else {
             val sums = slots.drop(1).dropLast(1).ifEmpty { slots }
-                .mapNotNull { s -> s.perStaff.filter { it.isNotEmpty() }.maxOfOrNull { cols -> cols.sumOf { it.advance } } }
+                .mapNotNull { s ->
+                    s.perStaff.filter { it.isNotEmpty() }.maxOfOrNull { cols ->
+                        // two voices on one staff: the length both voices agree on
+                        val split = splitVoices(cols)
+                        val su = split?.first?.sumOf { it.advance }; val sd = split?.second?.sumOf { it.advance }
+                        if (su != null && sd != null && abs(su - sd) < 0.05) su else cols.sumOf { it.advance }
+                    }
+                }
                 .map { (it * 2).roundToInt() / 2.0 }
             // Choose among the usual meters the one most measures add up to (4/4 wins ties; 4/2 must clearly win).
             val counts = sums.groupingBy { it }.eachCount()
@@ -1227,10 +1253,24 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 }
             }
         }
-        for ((mi, slot) in slots.withIndex()) {
-            val ss = slot.staves.first().staff.space
-            slot.perStaff.forEachIndexed { si, cols ->
-                applyTuplets(cols, slot.staves[si].tupletMarks.filter { it > slot.left && it < slot.right }, measureLen, ss)
+        for ((mi, slot0) in slots.withIndex()) {
+            val ss = slot0.staves.first().staff.space
+            slot0.perStaff.forEachIndexed { si, cols ->
+                applyTuplets(cols, slot0.staves[si].tupletMarks.filter { it > slot0.left && it < slot0.right }, measureLen, ss)
+            }
+            // a staff with two voices (stems up / down) whose combined columns do not add up: each voice counts on
+            // its own (it becomes a separate "staff" of the same hand)
+            val slot = run {
+                val per = ArrayList<List<Column>>(); val st = ArrayList<StaffData>()
+                for ((si, cols) in slot0.perStaff.withIndex()) {
+                    val split = if (abs(cols.sumOf { it.advance } - measureLen) > 0.05) splitVoices(cols) else null
+                    if (System.getProperty("omr.trace") != null && abs(cols.sumOf { it.advance } - measureLen) > 0.05) println("VOICES $mi/$si merged=${cols.sumOf { it.advance }} split=${split?.let { "${it.first.map { c -> c.advance }} | ${it.second.map { c -> c.advance }}" }} upDown=${cols.map { c -> c.heads.joinToString("") { h -> if (!h.hasStem) "o" else if (h.stemUp) "u" else "d" } }}")
+                    // one voice adding up is enough: it gives the timing, the other voice is placed by x like other staves
+                    if (split != null && (abs(split.first.sumOf { it.advance } - measureLen) < 0.05 || abs(split.second.sumOf { it.advance } - measureLen) < 0.05)) {
+                        per.add(split.first); st.add(slot0.staves[si]); per.add(split.second); st.add(slot0.staves[si])
+                    } else { per.add(cols); st.add(slot0.staves[si]) }
+                }
+                if (per.size == slot0.perStaff.size) slot0 else MeasureSlot(slot0.system, slot0.left, slot0.right, per, st)
             }
             // a measure longer than the meter by exactly the dot of one note: that "dot" was a staccato or
             // bowing mark (folk music) – drop it
@@ -1278,15 +1318,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             for ((si, cols) in slot.perStaff.withIndex()) {
                 val sd = slot.staves[si]
                 val hand = sd.hand
-                val accidentals = HashMap<Int, Int>()
+                // an accidental holds for its staff position until the bar line – in every voice of the staff
+                val staffAccidentals = slot.perStaff.indices.filter { slot.staves[it] === sd }
+                    .flatMap { i -> slot.perStaff[i].flatMap { it.heads } }.filter { it.accidental != null }.sortedBy { it.cx }
                 for ((ci, col) in cols.withIndex()) {
                     val onset = onsets[si][ci]
                     val nextOnset = onsets[si].getOrNull(ci + 1) ?: length
                     for (h in col.heads.sortedBy { it.cx }) {
-                        h.accidental?.let { accidentals[h.step] = it }
                         val base = sd.clefAt(h.cx).bottomLineDiatonic
                         val diatonic = base + h.step
-                        val alter = accidentals[h.step]
+                        val alter = h.accidental ?: staffAccidentals.lastOrNull { it.step == h.step && it.cx <= h.cx + 0.5 }?.accidental
                         h.pitch = Pitch.fromDiatonic(diatonic, handKeys[hand] ?: keyFifths, alter).coerceIn(Pitch.LOWEST_PIANO, Pitch.HIGHEST_PIANO)
                         val baseDur = h.baseDuration * col.factor
                         val dur = if (si in good || mi == 0 && pickup > 0) baseDur else min(baseDur, max(0.25, nextOnset - onset))
