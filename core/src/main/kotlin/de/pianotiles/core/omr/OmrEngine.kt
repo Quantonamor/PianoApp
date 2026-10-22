@@ -232,6 +232,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val prev = chains.lastOrNull()?.last()
             if (prev != null && connected(img, prev, st)) chains.last().add(st) else chains.add(mutableListOf(st))
         }
+        // Pages with piano systems (connected staff pairs): single unconnected staves are vocal/instrument parts.
+        val hasPiano = chains.any { it.size >= 2 }
+        if (hasPiano && chains.any { it.size == 1 }) {
+            warnings.add("Einzelne Notenzeilen (z. B. Gesang) wurden ignoriert – nur das Klavier wird übernommen")
+            chains.removeAll { it.size == 1 }
+        }
         return chains.map { chain ->
             when {
                 chain.size == 1 -> listOf(chain[0] to Clef.TREBLE)
@@ -247,14 +253,27 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
     /** Two staves belong to one system when a vertical line (system bar line) joins them at the left. */
     private fun connected(img: BitImage, a: Staff, b: Staff): Boolean {
         val y0 = a.bottom.roundToInt(); val y1 = b.top.roundToInt()
-        if (y1 - y0 > a.space * 14) return false
+        if (y1 - y0 > a.space * 22) return false // lyrics can make the gap large
         val xs = min(a.xStart, b.xStart) - (a.space * 2.5).toInt()
         val xe = max(a.xStart, b.xStart) + (a.space * 1.0).toInt()
-        for (x in xs.coerceAtLeast(0)..xe.coerceAtMost(img.width - 1)) {
+        fun joined(x: Int): Boolean {
             var ink = 0
             for (y in y0..y1) if (img[x, y] || img[x - 1, y] || img[x + 1, y]) ink++
-            if (ink >= (y1 - y0 + 1) * 0.92) return true
+            return ink >= (y1 - y0 + 1) * 0.92
         }
+        for (x in xs.coerceAtLeast(0)..xe.coerceAtMost(img.width - 1)) if (joined(x)) return true
+        // curly brace left of the staves: (almost) every row between them has ink just left of the staves
+        val bx0 = (min(a.xStart, b.xStart) - a.space * 2.8).toInt().coerceAtLeast(0)
+        val bx1 = min(a.xStart, b.xStart) - 1
+        if (bx1 > bx0) {
+            var rows = 0
+            for (y in y0..y1) if ((bx0..bx1).any { img[it, y] }) rows++
+            if (rows >= (y1 - y0 + 1) * 0.9) return true
+        }
+        // otherwise a bar line drawn through both staves anywhere in the system
+        val from = max(a.xStart, b.xStart); val to = min(a.xEnd, b.xEnd)
+        var x = from
+        while (x <= to) { if (img[x, (y0 + y1) / 2] && joined(x)) return true; x++ }
         return false
     }
 

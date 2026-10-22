@@ -104,14 +104,15 @@ Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `to
 Stand (2026-10-22):
 - Runde 1 (Choräle BWV 4, 253, 370; Volkslieder Lancashire Clog, Salem Hornpipe): 1 von 10 PDFs bei 100 %,
   Runde-1-Schnitt 93 % Noten / 93 % Rhythmus. **Noch keine Runde vollständig bestanden – Zähler: 0/5.**
-- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): 86 % Noten, 88 % Präzision, 89 % Rhythmus.
+- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **87,1 % Noten, 90,6 % Präzision, 89,4 % Rhythmus**
+  (vorher 86/88/89).
 - Bereits umgesetzt in dieser Schleife: Triolen (Ziffer „3“ + Taktsummen-Prüfung), verbundene
   Taktangaben-Ziffern, verschmolzene Kreuze in der Tonart, Hilfslinien-Ausnahme nur bei gedruckter Linie,
   Vorzeichen-Erkennung über ganze Zeichen, Fehlerarten-Statistik in der Auswertung.
 - **Nächste Schritte (in dieser Reihenfolge):**
-  1. Oktavierter Violinschlüssel (kleine 8 unten): `smallEightBelow()` in `OmrEngine.kt` findet die 8 noch
-     nicht (Trace zeigt Kandidat h≈0,9 w≈0,7 bei bottom+1,6 — Loch-Zählung prüfen). Betrifft „Lift Every Voice“ (31–35 Oktavfehler).
-  2. Zusätzliche Noten (extra) in Beach/Aloha (LilyPond): Herkunft prüfen (Text/Liedtext? Gesangszeilen?).
+  1. ✅ Oktavierter Violinschlüssel (LilyPond erkannt, 57→73 %); bei Verovio wird die kleine 8 noch nicht gefunden.
+  2. ✅ Gesangszeilen ohne Verbindung zum Klavier werden ignoriert; Klaviersysteme werden auch über
+     geschweifte Klammer und durchgezogene Taktstriche erkannt, großer Abstand durch Liedtext erlaubt.
   3. Choräle: zwei Stimmen pro Zeile (Sekunden-Akkorde, gemeinsame Köpfe), Vorzeichen in Akkorden.
   4. Tremolo-Schrägstrich (Salem Hornpipe) als Balken fehlinterpretiert.
   5. Lösung (`truth.py`) bei Auftakten musikalisch korrekt verschieben (music21 füllt Auftakte auf).
