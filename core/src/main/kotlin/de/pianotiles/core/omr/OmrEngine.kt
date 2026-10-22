@@ -1232,6 +1232,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             slot.perStaff.forEachIndexed { si, cols ->
                 applyTuplets(cols, slot.staves[si].tupletMarks.filter { it > slot.left && it < slot.right }, measureLen, ss)
             }
+            // a measure longer than the meter by exactly the dot of one note: that "dot" was a staccato or
+            // bowing mark (folk music) – drop it
+            for (cols in slot.perStaff) {
+                val sum = cols.sumOf { it.advance }
+                if (sum <= measureLen + 0.01) continue
+                cols.lastOrNull { c -> c.heads.isNotEmpty() && c.heads.all { it.dotted } && abs(sum - c.advance / 3 - measureLen) < 0.01 }
+                    ?.heads?.forEach { it.dotted = false }
+            }
             val sums = slot.perStaff.map { cols -> cols.sumOf { it.advance } }
             val good = slot.perStaff.indices.filter { slot.perStaff[it].isNotEmpty() && abs(sums[it] - measureLen) < 0.05 }
             if (System.getProperty("omr.trace") != null) println("SLOT $mi marks=${slot.staves.map { sd -> sd.tupletMarks.filter { it > slot.left && it < slot.right }.map { it.toInt() } }} sys=${slot.system} x=${slot.left.toInt()}-${slot.right.toInt()} L=$measureLen sums=$sums cols=${slot.perStaff.map { c -> c.map { "%.2f".format(it.advance) } }}")
