@@ -10,13 +10,31 @@ Emulators abstürzen lassen („device 'emulator-5554' not found“). Deshalb ze
 einfachen Formen (runde Linien, abgerundete Rechtecke, Kreise). Nach einem Absturz begrenzt `timeout 60` im Workflow
 das Warten von adb (vorher 40 Min. Hänger).
 
+## Rückmeldung des Nutzers vom Gerät (2026-10-22) – in Arbeit
+„Sound nicht gut, beim Abspielen spielt er nichts zusammen, manchmal fehlen Noten; viele Überlappungen der GUI,
+vieles sollte ausblendbar / standardmäßig aus sein.“ Umgesetzt (`429e7c1`):
+- `app/.../audio/Synth.kt` neu: Töne je Tonhöhe vorberechnet (Teiltöne, zweistufiges Abklingen, Saitenpaar,
+  Hammer), Audio-Thread mischt nur noch → Akkorde gleichzeitig; 48 Stimmen, weiches Dämpfen statt Abschneiden;
+  `prepare()` beim Öffnen und vor jedem Akkord. „Fließend“ ohne Mikrofon spielt auch die geübte Hand
+  (`PracticeEngine.playOwnHand`).
+- Übungsbildschirm: Menü „Ansicht“ (Auge) für Hände, Fingersatz, Notennamen, Taktnummern, Metronom; kompakte
+  Kopfzeile auf Handys; Gesten-Hinweis nur vor dem ersten Start; Hände/Fingersatz/Tastennamen standardmäßig aus
+  (neue Pref-Schlüssel `hands2`, `fingers2`, `namesKeys2`).
+- CI: Emulator jetzt Handy (`pixel_6`), Screenshots stehen verkleinert als base64 im Job-Log
+  („==== SHOT name ====“) – damit Überlappungen prüfen (Artefakte lassen sich hier nicht herunterladen).
+**Nächster Schritt:** Screenshots aus dem Log ansehen, weitere Überlappungen (Editor, Bibliothek) beheben;
+Nutzer um erneuten Gerätetest bitten.
+
 ## Danach (Reihenfolge, Details in `docs/PLAN.md` → M6)
 1. Optional „Fingersatz per KI“ (wie `core/ai/AiFixer.kt`, gleicher Schlüssel).
-2. **E) Notenbild `sheet.pdf`** aus der Noten-Datei setzen (einfacher eigener Notensatz mit Takt-Positionen),
-   damit auch MIDI/MusicXML-Stücke ein Notenblatt haben (`SongRepository.storeSheet` existiert schon).
-3. Konvergenz-Schleife der PDF-Erkennung (`docs/PLAN.md`, `tools/omr-eval/README.md`), Zähler 0/5.
+2. Konvergenz-Schleife der PDF-Erkennung (`docs/PLAN.md`, `tools/omr-eval/README.md`), Zähler 0/5. Neue
+   Hinweise aus dem Notensatz-Rundlauf (`EngraveTest`, `-Pengrave.out=<dir>`): Auftakte mit Sechzehntel-Balken
+   werden nicht erkannt (Balken-Lücke wird als hohler Notenkopf gelesen), 2/2 wird als 4/4 gelesen.
 
 ## Fertig in dieser Session
+- **E) Notenbild**: `core/engrave/` (PDF-Schreiber + Notensatz mit Bravura-Symbolen), Stücke ohne Original
+  bekommen `sheet.pdf` + Takt-Positionen (`SongRepository.withEngravedSheet`, `sheet.key`). Test `EngraveTest`.
+- OMR: Tonart-Kreuz, das beim Linien-Entfernen in zwei Hälften zerfällt, wird erkannt (Regression unverändert 87,6/91,1/89,5).
 - **D) 3D-Hände**: `core/hands/AutoFingering.kt` (Viterbi über Parncutt-Kosten; Tonleitern, Fünffinger-Lagen,
   Akkorde, Für Elise links 5-2-1), `core/hands/HandMotion.kt` (Handhaltung über die Zeit, `KeyX`), Tests `HandsTest`.
   App: `ui/practice/HandsOverlay.kt`, Fingerzahlen in `FallingNotes.kt`, Schalter ✋ (`PanTool`) im Übungsbildschirm,
