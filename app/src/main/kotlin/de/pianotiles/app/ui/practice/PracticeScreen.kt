@@ -435,7 +435,7 @@ private fun Overlays(vm: PracticeViewModel) {
             val names = vm.engine.expectedPitches.sorted().joinToString("  ") { Pitch.fullName(it, vm.settings.noteNaming) }
             Text(
                 tr("Spiele: %s", names),
-                Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(10.dp))
+                Modifier.align(Alignment.TopCenter).padding(top = 56.dp).clip(RoundedCornerShape(10.dp))
                     .background(Color(0xAA0E1220)).padding(horizontal = 8.dp, vertical = 2.dp),
                 color = PtColors.Hit, fontWeight = FontWeight.Bold, fontSize = 12.sp,
             )

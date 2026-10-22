@@ -8,6 +8,9 @@
 
 ## Der Übungsbildschirm
 
+Die App funktioniert im Hoch- und im Querformat. Während die Musik läuft, sind nur Noten und Tasten zu sehen
+(oben links Zurück, oben rechts Pause); beim Anhalten erscheinen alle Knöpfe wieder.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ←  Titel / Takt 3 von 16 · 96 BPM  [Warten|Fließend|Anhören] [L|L+R|R] 80% 🎤 📖 👁 ✎ │

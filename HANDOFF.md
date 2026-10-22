@@ -22,8 +22,12 @@ vieles sollte ausblendbar / standardmäßig aus sein.“ Umgesetzt (`429e7c1`):
   (neue Pref-Schlüssel `hands2`, `fingers2`, `namesKeys2`).
 - CI: Emulator jetzt Handy (`pixel_6`), Screenshots stehen verkleinert als base64 im Job-Log
   („==== SHOT name ====“) – damit Überlappungen prüfen (Artefakte lassen sich hier nicht herunterladen).
-**Nächster Schritt:** Screenshots aus dem Log ansehen, weitere Überlappungen (Editor, Bibliothek) beheben;
-Nutzer um erneuten Gerätetest bitten.
+Danach (Referenz-Screenshots des Nutzers: „Artie“/„fallingnoteapp“): neue Optik der fallenden Noten und der
+Klaviatur, Leisten blenden sich beim Spielen aus, Hoch- **und** Querformat (`fullUser`), Bibliothek/Editor schmal.
+**Bilder ansehen:** `mcp__github__get_job_logs` (ui-test-Job, `tail_lines` 500) speichert das Log als Datei →
+`python3 /tmp/claude-0/extract.py <datei>` (Skript: SHOT-Zeilen base64 → JPEG; siehe Verlauf, neu schreiben falls weg)
+→ JPEGs mit Read ansehen. Der Test läuft im Hochformat mit 130 % Schrift und macht zusätzlich Querformat-Bilder.
+**Offen:** Hände-Zeichnung ist noch unschön (standardmäßig aus); Nutzer um erneuten Gerätetest bitten.
 
 ## Danach (Reihenfolge, Details in `docs/PLAN.md` → M6)
 1. Optional „Fingersatz per KI“ (wie `core/ai/AiFixer.kt`, gleicher Schlüssel).

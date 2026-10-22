@@ -214,7 +214,7 @@ class SmokeTest {
 
             // Editor
             compose.onNodeWithContentDescription("Noten bearbeiten").performClick()
-            waitText("Noten bearbeiten –")
+            waitDesc("Rückgängig") // editor (its title is shortened on phones)
             shot("07_editor")
             compose.onNodeWithContentDescription("Zurück").performClick()
             waitText("Takt")

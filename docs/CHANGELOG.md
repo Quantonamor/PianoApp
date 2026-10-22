@@ -12,6 +12,12 @@
   Aufbereitung (Papier finden, Licht ausgleichen, gerade drehen, zuschneiden, skalieren).
 * Bibliothek 2.0: Titelbild, ▶ Abspielen direkt auf der Karte, Fortschrittsring, Regale/Filter, Sortierung nach
   Schwierigkeit, „Weiter üben“, Mehrfachauswahl (teilen/löschen).
+* **Neue Optik nach Vorlagen des Nutzers**: schwarzer Hintergrund, abgerundete leuchtende Notenbalken mit
+  Notennamen unten im Balken, leuchtende Trefferlinie mit Funken, plastische Klaviatur mit rotem Filzstreifen und
+  Oktav-Beschriftung (C2, C3 …); linke Hand blau-violett, rechte Hand orange. Beim Spielen verschwinden die
+  Leisten (kleine Zurück-/Pause-Knöpfe bleiben).
+* **Hoch- und Querformat**: die App dreht sich mit dem Gerät; im Hochformat zweizeilige Kopfzeile, Notenblatt über
+  den fallenden Noten, höhere Tasten; Bibliothek und Editor passen sich schmalen Bildschirmen an.
 * **Klang neu**: klavierähnliche Töne (vorberechnet je Tonhöhe: Teiltöne mit Inharmonizität, zweistufiges
   Abklingen, Saitenpaar, Hammeranschlag); Akkorde erklingen gleichzeitig, bis zu 48 Töne ohne Aussetzer, weiches
   Dämpfen. Im Modus „Fließend“ ohne Mikrofon erklingt auch die geübte Hand.
