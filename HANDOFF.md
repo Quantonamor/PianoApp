@@ -3,17 +3,10 @@
 Stand: **2026-10-22**, Branch `claude/vibrant-faraday-id9x3t` (vorher `ccr-257ad710-x5upqq`, dort CI grün).
 Allgemeine Regeln und Befehle stehen in `CLAUDE.md`. Session wurde wegen Token-Ende vorzeitig beendet.
 
-## ZUERST: CI prüfen und reparieren (wichtig!)
-Der letzte Push enthält viel **neuen App-Code, der lokal nur auf Syntax geprüft ist** (kein Android-SDK).
-CI (`.github/workflows/android.yml`) für diesen Branch ansehen, Compile-Fehler im APK-Build beheben, dann
-Emulator-Test. Betroffene Dateien:
-`app/.../data/SongRepository.kt` (komplett neu: Ordner je Stück, Migration, Pakete, Cover), `data/SheetDocument.kt` (neu),
-`data/Sharing.kt`, `importing/ScoreImporter.kt` (alle Formate + Fotos, braucht `androidx.exifinterface`),
-`ui/importflow/ImportViewModel.kt` + `ImportScreen.kt` (Liste von Uris), `ui/importflow/PhotoCaptureScreen.kt` (neu),
-`ui/library/LibraryScreen.kt` (komplett neu), `ui/practice/SheetPanel.kt`/`PracticeScreen.kt`/`PracticeViewModel.kt`
-(`listen`-Parameter), `ui/editor/EditorViewModel.kt` (SheetDocument statt PdfRenderer), `MainActivity.kt`
-(Screen.Import(uris), Screen.Photos, Practice(listen)), `AndroidManifest.xml`, `res/xml/file_paths.xml`.
-Neue Smoke-Tests in `SmokeTest.kt`: `playFromLibrary`, `importAbc`, `importPhoto`, `packageRoundTrip`.
+## CI-Stand
+Letzter Lauf (Commit `002ac5f`) **komplett grün**: Core-Tests, APK-Build und Emulator-Bedientest inkl. der neuen
+Tests `playFromLibrary`, `importAbc`, `importPhoto`, `packageRoundTrip`. Danach nur noch: Foto-Vorschaubilder
+berücksichtigen die EXIF-Drehung (`PhotoCaptureScreen.kt`) – nach dem Push kurz CI prüfen.
 Englische Übersetzungen der neuen Texte sind eingetragen (`English.kt`, Abschnitt „M6“); bei neuen `tr("…")`-Texten
 weiterhin dort ergänzen.
 

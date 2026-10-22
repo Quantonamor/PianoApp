@@ -122,7 +122,7 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
 
 - [x] Plan
 - [x] Core: MusicXML-Export (inkl. Fingersatz), Paket lesen/schreiben (`core/library/SongPackage.kt`), Tests (`PackageTest`)
-- [x] App: Bibliothek auf Ordner je Stück umstellen (+ automatische Übernahme der alten Dateien), Backup = Pakete *(CI-Build noch ungeprüft)*
+- [x] App: Bibliothek auf Ordner je Stück umstellen (+ automatische Übernahme der alten Dateien), Backup = Pakete
 - [x] Import/Export einzelner Stücke als `.pianotiles` (Teilen, Öffnen aus Dateien/Mail); Import nimmt alle Teile mit
 
 **B) Weitere Formate importieren** (außer PDF/MIDI/MusicXML)
@@ -132,7 +132,7 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
 **C) Noten abfotografieren (Alternative zu PDF)**
 - [x] Core: Foto-Vorbereitung (`PhotoTest`: 88–97 % Übereinstimmung mit dem PDF) (Beleuchtung ausgleichen, Schräglage korrigieren, Rand abschneiden, auf Erkennungsgröße
       skalieren) – getestet mit künstlich „verfotografierten“ Korpus-Seiten
-- [x] App *(CI ungeprüft)*: mehrere Fotos nacheinander aufnehmen oder aus der Galerie wählen, Reihenfolge ändern, dann wie beim PDF
+- [x] App: mehrere Fotos nacheinander aufnehmen oder aus der Galerie wählen, Reihenfolge ändern, dann wie beim PDF
       erkennen; Fotos werden als Original gespeichert
 
 **D) 3D-Hände** – ein-/ausblendbar über der Klaviatur, zeigen welcher Finger welche Taste spielt
@@ -143,8 +143,8 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
 - [ ] Optional „Fingersatz per KI“ (gleicher Schlüssel wie KI-nachbessern) und Fingersatz im Editor ändern
 
 **E) Abspielen & Bibliothek 2.0**
-- [x] *(CI ungeprüft)* Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)
-- [x] *(CI ungeprüft)* Schönere Bibliothek: Titelbild (Original-Seite bzw. Mini-Piano-Roll), Fortschrittsring, Filter nach Quelle,
+- [x] Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)
+- [x] Schönere Bibliothek: Titelbild (Original-Seite bzw. Mini-Piano-Roll), Fortschrittsring, Filter nach Quelle,
       Schwierigkeit, „zuletzt geübt“-Leiste, Mehrfachauswahl zum Exportieren
 - [ ] Notenbild `sheet.pdf` aus der Noten-Datei setzen (auch für MIDI/MusicXML-Stücke ohne Original)
 
