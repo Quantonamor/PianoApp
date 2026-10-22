@@ -10,10 +10,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.rememberTextMeasurer
 import de.pianotiles.core.hands.HandMotion
@@ -37,11 +35,9 @@ fun HandsOverlay(
     modifier: Modifier = Modifier,
 ) {
     val measurer = rememberTextMeasurer(cacheSize = 16)
-    Canvas(
-        modifier.fillMaxSize().clipToBounds()
-            // the whole hand fades as one piece (overlapping fingers do not get darker)
-            .graphicsLayer { alpha = 0.62f; compositingStrategy = CompositingStrategy.Offscreen },
-    ) {
+    // Half transparency comes from the colours themselves: an offscreen layer for the whole hand crashed the
+    // emulator's software renderer.
+    Canvas(modifier.fillMaxSize().clipToBounds()) {
         frame.also { } // redraw every frame
         val layout = KeyLayout(range.first, range.last, size.width)
         val firstWhite = layout.whites.firstOrNull() ?: return@Canvas
@@ -57,6 +53,7 @@ fun HandsOverlay(
     }
 }
 
+private const val HAND_ALPHA = 0.6f
 private val Skin = Color(0xFFF3D3B8)
 private val SkinShade = Color(0xFFB98468)
 
@@ -68,8 +65,8 @@ private fun DrawScope.drawHand(
     val zone = (h - keysH).coerceAtLeast(keysH * 0.25f)
     val dir = if (pose.hand == Hand.RIGHT) 1f else -1f
     val tint = handColor(pose.hand)
-    val light = lerp(Skin, tint, 0.10f)
-    val dark = lerp(SkinShade, handColorDark(pose.hand), 0.15f)
+    val light = lerp(Skin, tint, 0.10f).copy(alpha = HAND_ALPHA)
+    val dark = lerp(SkinShade, handColorDark(pose.hand), 0.15f).copy(alpha = HAND_ALPHA)
     val fingerW = (keyW * 0.48f).coerceIn(7f, 30f)
 
     // fingertips on the keys: front part of white keys, middle of black keys; pressing pulls them in a little
@@ -90,9 +87,9 @@ private fun DrawScope.drawHand(
     val right = maxOf(knuckles[1].x, knuckles[4].x) + fingerW * 0.8f
     val top = keysH + zone * 0.05f
     val palmH = h - top + fingerW * 2
-    drawRoundRect(Color.Black.copy(alpha = 0.25f), Offset(left + fingerW * 0.2f, top + fingerW * 0.3f), Size(right - left, palmH), CornerRadius(fingerW * 1.4f))
+    drawRoundRect(Color.Black.copy(alpha = 0.15f), Offset(left + fingerW * 0.2f, top + fingerW * 0.3f), Size(right - left, palmH), CornerRadius(fingerW * 1.4f))
     drawRoundRect(Brush.verticalGradient(listOf(light, dark), startY = top, endY = h), Offset(left, top), Size(right - left, palmH), CornerRadius(fingerW * 1.4f))
-    drawOval(Color.White.copy(alpha = 0.18f), Offset(left + (right - left) * 0.2f, top + zone * 0.12f), Size((right - left) * 0.5f, zone * 0.35f))
+    drawRoundRect(Color.White.copy(alpha = 0.12f), Offset(left + (right - left) * 0.2f, top + zone * 0.12f), Size((right - left) * 0.5f, zone * 0.3f), CornerRadius(zone * 0.15f))
 
     // fingers: thumb first, then from the outside in so the middle finger lies on top
     for (f in intArrayOf(0, 4, 1, 3, 2)) {
@@ -116,16 +113,16 @@ private fun DrawScope.drawFinger(
     val j2 = Offset(base.x + dx * 0.76f + nx * bend * 0.5f, base.y + dy * 0.76f + ny * bend * 0.5f)
     val segs = listOf(Triple(base, j1, width), Triple(j1, j2, width * 0.9f), Triple(j2, tip, width * 0.8f))
     val shadow = Offset(width * 0.18f, width * 0.28f)
-    for ((a, b, w) in segs) drawLine(Color.Black.copy(alpha = 0.28f), a + shadow, b + shadow, w, StrokeCap.Round)
+    for ((a, b, w) in segs) drawLine(Color.Black.copy(alpha = 0.16f), a + shadow, b + shadow, w, StrokeCap.Round)
     for ((a, b, w) in segs) drawLine(dark, a, b, w, StrokeCap.Round)
     for ((a, b, w) in segs) drawLine(light, a, b, w * 0.7f, StrokeCap.Round)
     // knuckle bumps
-    for (j in listOf(j1, j2)) drawCircle(lerp(light, Color.White, 0.15f), radius = width * 0.36f, center = j)
+    for (j in listOf(j1, j2)) drawCircle(lerp(light, Color.White, 0.15f).copy(alpha = HAND_ALPHA * 0.8f), radius = width * 0.36f, center = j)
     // highlight along the upper side
     val hl = Offset(-width * 0.16f, -width * 0.04f)
-    for ((a, b, w) in segs) drawLine(Color.White.copy(alpha = 0.38f), a + hl, b + hl, w * 0.18f, StrokeCap.Round)
+    for ((a, b, w) in segs) drawLine(Color.White.copy(alpha = 0.3f), a + hl, b + hl, w * 0.18f, StrokeCap.Round)
     // nail
     val nail = Offset(tip.x - dx / len * width * 0.3f, tip.y - dy / len * width * 0.3f)
-    drawRoundRect(Color(0xFFF7E3DA), Offset(nail.x - width * 0.26f, nail.y - width * 0.32f), Size(width * 0.52f, width * 0.5f), CornerRadius(width * 0.2f))
+    drawRoundRect(Color(0xFFF7E3DA).copy(alpha = 0.7f), Offset(nail.x - width * 0.26f, nail.y - width * 0.32f), Size(width * 0.52f, width * 0.5f), CornerRadius(width * 0.2f))
     if (down > 0f) drawCircle(glow.copy(alpha = 0.7f * down), radius = width * 0.7f, center = tip)
 }
