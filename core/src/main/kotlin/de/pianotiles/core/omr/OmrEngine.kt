@@ -1255,6 +1255,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     pickup = sums[nonEmpty[0]]
                     length = pickup
                     onsets = slot.perStaff.map { sequential(it) }
+                } else if (consistent && sums[nonEmpty[0]] < measureLen - 0.05 && sums[nonEmpty[0]] >= measureLen * 0.5) {
+                    // an incomplete measure (e.g. completing the pick-up before a repeat): the notes follow each other
+                    // from the bar line, the missing time is at the end
+                    onsets = slot.perStaff.map { sequential(it) }
                 } else {
                     estimated.add(mi + 1)
                     val firstX = slot.perStaff.flatten().minOfOrNull { it.x } ?: slot.left

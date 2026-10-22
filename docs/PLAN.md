@@ -164,7 +164,9 @@ Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `to
 Stand (2026-10-22):
 - Runde 1 (Choräle BWV 4, 253, 370; Volkslieder Lancashire Clog, Salem Hornpipe): 1 von 10 PDFs bei 100 %,
   Runde-1-Schnitt 93 % Noten / 93 % Rhythmus. **Noch keine Runde vollständig bestanden – Zähler: 0/5.**
-- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **89,3 % Noten, 93,1 % Präzision, 89,8 % Rhythmus**
+- Runde 2 (Choräle BWV 286, 318, 348; Reels Around the World, McDonald's): 3 von 10 PDFs bei 100 %, Schnitt
+  94,0 % Noten / 95,3 % Präzision / 92,9 % Rhythmus. Zähler weiter 0/5.
+- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **89,2 % Noten, 93,0 % Präzision, 90,8 % Rhythmus**
   (vorher 87,6/91,1/89,5, davor 86/88/89).
 - Bereits umgesetzt in dieser Schleife: Triolen (Ziffer „3“ + Taktsummen-Prüfung), verbundene
   Taktangaben-Ziffern, verschmolzene Kreuze in der Tonart, Hilfslinien-Ausnahme nur bei gedruckter Linie,

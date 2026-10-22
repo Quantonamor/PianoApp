@@ -22,6 +22,20 @@ chorales = [p for p in paths if '/bach/bwv' in p and p.endswith(('.mxl', '.xml')
 folk_opus = [p for p in paths if 'essenFolksong' in p or 'oneills1850' in p or 'ryansMammoth' in p]
 used = set(open(os.path.join(W, 'rounds/used.txt')).read().split()) if os.path.exists(os.path.join(W, 'rounds/used.txt')) else set()
 
+def unpad_pickup(lines):
+    """music21 pads a pickup measure to a full bar; the app counts the pickup as its real length."""
+    rows = [l.split() for l in lines]
+    if not rows:
+        return lines
+    on = sorted(set(float(r[1]) for r in rows))
+    first_end = max(float(r[1]) + float(r[2]) for r in rows if float(r[1]) < on[0] + 1e-6)
+    nxt = min((o for o in on if o >= first_end - 1e-6), default=None)
+    if nxt is None or on[0] != 0 or nxt - first_end <= 0.9:
+        return lines
+    gap = nxt - first_end
+    return [f"{r[0]} {float(r[1]) - (gap if float(r[1]) >= nxt - 1e-6 else 0):.4f} {r[2]} {r[3]}" for r in rows]
+
+
 def truth_for(s, d):
     parts = list(s.parts)
     sel = parts[-2:] if len(parts) > 2 else parts
@@ -32,6 +46,7 @@ def truth_for(s, d):
             if nn.duration.isGrace: continue
             for pitch in nn.pitches:
                 lines.append(f"{pitch.midi} {float(nn.offset):.4f} {float(nn.quarterLength):.4f} {hand}")
+    lines = unpad_pickup(lines)
     open(os.path.join(d, 'truth.txt'), 'w').write('\n'.join(lines))
 
 made = 0
