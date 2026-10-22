@@ -4,21 +4,17 @@ Stand: **2026-10-22**, Branch `claude/gifted-dijkstra-m4qa41` (enthält alles vo
 und davor `ccr-257ad710-x5upqq`). Allgemeine Regeln und Befehle stehen in `CLAUDE.md`.
 
 ## CI-Stand
-Core-Tests und APK-Build sind grün. Der Emulator-Bedientest ist nach den Händen (`8400a6d` …) **noch nicht bestätigt
-grün**: In zwei Läufen ist der Emulator selbst auf dem Übungsbildschirm verschwunden („device 'emulator-5554' not
-found“) – Verdacht: die Hände-Zeichnung (`HandsOverlay.kt`) überfordert den Software-Renderer (swiftshader). Danach
-hing `adb pull` 40 Minuten bis zum Job-Timeout; das ist behoben (`timeout 60` vor adb im Workflow).
-Eingrenzung läuft: im Test sind die Hände standardmäßig aus und werden nur in `libraryPracticeEditorSettings`
-eingeschaltet (`148bd3a`). Wenn dieser Lauf grün ist → war Zufall/Infrastruktur; wenn er in genau diesem Test
-abstürzt → Hände-Zeichnung vereinfachen (weniger Pfade/Verläufe, keine `clipToBounds`, Handfläche nicht über den
-Rand hinaus zeichnen).
+Letzter Lauf (`12bafc8`) **komplett grün**: Core-Tests, APK, Emulator-Bedientest mit eingeschalteten Händen.
+Lehre daraus: Die erste Hände-Zeichnung (freie Pfade mit schrägen Farbverläufen) hat den Software-Renderer des
+Emulators abstürzen lassen („device 'emulator-5554' not found“). Deshalb zeichnet `HandsOverlay.kt` nur noch mit
+einfachen Formen (runde Linien, abgerundete Rechtecke, Kreise). Nach einem Absturz begrenzt `timeout 60` im Workflow
+das Warten von adb (vorher 40 Min. Hänger).
 
 ## Danach (Reihenfolge, Details in `docs/PLAN.md` → M6)
-1. CI wie oben klären und grün bekommen.
-2. Optional „Fingersatz per KI“ (wie `core/ai/AiFixer.kt`, gleicher Schlüssel).
-3. **E) Notenbild `sheet.pdf`** aus der Noten-Datei setzen (einfacher eigener Notensatz mit Takt-Positionen),
+1. Optional „Fingersatz per KI“ (wie `core/ai/AiFixer.kt`, gleicher Schlüssel).
+2. **E) Notenbild `sheet.pdf`** aus der Noten-Datei setzen (einfacher eigener Notensatz mit Takt-Positionen),
    damit auch MIDI/MusicXML-Stücke ein Notenblatt haben (`SongRepository.storeSheet` existiert schon).
-4. Konvergenz-Schleife der PDF-Erkennung (`docs/PLAN.md`, `tools/omr-eval/README.md`), Zähler 0/5.
+3. Konvergenz-Schleife der PDF-Erkennung (`docs/PLAN.md`, `tools/omr-eval/README.md`), Zähler 0/5.
 
 ## Fertig in dieser Session
 - **D) 3D-Hände**: `core/hands/AutoFingering.kt` (Viterbi über Parncutt-Kosten; Tonleitern, Fünffinger-Lagen,

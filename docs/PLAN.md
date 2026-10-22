@@ -140,7 +140,8 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
       schwarze Tasten, Akkorde) + Handhaltung über die Zeit (`core/hands/`), Tests (`HandsTest`)
 - [x] App: 3D-Hände (perspektivisch gezeichnet, schattiert, Finger beugen sich beim Anschlag), Fingerzahlen auf den
       fallenden Noten, Schalter „Hände“
-- [ ] Optional „Fingersatz per KI“ (gleicher Schlüssel wie KI-nachbessern) und Fingersatz im Editor ändern
+- [x] Fingersatz im Editor ändern (Chip „Finger n“ bei ausgewählter Note)
+- [ ] Optional „Fingersatz per KI“ (gleicher Schlüssel wie KI-nachbessern)
 
 **E) Abspielen & Bibliothek 2.0**
 - [x] Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)
