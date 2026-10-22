@@ -129,6 +129,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         var keyGuess: Int? = null,
         /** A "C" / cut-time symbol was found: 4 quarter notes per measure. */
         var commonTime: Boolean = false,
+        /** The "C" has a vertical stroke through it (alla breve, 2/2). */
+        var cutTime: Boolean = false,
+        /** Holes in the upper time-signature digit, as relative heights (0 = top … 1 = bottom); null = not read. */
+        var upperDigitHoles: List<Double>? = null,
         /** Accidental glyphs: x0, x1, reference y (height of the note they belong to), type (+1/0/-1). */
         val accGlyphs: MutableList<DoubleArray> = ArrayList(),
         /** x centres of small digits outside the staff (possible tuplet numbers like "3"). */
@@ -400,6 +404,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val timeSigBoxes = ArrayList<IntArray>()
         for (a in glyphs) if (upperDigit(a)) for (c in glyphs) if (lowerDigit(c) && abs(a.cx - c.cx) < ss * 0.8) {
             timeSigBoxes.add(intArrayOf(min(a.minX, c.minX), a.minY, max(a.maxX, c.maxX), c.maxY))
+            // the upper digit tells 2/2 from 4/4 and 6/8 from 3/4 (same measure length): count its holes
+            if (sd.upperDigitHoles == null) {
+                sd.upperDigitHoles = digitHoles(noStaffCrop, a.minX, a.minY, a.maxX, a.maxY, a.height.toDouble(), st.lineThickness)
+            }
         }
         // Both digits joined into one glyph (connected through the middle staff line): tall, centred, wider
         // than a quarter rest, before the first note.
@@ -409,11 +417,20 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 val h = it.height / ss; val w = it.width / ss
                 h in 2.6..4.7 && w in 1.1..2.4 && abs(it.cy + top - st.middle) < ss * 0.6 &&
                     it.maxX + left < firstNoteX && it.cx + left < st.xStart + ss * 14 && it.minX + left > st.xStart + ss * 2.5
-            }.minByOrNull { it.minX }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)) }
+            }.minByOrNull { it.minX }?.let { b ->
+                timeSigBoxes.add(intArrayOf(b.minX, b.minY, b.maxX, b.maxY))
+                // holes in the upper half belong to the upper digit
+                sd.upperDigitHoles = digitHoles(noStaffCrop, b.minX, b.minY, b.maxX, b.maxY, b.height / 2.0, st.lineThickness).filter { it < 1.0 }
+            }
         }
         if (timeSigBoxes.isEmpty()) glyphs.firstOrNull {
             abs(it.cy + top - st.middle) < ss * 0.5 && it.cx + left < st.xStart + ss * 12 && openRight(it)
         }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)); sd.commonTime = true }
+        // alla breve: a "C" with a vertical stroke through it, so taller than the staff
+        if (timeSigBoxes.isEmpty()) Components.find(noStaffCrop).firstOrNull {
+            it.height / ss in 2.6..3.8 && it.width / ss in 0.8..2.2 && abs(it.cy + top - st.middle) < ss * 0.5 &&
+                it.cx + left < st.xStart + ss * 12 && it.cx + left > st.xStart + ss * 2.5 && openRight(it)
+        }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)); sd.commonTime = true; sd.cutTime = true }
         timeSigBoxes.forEach { sd.timeSigs.add(intArrayOf(it[0] + left, it[1] + top, it[2] + left, it[3] + top)) }
         fun inTimeSig(b: Blob) = timeSigBoxes.any { bx -> b.cx >= bx[0] - 2 && b.cx <= bx[2] + 2 && b.cy >= bx[1] - 2 && b.cy <= bx[3] + 2 }
         for ((blobId, b) in blobs.withIndex()) {
@@ -553,6 +570,19 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // 7) Accidentals in front of note heads.
         val usedAcc = HashSet<DoubleArray>()
         for (hd in sd.heads.sortedByDescending { it.x0 }) hd.accidental = accidentalFor(hd, sd, ss, usedAcc)
+    }
+
+    /**
+     * Holes of a digit in [img] (box x0..x1, y0..y1) as heights relative to [digitHeight] from its top. The staff
+     * lines were removed from the image, which cuts the digit's outline where a line crosses it: the cuts are closed
+     * first (dilation by the line thickness).
+     */
+    private fun digitHoles(img: BitImage, x0: Int, y0: Int, x1: Int, y1: Int, digitHeight: Double, lineThickness: Int): List<Double> {
+        val pad = lineThickness + 2
+        val crop = img.crop(x0 - pad, y0 - pad, x1 + pad + 1, y1 + pad + 1).dilate(((lineThickness + 1) / 2).coerceAtLeast(1))
+        return Components.find(crop, ink = false).filter { h ->
+            h.minX > 0 && h.minY > 0 && h.maxX < crop.width - 1 && h.maxY < crop.height - 1 && h.area >= 3
+        }.map { (it.cy - pad) / digitHeight }.sorted()
     }
 
     /**
@@ -1142,8 +1172,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
 
         // Estimate the measure length (in quarter beats).
         val measureLen: Double
-        val num: Int
-        val den: Int
+        var num: Int
+        var den: Int
         if (options.beatsPerMeasure != null) {
             num = options.beatsPerMeasure; den = options.beatUnit
             measureLen = num * 4.0 / den
@@ -1155,10 +1185,17 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val counts = sums.groupingBy { it }.eachCount()
             val candidates = listOf(4.0, 3.0, 2.0, 1.5, 6.0, 4.5, 8.0)
             fun score(c: Double) = (counts[c] ?: 0) * when (c) { 4.0 -> 1.15; 8.0, 4.5 -> 0.7; else -> 1.0 }
-            val common = systems.firstOrNull()?.staves?.any { it.commonTime } == true
+            val first = systems.firstOrNull()?.staves.orEmpty()
+            val common = first.any { it.commonTime }
             val mode = if (common) 4.0 else candidates.maxByOrNull { score(it) }?.takeIf { (counts[it] ?: 0) > 0 } ?: 4.0
             if (abs(mode - Math.round(mode)) < 1e-6) { num = mode.roundToInt(); den = 4 } else { num = (mode * 2).roundToInt(); den = 8 }
             measureLen = num * 4.0 / den
+            // meters of the same length: only clear signs change the default – ¢ = 2/2, a "6" (hole in its lower part) = 6/8.
+            // (A missing hole proves nothing: removing the staff lines can open up a "4".)
+            val holes = first.firstNotNullOfOrNull { it.upperDigitHoles }
+            if (System.getProperty("omr.trace") != null) println("METER mode=$mode common=$common cut=${first.any { it.cutTime }} upperHoles=$holes")
+            if (num == 4 && den == 4 && first.any { it.cutTime }) { num = 2; den = 2 }
+            else if (num == 3 && den == 4 && holes?.size == 1 && holes[0] > 0.55) { num = 6; den = 8 }
         }
 
         val notes = ArrayList<Note>()
