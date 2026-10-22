@@ -2,6 +2,8 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **Schärfere Hände**: gerendert mit 50 % statt 40 % Auflösung (eigener Thread, ~5 ms pro Bild).
+* **Klang**: der Audio-Thread läuft höchstens 0,2 s der Echtzeit voraus (eine nicht blockierende Ausgabe ließ ihn sonst durchdrehen).
 * **Haltepedal**: aus MIDI (Controller 64), MusicXML („Ped.“-Zeichen, auch Pedalwechsel) und MuseScore übernommen; beim
   Abspielen klingen losgelassene Töne bis zum Lösen des Pedals weiter; grüner Streifen „Ped.“ am rechten Rand
   der fallenden Noten; MIDI-Export schreibt das Pedal mit (`PedalTest`).

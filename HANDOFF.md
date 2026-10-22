@@ -21,7 +21,7 @@ Jeder Test hat 5 Min. Timeout; bei Fehlern stehen alle Thread-Stacks im Log („
   Konverter `tools/hands/convert_hand.py`). Software-Rasterizer (Skinning, z-Buffer, Licht, Rand-AA, Schatten,
   Unterarm-Ausblendung); IK je Finger (gedämpftes 2×2-Gauss-Newton über Spreizung/Beugung); die Hand rückt an die
   Tasten, bis Daumen/kleiner Finger reichen (max. 0,4 Mittelfinger-Längen). Fallback: alte SDF-Zeichnung in
-  `HandRenderer.kt`. App rendert mit 40 % Auflösung (`HandsOverlay.kt`).
+  `HandRenderer.kt`. App rendert mit 50 % Auflösung im Hintergrund-Thread (`HandsOverlay.kt`, ~5 ms/Bild am Desktop).
 - **Klang**: Mischer im Core (`core/audio/PianoSound.kt`: `PianoTones` = Salamander-Flügel, 3 Anschlagstufen p/m/f,
   Tonhöhe beim Mischen umgerechnet; `PianoMixer` = Zeitplan für vorausgeplante Töne, Stimmen, Hall, Kompressor).
   `app/.../audio/Synth.kt` dekodiert nur die MP3s (`assets/piano/<p|m|f>_<midi>.mp3`, `tools/samples/make_piano.py`)
