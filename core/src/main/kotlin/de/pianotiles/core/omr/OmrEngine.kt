@@ -152,10 +152,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
     private class SystemData(val staves: List<StaffData>)
 
     private val warnings = ArrayList<String>()
+    private val handKeys = HashMap<Hand, Int>()
     private var firstKey: Int? = null
 
     fun recognize(pages: List<GrayImage>, progress: (Int, Int) -> Unit = { _, _ -> }): OmrResult {
         warnings.clear()
+        handKeys.clear()
         firstKey = null
         val systems = ArrayList<SystemData>()
         val diagnostics = ArrayList<PageDiagnostics>()
@@ -196,6 +198,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val votes = systems.flatMap { it.staves }.mapNotNull { it.keyGuess }
         val voted = votes.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
         val keyFifths = options.keyFifths ?: voted ?: firstKey ?: 0
+        // Upper and lower staves vote separately (as printed); normally both agree with the global key.
+        if (options.keyFifths == null) for (hand in Hand.entries) {
+            val v = systems.flatMap { it.staves }.filter { it.hand == hand }.mapNotNull { it.keyGuess }
+                .groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+            if (v != null) handKeys[hand] = v
+        }
         val (song, estimated) = assemble(systems, keyFifths)
 
         for ((pageIdx, gray) in pages.withIndex()) {
@@ -663,7 +671,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             cy > st.top - ss * 2 && cy < st.bottom + ss * 2 && b.minX + left > st.xStart - 2
         }
         // clef = the tallest glyph at the start of the staff
-        val clef = inStaff.filter { it.minX + left < st.xStart + ss * 2.5 && it.height > ss * 2.2 }.maxByOrNull { it.height } ?: return null
+        // the clef is the tallest *wide* glyph at the start (not the thin system bar line)
+        val clef = inStaff.filter { it.minX + left < st.xStart + ss * 2.5 && it.height > ss * 2.2 && it.width > ss * 0.8 }.maxByOrNull { it.height } ?: return null
         val from = clef.maxX + left + 1
         // stemless "heads" may be artefacts on the key signature itself
         val firstNote = (sd.heads.filter { it.hasStem }.ifEmpty { sd.heads }).minOfOrNull { it.x0 } ?: Int.MAX_VALUE
@@ -679,6 +688,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (h in 1.3..3.6 && w in 1.2..4.5) {
                 // several sharps touching each other: count stroke pairs
                 val st2 = verticalStrokes(img, b, ss * 1.2)
+                if (System.getProperty("omr.trace") != null) println("KEYMULTI x=$x0 w=${"%.2f".format(w)} h=${"%.2f".format(h)} strokes=${st2.map { it - b.minX }}")
                 if (st2.size >= 4 && st2.size % 2 == 0) { sharps += st2.size / 2; keyEnd = maxOf(keyEnd, x1); continue }
             }
             if (h < 1.3 || h > 3.6 || w > 1.5) {
@@ -702,12 +712,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // Nothing playable sits inside the key signature or before the time signature.
         val noHeadsBefore = maxOf(keyEnd, sd.timeSigs.maxOfOrNull { it[2] } ?: -1)
         if (noHeadsBefore > 0) sd.heads.removeAll { it.cx < noHeadsBefore + ss * 0.2 && it.cx > st.xStart && !it.hasStem }
+        if (System.getProperty("omr.trace") != null) println("KEYRESULT sharps=$sharps flats=$flats other=$other from=$from to=$to")
         if (sharps > 0 && flats > 0) return if (sharps >= flats) sharps.coerceAtMost(7) else -flats.coerceAtMost(7)
         return when {
             sharps > 0 -> sharps.coerceAtMost(7)
             flats > 0 -> -flats.coerceAtMost(7)
-            other == 0 -> 0
-            else -> null
+            else -> 0
         }
     }
 
@@ -1200,7 +1210,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         val base = sd.clefAt(h.cx).bottomLineDiatonic
                         val diatonic = base + h.step
                         val alter = accidentals[h.step]
-                        h.pitch = Pitch.fromDiatonic(diatonic, keyFifths, alter).coerceIn(Pitch.LOWEST_PIANO, Pitch.HIGHEST_PIANO)
+                        h.pitch = Pitch.fromDiatonic(diatonic, handKeys[hand] ?: keyFifths, alter).coerceIn(Pitch.LOWEST_PIANO, Pitch.HIGHEST_PIANO)
                         val baseDur = h.baseDuration * col.factor
                         val dur = if (si in good || mi == 0 && pickup > 0) baseDur else min(baseDur, max(0.25, nextOnset - onset))
                         h.duration = dur
