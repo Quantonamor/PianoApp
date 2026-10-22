@@ -307,7 +307,7 @@ class PracticeEngine(val song: Song) {
                 val shouldPlay = mode == PracticeMode.LISTEN || (!hands.includes(n.hand) && accompaniment) ||
                     (mode == PracticeMode.FLOW && playOwnHand && hands.includes(n.hand))
                 val delay = ((n.start - target) / beatsPerSecond).coerceAtLeast(0.0)
-                if (shouldPlay) events.add(EngineEvent.PlayNote(n.pitch, n.velocity, n.duration / beatsPerSecond, n.hand, delay))
+                if (shouldPlay) events.add(EngineEvent.PlayNote(n.pitch, n.velocity, (song.soundingEnd(n) - n.start) / beatsPerSecond, n.hand, delay))
             }
             autoCursor++
         }

@@ -64,5 +64,5 @@ was umgesetzt wurde (✅) und was bewusst offen bleibt (⏳).
 | Übungsstatistik: heute / diese Woche / Tage in Folge | A, C, G | ✅ |
 | Realistischere Hände, besserer Klang, Hoch-/Querformat | alle | ✅ |
 | Lernpfad mit Levels und Lektionen | A, C | ✅ (13 Lektionen, Sterne) |
-| Pedal-Anzeige / Dynamik | D, E | ⏳ |
+| Pedal-Anzeige / Dynamik | D, E | ✅ Pedal (aus MIDI/MusicXML, klingt nach, grüner Streifen „Ped.“); ⏳ Dynamik |
 | Lehrer-Modus (Aufgaben verteilen) | E | ⏳ |

@@ -113,6 +113,15 @@ fun FallingNotes(
             }
         }
 
+        // sustain pedal: a soft green strip on the right edge while it is held, "Ped." where it goes down
+        for (p in song.pedal) {
+            val top = y(p.end); val bottom = y(p.start)
+            if (bottom < 0 || top > h) continue
+            val x0 = size.width - 7f
+            drawRect(PtColors.Hit.copy(alpha = 0.35f), Offset(x0, max(0f, top)), Size(5f, min(h, bottom) - max(0f, top)))
+            if (bottom in 0f..h) drawLabel(measurer, "Ped.", Offset(x0 - 30f, bottom - 16f), PtColors.Hit.copy(alpha = 0.7f), 10)
+        }
+
         // measure lines
         val firstM = song.measureIndexAt(max(0.0, pos))
         var m = max(0, firstM - 1)

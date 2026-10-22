@@ -165,7 +165,7 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
             var t = from
             for (n in ns) {
                 if (n.start > t) { sec += (n.start - t) * 60.0 / s.bpmAt(t); t = n.start }
-                pt.synth.noteOn(n.pitch, n.velocity, n.duration * 60 / s.bpmAt(n.start), sec)
+                pt.synth.noteOn(n.pitch, n.velocity, (s.soundingEnd(n) - n.start) * 60 / s.bpmAt(n.start), sec)
             }
             sec += (to - t) * 60.0 / s.bpmAt(t)
             delay((sec * 1000).toLong().coerceAtMost(30_000))
