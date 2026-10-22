@@ -34,7 +34,7 @@ class SecretStore(context: Context) {
     var apiKey: String?
         get() = runCatching {
             val data = prefs.getString("apiKey", null) ?: return null
-            val iv = Base64.decode(prefs.getString("apiKeyIv", null), Base64.NO_WRAP)
+            val iv = Base64.decode(prefs.getString("apiKeyIv", null) ?: return null, Base64.NO_WRAP)
             val c = Cipher.getInstance("AES/GCM/NoPadding")
             c.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, iv))
             String(c.doFinal(Base64.decode(data, Base64.NO_WRAP)), Charsets.UTF_8)
