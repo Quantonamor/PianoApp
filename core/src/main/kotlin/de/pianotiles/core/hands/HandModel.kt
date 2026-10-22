@@ -279,20 +279,28 @@ object Hand3D {
         // the hand moves towards the keys (fingers more curved) until the thumb and little finger reach as well
         var lift = 0f
         var result: Pair<Array<Affine>, View>? = null
-        for (attempt in 0 until 4) {
+        for (attempt in 0 until 5) {
             val knuckleY = targetTipY + midLen * scale * 0.78f - lift
             val oy = knuckleY - prox.map { p(it, 1) }.average().toFloat() * scale
             val view = View(side, scale, ox, oy)
             var worst = 0f
-            val xf = solve(model, view, tips, side, base) { f, err -> if (f == 0 || f == 4) worst = maxOf(worst, err) }
+            var worstMiddle = 0f
+            val xf = solve(model, view, tips, side, base) { f, err, curl ->
+                if (f == 0 || f == 4) worst = maxOf(worst, err)
+                // a finger that reaches only (nearly) stretched out: the hand should come closer so it stays curved
+                else worstMiddle = maxOf(worstMiddle, err, (0.9f - curl) * midLen * scale * 0.5f)
+            }
             result = xf to view
-            if (worst < keyW * 0.12f || lift > midLen * scale * 0.18f) break
-            lift += worst * 0.9f
+            // thumb or little finger short: move in a little (the fingers curl more); a middle finger short (black key
+            // far in): the whole hand moves forward, as a pianist's does
+            val step = maxOf(if (lift < midLen * scale * 0.18f) worst else 0f, if (lift < midLen * scale * 0.7f) worstMiddle else 0f)
+            if (step < keyW * 0.12f) break
+            lift += step * 0.9f
         }
         return result!!
     }
 
-    private fun solve(model: HandModel, view: View, tips: Array<FloatArray>, side: Float, base: Affine, report: (Int, Float) -> Unit): Array<Affine> {
+    private fun solve(model: HandModel, view: View, tips: Array<FloatArray>, side: Float, base: Affine, report: (Int, Float, Float) -> Unit): Array<Affine> {
         val jp = model.jointPos
         fun p(i: Int, k: Int) = jp[i * 3 + k]
         val nx = side; val ny = 0f; val nz = 0f
@@ -352,7 +360,7 @@ object Hand3D {
             }
             val a = build(spread, curl * sign)
             val t = tipScreen(a)
-            report(f, t[1] - target[1])
+            report(f, t[1] - target[1], curl)
             xf[j0] = a[0]; xf[j1] = a[1]; xf[j2] = a[2]; xf[jt] = a[2]
             if (f == 0) xf[model.joint("thumb-metacarpal")] = a[0]
         }
@@ -544,7 +552,7 @@ object Hand3D {
                     val d = cover[i - width - 1] + cover[i - width + 1] + cover[i + width - 1] + cover[i + width + 1]
                     if (e + d < 8) cov = (4f + 2f * e + d) / 16f
                 }
-                val a = aHand * cov * fbuf[i].let { it * (2f - it) }
+                val a = (aHand + (0.9f - aHand).coerceAtLeast(0f) * pbuf[i].coerceIn(0f, 1f)) * cov * fbuf[i].let { it * (2f - it) }
                 out[i] = ((a * 255).toInt().coerceIn(0, 255) shl 24) or (r.toInt().coerceIn(0, 255) shl 16) or
                     (g.toInt().coerceIn(0, 255) shl 8) or b.toInt().coerceIn(0, 255)
             }

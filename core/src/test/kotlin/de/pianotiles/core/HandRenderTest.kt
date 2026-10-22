@@ -62,6 +62,7 @@ class HandRenderTest {
         // … and a close-up at full resolution to judge the details
         render("closeup", DemoSongs.odeToJoy(), 0.5, 57, 74, 1080, 420, 1f, out)
         render("closeup_left", DemoSongs.odeToJoy(), 0.5, 40, 57, 1080, 420, 1f, out)
+        render("closeup_black", DemoSongs.furElise(), 0.3, 62, 79, 1080, 420, 1f, out)
         // a film strip of the motion (right hand, Ode: E E F G G F E D C), for checking smoothness and key presses
         if (out != null) {
             strip(out, "strip", DemoSongs.odeToJoy(), (0 until 8).map { k -> 2.0 + k * 0.5 }, 59, 69)
