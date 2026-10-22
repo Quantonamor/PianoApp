@@ -84,13 +84,15 @@ jobs:
         with:
           name: ui-screenshots
           path: screenshots/
-      - name: Print small screenshots into the log (readable without artifact download)
+      - name: Layout report and a few small screenshots in the log (readable without artifact download)
         if: always()
         shell: bash
         run: |
           [ -d screenshots ] || exit 0
-          for f in screenshots/*.png; do
-            convert "$f" -resize 1000x1000 -quality 55 /tmp/shot.jpg || continue
+          echo "==== LAYOUT ===="; cat screenshots/layout.txt || true; echo "==== END LAYOUT ===="
+          for f in screenshots/01_library.png screenshots/03_practice_playing.png screenshots/07_editor.png; do
+            [ -f "$f" ] || continue
+            convert "$f" -resize 560x560 -quality 40 /tmp/shot.jpg || continue
             echo "==== SHOT $(basename "$f") ===="; base64 -w 0 /tmp/shot.jpg; echo; echo "==== END ===="
           done
       - name: Upload UI test report

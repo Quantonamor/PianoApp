@@ -60,6 +60,49 @@ class SmokeTest {
         val count = roots.fetchSemanticsNodes(atLeastOneRootRequired = false).size
         val bmp = roots[(count - 1).coerceAtLeast(0)].captureToImage().asAndroidBitmap()
         File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        reportLayoutProblems(name, File(dir, "layout.txt"))
+    }
+
+    /**
+     * Writes overlapping labels/buttons and cut-off texts of the current screen to [out] (the CI prints the file),
+     * so layout problems on phone-sized screens show up without looking at the screenshots.
+     */
+    private fun reportLayoutProblems(screen: String, out: File) {
+        class Item(val label: String, val bounds: androidx.compose.ui.geometry.Rect, val ancestors: Set<Int>, val id: Int)
+        val lines = ArrayList<String>()
+        for (root in compose.onAllNodes(isRoot(), useUnmergedTree = true).fetchSemanticsNodes(atLeastOneRootRequired = false)) {
+            val items = ArrayList<Item>()
+            fun walk(n: androidx.compose.ui.semantics.SemanticsNode, anc: Set<Int>) {
+                val text = n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.joinToString(" ")
+                val desc = n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ContentDescription)?.joinToString(" ")
+                val label = text ?: desc
+                val b = n.boundsInRoot
+                if (label != null && b.width > 1f && b.height > 1f) {
+                    items.add(Item(label.take(40), b, anc, n.id))
+                    // text that does not fit (cut off or ellipsised)
+                    n.config.getOrNull(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult)?.action?.let { get ->
+                        val results = ArrayList<androidx.compose.ui.text.TextLayoutResult>()
+                        runCatching { get(results) }
+                        results.firstOrNull()?.let { r ->
+                            val cut = r.hasVisualOverflow || (0 until r.lineCount).any { r.isLineEllipsized(it) }
+                            if (cut) lines.add("$screen: CUT '${label.take(40)}' ${b.width.toInt()}x${b.height.toInt()}")
+                        }
+                    }
+                }
+                for (c in n.children) walk(c, anc + n.id)
+            }
+            walk(root, emptySet())
+            for (i in items.indices) for (j in i + 1 until items.size) {
+                val a = items[i]; val c = items[j]
+                if (a.id in c.ancestors || c.id in a.ancestors) continue
+                val inter = a.bounds.intersect(c.bounds)
+                if (inter.width <= 0f || inter.height <= 0f) continue
+                val area = inter.width * inter.height
+                val smaller = minOf(a.bounds.width * a.bounds.height, c.bounds.width * c.bounds.height)
+                if (area > 20f && area > smaller * 0.15f) lines.add("$screen: OVERLAP '${a.label}' ${a.bounds.let { "${it.left.toInt()},${it.top.toInt()}-${it.right.toInt()},${it.bottom.toInt()}" }} x '${c.label}' ${c.bounds.let { "${it.left.toInt()},${it.top.toInt()}-${it.right.toInt()},${it.bottom.toInt()}" }}")
+            }
+        }
+        out.appendText(if (lines.isEmpty()) "$screen: ok\n" else lines.distinct().joinToString("\n", postfix = "\n"))
     }
 
     /**
