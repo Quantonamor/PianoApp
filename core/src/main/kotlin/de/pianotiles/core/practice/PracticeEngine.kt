@@ -65,6 +65,8 @@ class PracticeEngine(val song: Song) {
     var countIn: Boolean = true
     /** Play the hand the user does not practise. */
     var accompaniment: Boolean = true
+    /** FLOW mode: also sound the practised hand (useful without microphone, so the whole piece is heard). */
+    var playOwnHand: Boolean = false
     /** Score hits in FLOW mode (requires microphone or on-screen input). */
     var scoreInFlow: Boolean = true
     /** Accept a played note one octave off (microphone harmonics can confuse octaves). */
@@ -284,7 +286,8 @@ class PracticeEngine(val song: Song) {
             val idx = sortedIdx[autoCursor]
             val n = song.notes[idx]
             if (n.start >= position - 1e-9 && inRange(n.start)) {
-                val shouldPlay = mode == PracticeMode.LISTEN || (!hands.includes(n.hand) && accompaniment)
+                val shouldPlay = mode == PracticeMode.LISTEN || (!hands.includes(n.hand) && accompaniment) ||
+                    (mode == PracticeMode.FLOW && playOwnHand && hands.includes(n.hand))
                 if (shouldPlay) events.add(EngineEvent.PlayNote(n.pitch, n.velocity, n.duration / beatsPerSecond, n.hand))
             }
             autoCursor++

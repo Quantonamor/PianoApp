@@ -82,6 +82,22 @@ Töne, die der eigene Synthesizer gerade spielt, ignoriert die App (sonst „hö
   verjüngte Finger, Fingernägel mit Zahl, Schatten auf den Tasten) über der Klaviatur; Fingerzahl auf den fallenden
   Noten in `FallingNotes.kt`.
 
+## Notensatz (sheet.pdf)
+
+* `core/engrave/PdfCanvas.kt`: kleiner Vektor-PDF-Schreiber ohne Abhängigkeiten (Linien, Polygone, Kurven,
+  Helvetica-Text, Notensymbole als gefüllte Umrisse, Flate-komprimiert).
+* `core/engrave/Engraver.kt`: Klaviersatz aus einem `Song` – rechte Hand Violin-, linke Bassschlüssel (je nach
+  Lage), Tonart, Taktart, Notenwerte/Punkte/Haltebögen/Triolen (gleiche Quantisierung wie der MusicXML-Export),
+  Pausen, Akkorde mit Sekunden, Vorzeichen-Spalten, zwei Stimmen je System, Balken je Schlag, Fähnchen,
+  Hilfslinien, Fingersatz, Zeilen-/Seitenumbruch mit Ausgleich. Gespielte Längen werden vorher zu geschriebenen
+  (Ende bis zum nächsten Anschlag bzw. auf das Raster). Liefert `EngravedSheet(pdf, measures)`.
+* Notensymbole: Umrisse aus der Bravura-Schrift (SMuFL, SIL Open Font License,
+  `core/src/main/resources/engrave/`), erzeugt mit `tools/engrave/extract_glyphs.py`.
+* App: `SongRepository.withEngravedSheet` – Stücke ohne Original bekommen beim Speichern/Laden `sheet.pdf` und
+  `Song.sheetMeasures`; `sheet.key` (Fingerabdruck des Gedruckten + `Engraver.VERSION`) verhindert unnötiges Neusetzen.
+* Test `EngraveTest`: Layout aller Demos und Rundlauf setzen → rendern → eigene OMR → Vergleich (Demos, ABC-, MEI-
+  Stücke; Schnitt ~71 %, Ausfälle fast nur Auftakte, die die OMR nicht erkennt). `-Pengrave.out=<dir>` schreibt die PDFs.
+
 ## KI-nachbessern
 
 * `core/ai/AiPrompt.kt`: fester System-Prompt (Rolle Notensatz-Korrektor), Seitentext je PDF-Seite

@@ -14,7 +14,7 @@ data class AppSettings(
     /** Compensates for audio input latency in FLOW mode (ms). */
     val latencyMs: Int = 80,
     val showNamesOnTiles: Boolean = true,
-    val showNamesOnKeys: Boolean = true,
+    val showNamesOnKeys: Boolean = false,
     val countIn: Boolean = true,
     val metronome: Boolean = false,
     val accompaniment: Boolean = true,
@@ -22,9 +22,9 @@ data class AppSettings(
     val volume: Float = 0.8f,
     val showMeasureNumbers: Boolean = true,
     /** Shaded hands over the keyboard showing which finger plays which key. */
-    val showHands: Boolean = true,
+    val showHands: Boolean = false,
     /** Finger numbers on the falling notes. */
-    val showFingers: Boolean = true,
+    val showFingers: Boolean = false,
     /** UI language: "auto" (device language), "de" or "en". */
     val language: String = "auto",
 )
@@ -38,21 +38,22 @@ class SettingsStore(context: Context) {
         val language = prefs.getString("language", null) ?: "auto"
         // Without an explicit choice, English UIs get English note names (… B) instead of German (… H).
         val defaultNaming = if (I18n.isEnglish(language)) NoteNaming.ENGLISH else NoteNaming.GERMAN
+        // "…2" keys: since 0.3 the practice screen starts tidy (hands, fingering, key names hidden), also after an update
         return AppSettings(
             noteNaming = runCatching { NoteNaming.valueOf(prefs.getString("naming", null) ?: defaultNaming.name) }.getOrDefault(defaultNaming),
             lookaheadSeconds = prefs.getFloat("lookahead", 3f),
             micSensitivity = prefs.getFloat("micSensitivity", 0.5f),
             latencyMs = prefs.getInt("latency", 80),
             showNamesOnTiles = prefs.getBoolean("namesTiles", true),
-            showNamesOnKeys = prefs.getBoolean("namesKeys", true),
+            showNamesOnKeys = prefs.getBoolean("namesKeys2", false),
             countIn = prefs.getBoolean("countIn", true),
             metronome = prefs.getBoolean("metronome", false),
             accompaniment = prefs.getBoolean("accompaniment", true),
             octaveTolerant = prefs.getBoolean("octaveTolerant", true),
             volume = prefs.getFloat("volume", 0.8f),
             showMeasureNumbers = prefs.getBoolean("measureNumbers", true),
-            showHands = prefs.getBoolean("hands", true),
-            showFingers = prefs.getBoolean("fingers", true),
+            showHands = prefs.getBoolean("hands2", false),
+            showFingers = prefs.getBoolean("fingers2", false),
             language = language,
         )
     }
@@ -65,15 +66,15 @@ class SettingsStore(context: Context) {
             .putFloat("micSensitivity", s.micSensitivity)
             .putInt("latency", s.latencyMs)
             .putBoolean("namesTiles", s.showNamesOnTiles)
-            .putBoolean("namesKeys", s.showNamesOnKeys)
+            .putBoolean("namesKeys2", s.showNamesOnKeys)
             .putBoolean("countIn", s.countIn)
             .putBoolean("metronome", s.metronome)
             .putBoolean("accompaniment", s.accompaniment)
             .putBoolean("octaveTolerant", s.octaveTolerant)
             .putFloat("volume", s.volume)
             .putBoolean("measureNumbers", s.showMeasureNumbers)
-            .putBoolean("hands", s.showHands)
-            .putBoolean("fingers", s.showFingers)
+            .putBoolean("hands2", s.showHands)
+            .putBoolean("fingers2", s.showFingers)
             .putString("language", s.language)
             .apply()
         _settings.value = s

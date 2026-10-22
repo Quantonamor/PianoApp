@@ -35,14 +35,16 @@ import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -190,43 +192,72 @@ private fun TopBar(
     sheetAvailable: Boolean, sheetShown: Boolean, onSheet: () -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.surface) {
-        Row(
-            Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
-            Column(Modifier.weight(1f)) {
-                Text(vm.song.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                vm.frame.also { }
-                val m = vm.engine.currentMeasure + 1
-                Text(
-                    tr("Takt %s / %s · %s BPM", m, vm.song.measureCount, (vm.song.bpmAt(vm.engine.position) * vm.speed).toInt()),
-                    style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim,
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // phones: mode buttons without text, title shortened; everything optional sits in the "Ansicht" menu
+            val compact = maxWidth < 900.dp
+            Row(
+                Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
+                Column(Modifier.weight(1f)) {
+                    Text(vm.song.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    vm.frame.also { }
+                    val m = vm.engine.currentMeasure + 1
+                    Text(
+                        if (compact) tr("Takt %s / %s", m, vm.song.measureCount)
+                        else tr("Takt %s / %s · %s BPM", m, vm.song.measureCount, (vm.song.bpmAt(vm.engine.position) * vm.speed).toInt()),
+                        style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim, maxLines = 1,
+                    )
+                }
+                Segmented(
+                    listOf(
+                        Triple(PracticeMode.WAIT, Icons.Filled.HourglassTop, tr("Warten")),
+                        Triple(PracticeMode.FLOW, Icons.Filled.PlayArrow, tr("Fließend")),
+                        Triple(PracticeMode.LISTEN, Icons.Filled.Hearing, tr("Anhören")),
+                    ),
+                    selected = vm.mode, onSelect = vm::changeMode, showLabels = !compact,
                 )
+                Spacer(Modifier.width(6.dp))
+                HandSelector(vm.hands, vm::changeHands)
+                Spacer(Modifier.width(6.dp))
+                Chip(text = "${(vm.speed * 100).toInt()} %", icon = if (compact) null else Icons.Filled.Tune, active = vm.speed != 1f, onClick = onSpeed)
+                MicButton(vm.micActive, vm.micLevel, onMic)
+                if (sheetAvailable) ToggleIcon(Icons.Filled.MenuBook, tr("Notenblatt"), sheetShown, onSheet)
+                ViewMenu(vm)
+                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, tr("Noten bearbeiten")) }
             }
-            Segmented(
-                listOf(
-                    Triple(PracticeMode.WAIT, Icons.Filled.HourglassTop, tr("Warten")),
-                    Triple(PracticeMode.FLOW, Icons.Filled.PlayArrow, tr("Fließend")),
-                    Triple(PracticeMode.LISTEN, Icons.Filled.Hearing, tr("Anhören")),
-                ),
-                selected = vm.mode, onSelect = vm::changeMode,
+        }
+    }
+}
+
+/** Everything that can be shown or hidden on the practice screen, in one menu. */
+@Composable
+private fun ViewMenu(vm: PracticeViewModel) {
+    var open by remember { mutableStateOf(false) }
+    val app = LocalContext.current.applicationContext as PianoTilesApp
+    val s by app.settings.settings.collectAsState()
+    Box {
+        IconButton(onClick = { open = true }) { Icon(Icons.Filled.Visibility, tr("Ansicht")) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            @Composable
+            fun item(label: String, checked: Boolean, onToggle: () -> Unit) = DropdownMenuItem(
+                text = { Text(label) },
+                leadingIcon = { Checkbox(checked = checked, onCheckedChange = null) },
+                onClick = { onToggle(); open = false },
             )
-            Spacer(Modifier.width(8.dp))
-            HandSelector(vm.hands, vm::changeHands)
-            Spacer(Modifier.width(8.dp))
-            Chip(text = "${(vm.speed * 100).toInt()} %", icon = Icons.Filled.Tune, active = vm.speed != 1f, onClick = onSpeed)
-            ToggleIcon(Icons.Filled.Timer, tr("Metronom"), vm.metronome, vm::toggleMetronome)
-            MicButton(vm.micActive, vm.micLevel, onMic)
-            ToggleIcon(Icons.Filled.PanTool, tr("Hände"), vm.settings.showHands, vm::toggleHands)
-            if (sheetAvailable) ToggleIcon(Icons.Filled.MenuBook, tr("Notenblatt"), sheetShown, onSheet)
-            IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, tr("Noten bearbeiten")) }
+            item(tr("Hände über der Klaviatur"), s.showHands) { app.settings.update { it.copy(showHands = !it.showHands) } }
+            item(tr("Fingersatz auf den Noten"), s.showFingers) { app.settings.update { it.copy(showFingers = !it.showFingers) } }
+            item(tr("Notennamen auf den Noten"), s.showNamesOnTiles) { app.settings.update { it.copy(showNamesOnTiles = !it.showNamesOnTiles) } }
+            item(tr("Notennamen auf den Tasten"), s.showNamesOnKeys) { app.settings.update { it.copy(showNamesOnKeys = !it.showNamesOnKeys) } }
+            item(tr("Taktnummern"), s.showMeasureNumbers) { app.settings.update { it.copy(showMeasureNumbers = !it.showMeasureNumbers) } }
+            item(tr("Metronom"), vm.metronome) { vm.toggleMetronome() }
         }
     }
 }
 
 @Composable
-private fun <T> Segmented(items: List<Triple<T, ImageVector, String>>, selected: T, onSelect: (T) -> Unit) {
+private fun <T> Segmented(items: List<Triple<T, ImageVector, String>>, selected: T, onSelect: (T) -> Unit, showLabels: Boolean = true) {
     Row(Modifier.clip(RoundedCornerShape(20.dp)).background(PtColors.SurfaceHigh)) {
         for ((value, icon, label) in items) {
             val sel = value == selected
@@ -238,9 +269,11 @@ private fun <T> Segmented(items: List<Triple<T, ImageVector, String>>, selected:
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(icon, null, Modifier.size(16.dp), tint = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim)
-                Spacer(Modifier.width(4.dp))
-                Text(label, fontSize = 12.sp, color = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim, fontWeight = FontWeight.Medium)
+                Icon(icon, label, Modifier.size(16.dp), tint = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim)
+                if (showLabels) {
+                    Spacer(Modifier.width(4.dp))
+                    Text(label, fontSize = 12.sp, color = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim, fontWeight = FontWeight.Medium)
+                }
             }
         }
     }
@@ -327,16 +360,20 @@ private fun Overlays(vm: PracticeViewModel) {
     Box(Modifier.fillMaxSize()) {
         // big play hint when paused
         if (!vm.isPlaying && vm.finished == null) {
+            val firstTime = !vm.hasStarted
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     Modifier.size(72.dp).clip(CircleShape).background(Color(0x553E4A7A)).clickable { vm.togglePlay() },
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.PlayArrow, "Start", Modifier.size(44.dp)) }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    tr("Tippen = Start/Pause · Wischen = Spulen · Doppeltipp = Takt wiederholen"),
-                    style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim,
-                )
+                if (firstTime) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        tr("Tippen = Start/Pause · Wischen = Spulen · Doppeltipp = Takt wiederholen"),
+                        style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim,
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xAA0E1220)).padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                }
             }
         }
         // waiting hint
@@ -344,9 +381,9 @@ private fun Overlays(vm: PracticeViewModel) {
             val names = vm.engine.expectedPitches.sorted().joinToString("  ") { Pitch.fullName(it, vm.settings.noteNaming) }
             Text(
                 tr("Spiele: %s", names),
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp).clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xAA0E1220)).padding(horizontal = 12.dp, vertical = 4.dp),
-                color = PtColors.Hit, fontWeight = FontWeight.Bold,
+                Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xAA0E1220)).padding(horizontal = 8.dp, vertical = 2.dp),
+                color = PtColors.Hit, fontWeight = FontWeight.Bold, fontSize = 12.sp,
             )
         }
         // pass result toast

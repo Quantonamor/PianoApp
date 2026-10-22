@@ -96,7 +96,7 @@ class SmokeTest {
             shot("02_practice_paused")
 
             // Flow mode, play for a while
-            compose.onNodeWithText("Fließend").performClick()
+            compose.onNodeWithContentDescription("Fließend").performClick()
             compose.onAllNodesWithContentDescription("Start")[0].performClick()
             play(4000)
             shot("03_practice_playing")
@@ -110,15 +110,19 @@ class SmokeTest {
             play(300)
 
             // 3D hands over the keyboard: off and on again
-            compose.onNodeWithContentDescription("Hände").performClick()
+            compose.onNodeWithContentDescription("Ansicht").performClick()
+            waitText("Hände über der Klaviatur")
+            shot("03b_view_menu")
+            compose.onNodeWithText("Hände über der Klaviatur").performClick()
             play(300)
-            shot("03b_hands_off")
-            compose.onNodeWithContentDescription("Hände").performClick()
+            shot("03c_hands_off")
+            compose.onNodeWithContentDescription("Ansicht").performClick()
+            waitText("Hände über der Klaviatur").performClick()
             play(300)
 
             // Hands, wait mode with on-screen keys
             compose.onNodeWithText("R").performClick()
-            compose.onNodeWithText("Warten").performClick()
+            compose.onNodeWithContentDescription("Warten").performClick()
             compose.onAllNodesWithContentDescription("Start")[0].performClick()
             play(2500)
             shot("04_wait_mode")

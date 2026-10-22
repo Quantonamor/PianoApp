@@ -43,6 +43,8 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
     var frame by mutableLongStateOf(0L)
         private set
     var isPlaying by mutableStateOf(false); private set
+    /** Becomes true at the first start; the gesture hint is only shown before that. */
+    var hasStarted by mutableStateOf(listen); private set
     var mode by mutableStateOf(if (listen) PracticeMode.LISTEN else PracticeMode.WAIT); private set
     var hands by mutableStateOf(HandSelection.BOTH); private set
     var speed by mutableFloatStateOf(1f); private set
@@ -73,6 +75,10 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         synth.volume = settings.volume
         mic.sensitivity = settings.micSensitivity.toDouble()
         synth.start()
+        engine.playOwnHand = true // until the microphone listens to the real piano
+        // render the piano tones of this piece (and the visible keys) before they are needed
+        val pitches = song.notes.map { it.pitch }.toSet().let { ps -> ps + ((ps.minOrNull() ?: 60) - 12..(ps.maxOrNull() ?: 72) + 12) }
+        Thread({ runCatching { synth.prepare(pitches) } }, "SynthPrepare").apply { priority = Thread.MIN_PRIORITY; start() }
         // "Abspielen" from the library: listen right away
         if (listen) { engine.togglePlay(); isPlaying = engine.isPlaying }
     }
@@ -89,6 +95,8 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
     }
 
     private fun handle(events: List<EngineEvent>) {
+        // a chord's tones must be ready before the first of them is queued, so all start in the same audio block
+        synth.prepare(events.mapNotNull { (it as? EngineEvent.PlayNote)?.pitch })
         for (e in events) when (e) {
             is EngineEvent.PlayNote -> {
                 synth.noteOn(e.pitch, e.velocity, e.durationSeconds)
@@ -141,6 +149,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         finished = null
         engine.togglePlay()
         isPlaying = engine.isPlaying
+        if (isPlaying) hasStarted = true
         if (!isPlaying) synth.allNotesOff()
         bump()
     }
@@ -168,9 +177,11 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         if (on) {
             mic.sensitivity = settings.micSensitivity.toDouble()
             micActive = mic.start()
+            engine.playOwnHand = !micActive
             if (!micActive) message = tr("Mikrofon konnte nicht gestartet werden")
         } else {
             mic.stop(); micActive = false; heardPitches = emptySet(); micLevel = 0f
+            engine.playOwnHand = true
         }
     }
 
@@ -257,8 +268,6 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         pt.appScope.launch { val stored = pt.songs.save(fingered); song = song.copy(sheetMeasures = stored.sheetMeasures) }
         return fingered
     }
-
-    fun toggleHands() { pt.settings.update { it.copy(showHands = !it.showHands) } }
 
     private fun persist(s: Song) {
         song = s

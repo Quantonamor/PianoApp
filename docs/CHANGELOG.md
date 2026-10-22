@@ -12,6 +12,9 @@
   Aufbereitung (Papier finden, Licht ausgleichen, gerade drehen, zuschneiden, skalieren).
 * Bibliothek 2.0: Titelbild, ▶ Abspielen direkt auf der Karte, Fortschrittsring, Regale/Filter, Sortierung nach
   Schwierigkeit, „Weiter üben“, Mehrfachauswahl (teilen/löschen).
+* **Notenblatt für jedes Stück**: Stücke ohne Original (MIDI, MusicXML, ABC, MuseScore, MEI, Demos) bekommen ein
+  selbst gesetztes Notenblatt (`sheet.pdf`, mit Fingersatz und Takt-Positionen) neben den fallenden Noten.
+* PDF-Erkennung: Kreuz der Tonart, das beim Entfernen der Notenlinien in zwei Hälften zerfällt, wird erkannt.
 * **3D-Hände**: gezeichnete, schattierte Hände über der Klaviatur zeigen, welcher Finger welche Taste spielt
   (Schalter ✋ im Übungsbildschirm); Fingerzahlen auf den fallenden Noten. Automatischer Fingersatz für alle Stücke
   ohne Fingersatz (dynamische Programmierung nach Parncutt), Fingersätze aus Dateien bleiben erhalten.

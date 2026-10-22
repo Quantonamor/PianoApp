@@ -147,7 +147,7 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
 - [x] Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)
 - [x] Schönere Bibliothek: Titelbild (Original-Seite bzw. Mini-Piano-Roll), Fortschrittsring, Filter nach Quelle,
       Schwierigkeit, „zuletzt geübt“-Leiste, Mehrfachauswahl zum Exportieren
-- [ ] Notenbild `sheet.pdf` aus der Noten-Datei setzen (auch für MIDI/MusicXML-Stücke ohne Original)
+- [x] Notenbild `sheet.pdf` aus der Noten-Datei setzen (auch für MIDI/MusicXML-Stücke ohne Original) – `core/engrave/`, `EngraveTest`
 
 ### Konvergenz-Schleife der PDF-Erkennung (Wunsch des Nutzers, **läuft**)
 

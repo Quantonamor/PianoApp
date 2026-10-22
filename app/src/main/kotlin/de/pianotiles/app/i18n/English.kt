@@ -18,6 +18,11 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Namen auf den Tasten" to "Names on the keys",
     "Taktnummern" to "Measure numbers",
     "Hände" to "Hands",
+    "Ansicht" to "View",
+    "Notennamen auf den Noten" to "Note names on the notes",
+    "Notennamen auf den Tasten" to "Note names on the keys",
+    "Das Buch-Symbol oben zeigt die Noten neben den fallenden Noten; der aktuelle Takt ist markiert, Antippen springt dorthin. Bei PDFs und Fotos siehst du das Original, bei allen anderen Stücken setzt die App das Notenblatt selbst aus den Noten (mit Fingersatz) und hält es nach Änderungen im Editor aktuell." to
+        "The book icon at the top shows the sheet music next to the falling notes; the current measure is highlighted, tapping jumps there. For PDFs and photos you see the original; for all other pieces the app engraves the sheet itself from the notes (with fingering) and keeps it up to date after changes in the editor.",
     "Finger %s" to "Finger %s",
     "Finger –" to "Finger –",
     "Hände & Fingersatz" to "Hands & fingering",

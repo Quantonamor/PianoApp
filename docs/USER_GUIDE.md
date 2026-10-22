@@ -27,6 +27,10 @@
 * **L / L+R / R**: Welche Hand du übst. Die andere Hand wird blasser dargestellt und mitgespielt.
 * **Tempo** (z. B. „80 %“): antippen zum Einstellen.
 * **⏱**: Metronom. **🎤**: Mikrofon an/aus (grüner Balken = Pegel). **✎**: Noten bearbeiten.
+* **Notenblatt** (Buch-Symbol): zeigt die Noten neben den fallenden Noten, der aktuelle Takt ist markiert, Antippen
+  springt dorthin. Bei PDF- und Foto-Importen ist es das Original; bei allen anderen Stücken (MIDI, MusicXML, ABC,
+  MuseScore, Demos …) setzt die App das Notenblatt selbst aus den Noten – mit Fingersatz – und aktualisiert es nach
+  jeder Änderung im Editor.
 * **✋ Hände**: blendet zwei gezeichnete Hände über der Klaviatur ein bzw. aus. Sie gleiten mit dem Stück mit; der
   Finger, der gerade spielt, drückt seine Taste und leuchtet auf. Die Zahlen auf den Fingernägeln und in den
   fallenden Noten sind der Fingersatz (1 = Daumen … 5 = kleiner Finger). Hat ein Stück keinen Fingersatz, rechnet

@@ -158,6 +158,8 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         val ns = s.notes.filter { it.start >= from - 1e-6 && it.start < to - 1e-6 }.sortedBy { it.start }
         playing = true
         playJob = viewModelScope.launch {
+            // tones rendered beforehand, so chord notes start together
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { pt.synth.prepare(ns.map { it.pitch }.toSet()) }
             var t = from
             for (n in ns) {
                 if (n.start > t) {
