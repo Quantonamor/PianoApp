@@ -3,6 +3,8 @@ package de.pianotiles.app
 import android.Manifest
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
@@ -94,7 +96,7 @@ class HandsShotTest {
             waitText("Meine Bibliothek")
             // scrolling needs frames: let the clock run meanwhile (with a paused clock the test waits for idle forever)
             compose.mainClock.autoAdvance = true
-            compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Ode an die Freude"))
+            compose.onNode(hasScrollToNodeAction() and SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)).performScrollToNode(hasText("Ode an die Freude"))
             compose.mainClock.autoAdvance = false
             compose.onAllNodesWithText("Ode an die Freude")[0].performClick()
             waitText("Takt")
