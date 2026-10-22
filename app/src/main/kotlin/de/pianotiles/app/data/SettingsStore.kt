@@ -102,6 +102,12 @@ class PracticeLogStore(context: Context) {
         _welcomeSeen.value = true
     }
 
+    /** Shows the welcome card again (help screen, tests). */
+    fun showWelcomeAgain() {
+        prefs.edit().putBoolean("welcomeSeen", false).apply()
+        _welcomeSeen.value = false
+    }
+
     companion object {
         fun today(): Long = java.time.LocalDate.now().toEpochDay()
     }

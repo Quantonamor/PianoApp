@@ -57,6 +57,8 @@ class SmokeTest {
         // "Failed to find ColorBuffer"); the hands are checked with the JVM previews of HandRenderTest instead
         app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN, showHands = false) }
         app.applyLanguage()
+        // the welcome card is checked in libraryPracticeEditorSettings only (test order is not fixed)
+        app.practiceLog.dismissWelcome()
     }
 
     private fun shot(name: String) {
@@ -140,6 +142,7 @@ class SmokeTest {
 
     @Test
     fun libraryPracticeEditorSettings() {
+        (context.applicationContext as PianoTilesApp).practiceLog.showWelcomeAgain()
         compose.mainClock.autoAdvance = false
         ActivityScenario.launch(MainActivity::class.java).use {
             waitText("Meine Bibliothek")
