@@ -52,8 +52,9 @@ class SmokeTest {
     @Before
     fun forceGerman() {
         val app = context.applicationContext as PianoTilesApp
-        // hands on: they are one rendered bitmap now (the earlier stroke-drawn hands crashed the emulator renderer)
-        app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN, showHands = true) }
+        // hands off: the per-frame bitmap upload crashes the emulator's software renderer (swiftshader,
+        // "Failed to find ColorBuffer"); the hands are checked with the JVM previews of HandRenderTest instead
+        app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN, showHands = false) }
         app.applyLanguage()
     }
 
