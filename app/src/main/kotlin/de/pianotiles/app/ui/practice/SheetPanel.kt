@@ -57,6 +57,8 @@ fun SheetPanel(
     loopMeasures: IntRange?,
     onSeekMeasure: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** Measures to mark in orange (e.g. "Bitte prüfen" in the editor). */
+    marked: Set<Int> = emptySet(),
 ) {
     val renderer = remember(pdf) {
         runCatching { PdfRenderer(ParcelFileDescriptor.open(pdf, ParcelFileDescriptor.MODE_READ_ONLY)) }.getOrNull()
@@ -120,6 +122,9 @@ fun SheetPanel(
                     for (m in measures) if (m.page == page && m.measure in range) {
                         val (o, s) = rect(m); drawRect(PtColors.Loop.copy(alpha = 0.12f), o, s)
                     }
+                }
+                for (m in measures) if (m.page == page && m.measure in marked) {
+                    val (o, s) = rect(m); drawRect(Color(0x33FF9800), o, s)
                 }
                 current?.let {
                     val (o, s) = rect(it)

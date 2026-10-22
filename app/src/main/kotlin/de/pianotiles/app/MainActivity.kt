@@ -97,7 +97,7 @@ class MainActivity : ComponentActivity() {
             )
             is Screen.Practice -> PracticeScreen(screen.songId, onBack = ::pop, onEdit = { push(Screen.Editor(it)) })
             is Screen.Import -> ImportScreen(screen.uri, onBack = ::pop, onDone = { id, edit -> replaceTop(if (edit) Screen.Editor(id) else Screen.Practice(id)) })
-            is Screen.Editor -> EditorScreen(screen.songId, onBack = ::pop)
+            is Screen.Editor -> EditorScreen(screen.songId, onBack = ::pop, onOpenSettings = { push(Screen.Settings) })
             Screen.Settings -> SettingsScreen(onBack = ::pop)
             Screen.Help -> HelpScreen(onBack = ::pop)
         }

@@ -14,6 +14,8 @@ kotlin {
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    // "KI-nachbessern": official Anthropic SDK (Claude API)
+    api("com.anthropic:anthropic-java:2.34.0")
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
     // renders the PDF test corpus (same role as android.graphics.pdf.PdfRenderer in the app)

@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- only used by "KI-nachbessern" (optional, with the user's own API key) -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".PianoTilesApp"

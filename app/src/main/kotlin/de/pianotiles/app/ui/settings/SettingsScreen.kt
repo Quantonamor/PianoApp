@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -35,9 +36,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import de.pianotiles.app.PianoTilesApp
 import de.pianotiles.app.ui.theme.PtColors
+import de.pianotiles.core.ai.ClaudeReviewer
 import de.pianotiles.core.model.NoteNaming
 import kotlinx.coroutines.launch
 
@@ -80,6 +83,39 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
             Toggle("Oktavfehler tolerieren (empfohlen)", s.octaveTolerant) { v -> upd { it.copy(octaveTolerant = v) } }
 
+            Header("KI-nachbessern (optional)")
+            var keyInput by remember { mutableStateOf("") }
+            var hasKey by remember { mutableStateOf(!app.secrets.apiKey.isNullOrBlank()) }
+            var model by remember { mutableStateOf(app.secrets.aiModel) }
+            Text(
+                "Im Noten-Editor kann eine KI (Claude von Anthropic) importierte Stücke mit dem Original-PDF vergleichen und " +
+                    "Korrekturen vorschlagen. Dafür brauchst du einen eigenen API-Schlüssel (console.anthropic.com → API Keys). " +
+                    "Der Schlüssel wird verschlüsselt (Android-Keystore) nur auf diesem Gerät gespeichert. Gesendet werden nur die " +
+                    "Seitenbilder und Noten des Stücks, das du prüfen lässt – und erst, wenn du im Editor auf „KI-nachbessern“ tippst.",
+                style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim,
+            )
+            if (hasKey) {
+                Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("✓ API-Schlüssel ist gespeichert", color = PtColors.Hit, modifier = Modifier.weight(1f))
+                    OutlinedButton(onClick = { app.secrets.apiKey = null; hasKey = false }) { Text("Schlüssel löschen") }
+                }
+            } else {
+                Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = keyInput, onValueChange = { keyInput = it }, singleLine = true, modifier = Modifier.weight(1f),
+                        label = { Text("API-Schlüssel (sk-ant-…)") }, visualTransformation = PasswordVisualTransformation(),
+                    )
+                    OutlinedButton(onClick = { app.secrets.apiKey = keyInput; keyInput = ""; hasKey = !app.secrets.apiKey.isNullOrBlank() }, enabled = keyInput.isNotBlank()) {
+                        Text("Speichern")
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = model, onValueChange = { model = it; if (it.isNotBlank()) app.secrets.aiModel = it }, singleLine = true,
+                label = { Text("Modell") }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                supportingText = { Text("Standard: ${ClaudeReviewer.DEFAULT_MODEL} (nur ändern, wenn du ein anderes Claude-Modell nutzen möchtest)") },
+            )
+
             Header("Bibliothek")
             val context = LocalContext.current
             var info by remember { mutableStateOf<String?>(null) }
@@ -102,7 +138,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
             info?.let { Text(it, color = PtColors.Hit, modifier = Modifier.padding(top = 6.dp)) }
             Spacer(Modifier.height(32.dp))
-            Text("PianoTiles 0.1 · Alle Daten bleiben auf deinem Gerät.", style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
+            Text("PianoTiles 0.2 · Alle Daten bleiben auf deinem Gerät (außer beim freiwilligen KI-nachbessern).", style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
             Spacer(Modifier.height(32.dp))
         }
     }

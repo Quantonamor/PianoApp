@@ -1256,6 +1256,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             source = SongSource.PDF,
             createdAt = System.currentTimeMillis(),
             pickupBeats = pickup,
+            flaggedMeasures = estimated.map { it - 1 },
         )
         return song to estimated
     }

@@ -74,6 +74,8 @@ data class Song(
     val tempoChanges: List<TempoChange> = emptyList(),
     /** Measure positions in the imported PDF (empty for other sources). */
     val sheetMeasures: List<SheetMeasure> = emptyList(),
+    /** Measures (0-based) the recognition was unsure about ("Bitte prüfen" in the editor). */
+    val flaggedMeasures: List<Int> = emptyList(),
 ) {
     /** Tempo at [beat], following [tempoChanges]. */
     fun bpmAt(beat: Double): Double = tempoChanges.lastOrNull { it.beat <= beat + 1e-9 }?.bpm ?: bpm
