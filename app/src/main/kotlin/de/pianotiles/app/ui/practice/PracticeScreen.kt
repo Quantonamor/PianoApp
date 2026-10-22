@@ -175,7 +175,7 @@ private fun TopBar(vm: PracticeViewModel, onBack: () -> Unit, onEdit: () -> Unit
                 vm.frame.also { }
                 val m = vm.engine.currentMeasure + 1
                 Text(
-                    "Takt $m / ${vm.song.measureCount} · ${(vm.song.bpm * vm.speed).toInt()} BPM",
+                    "Takt $m / ${vm.song.measureCount} · ${(vm.song.bpmAt(vm.engine.position) * vm.speed).toInt()} BPM",
                     style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim,
                 )
             }

@@ -54,6 +54,8 @@ object MusicXmlImporter {
         val notesByPart = ArrayList<List<Pair<Note, Int>>>() // note + staff number
         var maxStaves = 1
         var pickup = 0.0
+        val measures = ArrayList<MeasureInfo>() // from the first part
+        val tempos = ArrayList<de.pianotiles.core.model.TempoChange>()
 
         for (part in parts) {
             val partNotes = ArrayList<Pair<Note, Int>>()
@@ -61,6 +63,18 @@ object MusicXmlImporter {
             var measureStart = 0.0
             val tieOpen = HashMap<Int, Int>() // pitch -> index in partNotes
             for ((measureIdx, measure) in part.children("measure").withIndex()) {
+                val info = MeasureInfo(measureStart)
+                if (parts.indexOf(part) == 0) {
+                    for (bl in measure.children("barline")) {
+                        bl.child("repeat")?.let { r ->
+                            if (r.getAttribute("direction") == "forward") info.forward = true
+                            if (r.getAttribute("direction") == "backward") info.backwardTimes = r.getAttribute("times").toIntOrNull() ?: 2
+                        }
+                        bl.child("ending")?.let { e ->
+                            if (e.getAttribute("type") == "start") e.getAttribute("number").split(',', ' ').mapNotNull { it.trim().toIntOrNull() }.let { info.endings.addAll(it) }
+                        }
+                    }
+                }
                 var cursor = 0.0
                 var lastNoteStart = 0.0
                 var measureLength = 0.0
@@ -77,12 +91,17 @@ object MusicXmlImporter {
                             el.child("staves")?.text()?.toIntOrNull()?.let { maxStaves = maxOf(maxStaves, it) }
                         }
                         "direction" -> {
-                            if (bpm < 0) {
-                                el.child("sound")?.getAttribute("tempo")?.toDoubleOrNull()?.let { bpm = it }
-                                el.descendants("per-minute").firstOrNull()?.text()?.toDoubleOrNull()?.let { if (bpm < 0) bpm = it }
+                            val t = el.child("sound")?.getAttribute("tempo")?.toDoubleOrNull()
+                                ?: el.descendants("per-minute").firstOrNull()?.text()?.toDoubleOrNull()
+                            if (t != null && t > 0) {
+                                if (bpm < 0) bpm = t
+                                if (parts.indexOf(part) == 0) tempos.add(de.pianotiles.core.model.TempoChange(measureStart + cursor, t))
                             }
                         }
-                        "sound" -> if (bpm < 0) el.getAttribute("tempo").toDoubleOrNull()?.let { bpm = it }
+                        "sound" -> el.getAttribute("tempo").toDoubleOrNull()?.let { t ->
+                            if (bpm < 0) bpm = t
+                            if (parts.indexOf(part) == 0) tempos.add(de.pianotiles.core.model.TempoChange(measureStart + cursor, t))
+                        }
                         "backup" -> cursor -= (el.child("duration")?.text()?.toDoubleOrNull() ?: 0.0) / divisions
                         "forward" -> {
                             cursor += (el.child("duration")?.text()?.toDoubleOrNull() ?: 0.0) / divisions
@@ -121,7 +140,9 @@ object MusicXmlImporter {
                     pickup = measureLength
                 }
                 // Pick-up measures are shorter; use the actual content length when it is shorter.
-                measureStart += if (measureLength > 0) measureLength else nominal
+                val len = if (measureLength > 0) measureLength else nominal
+                if (parts.indexOf(part) == 0) { info.length = len; measures.add(info) }
+                measureStart += len
             }
             notesByPart.add(partNotes)
         }
@@ -139,6 +160,7 @@ object MusicXmlImporter {
             else -> allNotes.addAll(SongUtils.splitHands(pianoParts.flatten().map { it.first }))
         }
 
+        val (played, playedTempos) = expandRepeats(allNotes, measures, tempos)
         return Song(
             id = SongUtils.newId(),
             title = title.trim().ifEmpty { fallbackTitle },
@@ -146,11 +168,68 @@ object MusicXmlImporter {
             bpm = if (bpm > 0) bpm else 100.0,
             beatsPerMeasure = beats,
             beatUnit = beatType,
-            notes = SongUtils.dedupe(allNotes),
+            notes = SongUtils.dedupe(played),
+            tempoChanges = playedTempos.distinctBy { it.beat }.filter { it.beat > 1e-6 },
             source = SongSource.MUSICXML,
             createdAt = System.currentTimeMillis(),
             pickupBeats = pickup,
         )
+    }
+
+    private class MeasureInfo(val start: Double) {
+        var length = 0.0
+        var forward = false
+        var backwardTimes = 0
+        val endings = HashSet<Int>()
+    }
+
+    /**
+     * Order in which measures are played: a backward repeat jumps back to the last forward repeat (or the
+     * start); measures inside 1st/2nd endings are only played in the matching pass.
+     */
+    internal fun playOrder(forward: List<Boolean>, backwardTimes: List<Int>, endings: List<Set<Int>>): List<Int> {
+        val order = ArrayList<Int>()
+        var i = 0
+        var sectionStart = 0
+        var pass = 1
+        var jumped = false
+        val made = HashMap<Int, Int>()
+        while (i < forward.size && order.size < 20_000) {
+            if (forward[i] && !jumped) { sectionStart = i; pass = 1 }
+            jumped = false
+            if (endings[i].isNotEmpty() && pass !in endings[i]) { i++; continue }
+            order.add(i)
+            if (backwardTimes[i] > 0 && (made[i] ?: 0) < backwardTimes[i] - 1) {
+                made[i] = (made[i] ?: 0) + 1
+                pass++
+                i = sectionStart
+                jumped = true
+                continue
+            }
+            if (backwardTimes[i] > 0) { sectionStart = i + 1; pass = 1 }
+            i++
+        }
+        return order
+    }
+
+    private fun expandRepeats(
+        notes: List<Note>, measures: List<MeasureInfo>, tempos: List<de.pianotiles.core.model.TempoChange>,
+    ): Pair<List<Note>, List<de.pianotiles.core.model.TempoChange>> {
+        if (measures.none { it.backwardTimes > 0 }) return notes to tempos
+        val order = playOrder(measures.map { it.forward }, measures.map { it.backwardTimes }, measures.map { it.endings })
+        fun measureOf(beat: Double) = measures.indexOfLast { it.start <= beat + 1e-6 }.coerceAtLeast(0)
+        val byMeasure = notes.groupBy { measureOf(it.start) }
+        val temposByMeasure = tempos.groupBy { measureOf(it.beat) }
+        val out = ArrayList<Note>()
+        val outTempos = ArrayList<de.pianotiles.core.model.TempoChange>()
+        var t = 0.0
+        for (m in order) {
+            val info = measures[m]
+            byMeasure[m]?.forEach { out.add(it.copy(start = t + it.start - info.start)) }
+            temposByMeasure[m]?.forEach { outTempos.add(it.copy(beat = t + it.beat - info.start)) }
+            t += info.length
+        }
+        return out to outTempos
     }
 
     private fun extractFromMxl(bytes: ByteArray): ByteArray {

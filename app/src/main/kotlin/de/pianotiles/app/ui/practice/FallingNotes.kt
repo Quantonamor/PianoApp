@@ -53,7 +53,7 @@ fun FallingNotes(
     onDoubleTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val measurer = rememberTextMeasurer()
+    val measurer = rememberTextMeasurer(cacheSize = 512) // note names repeat: measure each once
     val song = engine.song
     val noteOrder = remember(song) { song.notes.indices.sortedBy { song.notes[it].start } }
     Canvas(

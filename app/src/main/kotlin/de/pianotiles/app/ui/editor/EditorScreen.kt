@@ -113,7 +113,7 @@ fun EditorScreen(songId: String, onBack: () -> Unit) {
 
     val lo = max(Pitch.LOWEST_PIANO, (notes.minOfOrNull { it.pitch } ?: 60) - 5)
     val hi = minOf(Pitch.HIGHEST_PIANO, (notes.maxOfOrNull { it.pitch } ?: 72) + 5)
-    val measurer = rememberTextMeasurer()
+    val measurer = rememberTextMeasurer(cacheSize = 512) // note names repeat: measure each once
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Surface(color = MaterialTheme.colorScheme.surface) {

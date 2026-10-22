@@ -25,6 +25,10 @@ data class Note(
     val end: Double get() = start + duration
 }
 
+/** Tempo from [beat] on (quarter notes per minute). */
+@Serializable
+data class TempoChange(val beat: Double, val bpm: Double)
+
 /** A named range of the piece that can be practised as a loop ("Teil A", "Refrain", ...). */
 @Serializable
 data class Section(
@@ -62,7 +66,12 @@ data class Song(
     val stats: SongStats = SongStats(),
     /** Beat offset of the first bar line (for pick-up measures / Auftakt). */
     val pickupBeats: Double = 0.0,
+    /** Tempo changes after the start ([bpm] is the initial tempo). */
+    val tempoChanges: List<TempoChange> = emptyList(),
 ) {
+    /** Tempo at [beat], following [tempoChanges]. */
+    fun bpmAt(beat: Double): Double = tempoChanges.lastOrNull { it.beat <= beat + 1e-9 }?.bpm ?: bpm
+
     /** Length of one measure in quarter-note beats (6/8 → 3.0). */
     val measureLength: Double get() = beatsPerMeasure * 4.0 / beatUnit
 

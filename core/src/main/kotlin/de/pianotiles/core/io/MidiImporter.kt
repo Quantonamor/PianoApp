@@ -30,6 +30,7 @@ object MidiImporter {
         val tpq = division.toDouble().coerceAtLeast(1.0)
 
         var tempoMicros = -1L
+        val tempoEvents = ArrayList<Pair<Long, Long>>()
         var tsNum = 4
         var tsDen = 4
         var keyFifths = 0
@@ -61,8 +62,11 @@ object MidiImporter {
                         val l = r.vlq().toInt()
                         val data = r.bytes(l)
                         when (type) {
-                            0x51 -> if (tempoMicros < 0 && l >= 3) tempoMicros =
-                                ((data[0].toLong() and 0xFF) shl 16) or ((data[1].toLong() and 0xFF) shl 8) or (data[2].toLong() and 0xFF)
+                            0x51 -> if (l >= 3) {
+                                val us = ((data[0].toLong() and 0xFF) shl 16) or ((data[1].toLong() and 0xFF) shl 8) or (data[2].toLong() and 0xFF)
+                                if (tempoMicros < 0) tempoMicros = us
+                                if (us > 0) tempoEvents.add(tick to us)
+                            }
                             0x58 -> if (l >= 2) { tsNum = data[0].toInt() and 0xFF; tsDen = 1 shl (data[1].toInt() and 0xFF) }
                             0x59 -> if (l >= 1) keyFifths = data[0].toInt()
                             0x03 -> {
@@ -113,6 +117,9 @@ object MidiImporter {
             beatsPerMeasure = tsNum,
             beatUnit = tsDen,
             notes = SongUtils.dedupe(result),
+            tempoChanges = tempoEvents.sortedBy { it.first }.filter { it.first > 0 }
+                .map { de.pianotiles.core.model.TempoChange(it.first / tpq, Math.round(600_000_000.0 / it.second) / 10.0) }
+                .distinctBy { it.beat },
             source = SongSource.MIDI,
             createdAt = System.currentTimeMillis(),
         )

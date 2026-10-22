@@ -128,4 +128,30 @@ class ImportTest {
         val song = MusicXmlImporter.import(bos.toByteArray(), "x")
         assertTrue(song.notes.isNotEmpty())
     }
+
+    @Test
+    fun repeatsAndEndings() {
+        // | A :| -> A A ; |: B | 1. C :| 2. D | -> B C B D
+        val order = MusicXmlImporter.playOrder(
+            forward = listOf(false, true, false, false),
+            backwardTimes = listOf(0, 0, 2, 0),
+            endings = listOf(emptySet(), emptySet(), setOf(1), setOf(2)),
+        )
+        assertEquals(listOf(0, 1, 2, 1, 3), order)
+        val simple = MusicXmlImporter.playOrder(listOf(false, false), listOf(2, 0), listOf(emptySet(), emptySet()))
+        assertEquals(listOf(0, 0, 1), simple)
+    }
+
+    @Test
+    fun musicXmlRepeatIsExpanded() {
+        val rep = xml.replace("""<measure number="1">""", """<measure number="1"><barline location="left"><repeat direction="forward"/></barline>""")
+            .replace("""<note><rest/><duration>4</duration><staff>1</staff></note>
+    </measure>""", """<note><rest/><duration>4</duration><staff>1</staff></note>
+      <barline location="right"><repeat direction="backward"/></barline>
+    </measure>""")
+        val song = MusicXmlImporter.import(rep.toByteArray(), "x")
+        // measures 1+2 (6 beats after the 1-beat pick-up) are played twice
+        assertEquals(2, song.notes.count { it.pitch == 66 })
+        assertTrue(song.notes.any { it.pitch == 66 && kotlin.math.abs(it.start - 9.0) < 1e-6 })
+    }
 }

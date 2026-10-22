@@ -135,7 +135,7 @@ class PracticeEngine(val song: Song) {
         return if (total == 0) 100 else (100.0 * hitSteps / total).roundToInt()
     }
 
-    fun secondsToBeats(seconds: Double) = seconds * song.bpm * speed / 60.0
+    fun secondsToBeats(seconds: Double) = seconds * song.bpmAt(position) * speed / 60.0
 
     private fun preRollBeats(): Double = song.measureLength.coerceAtMost(4.0) * 0.5
 
@@ -231,7 +231,7 @@ class PracticeEngine(val song: Song) {
         val events = ArrayList<EngineEvent>()
         if (!isPlaying || dtSeconds <= 0) return events
         practiceSeconds += dtSeconds
-        val beatsPerSecond = song.bpm * speed / 60.0
+        val beatsPerSecond = song.bpmAt(position) * speed / 60.0
         var delta = dtSeconds * beatsPerSecond
 
         if (countInRemaining > 0) {

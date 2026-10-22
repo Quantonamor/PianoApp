@@ -36,7 +36,7 @@ fun Keyboard(
     onKeyUp: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val measurer = rememberTextMeasurer()
+    val measurer = rememberTextMeasurer(cacheSize = 512) // note names repeat: measure each once
     Canvas(
         modifier
             .fillMaxSize()
