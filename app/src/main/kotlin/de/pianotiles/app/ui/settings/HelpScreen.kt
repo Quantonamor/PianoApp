@@ -32,6 +32,8 @@ private val topics = listOf(
         "Wähle oben L (links), R (rechts) oder L+R. Die andere Hand wird leiser angezeigt und – wenn eingeschaltet – automatisch mitgespielt.",
     "Notenblatt" to
         "Das Buch-Symbol oben zeigt die Noten neben den fallenden Noten; der aktuelle Takt ist markiert, Antippen springt dorthin. Bei PDFs und Fotos siehst du das Original, bei allen anderen Stücken setzt die App das Notenblatt selbst aus den Noten (mit Fingersatz) und hält es nach Änderungen im Editor aktuell.",
+    "Akkorde & Halten" to
+        "Akkorde zählen nur, wenn ihre Tasten zusammen angeschlagen oder gemeinsam gehalten werden. Musst du eine Taste loslassen, während eine andere weiterklingt, wird sie weiß mit Pfeil nach oben markiert („Loslassen“). Lässt du eine Note zu früh los, leuchtet ihre Taste grün umrandet („Halten“) – das geht nur mit den Bildschirm-Tasten, weil das Mikrofon den Nachklang hört.",
     "Hände & Fingersatz" to
         "Über das Auge (Menü „Ansicht“) blendest du Hände über der Klaviatur und den Fingersatz ein: Die Hände gleiten mit dem Stück mit, der spielende Finger drückt seine Taste; die Zahlen (1 = Daumen … 5 = kleiner Finger) stehen auch in den fallenden Noten. Hat ein Stück keinen Fingersatz, rechnet die App automatisch einen aus; Fingersätze aus MusicXML- oder MuseScore-Dateien bleiben erhalten.",
     "Teile wiederholen (Schleife)" to

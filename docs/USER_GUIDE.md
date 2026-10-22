@@ -24,7 +24,10 @@ Die App funktioniert im Hoch- und im Querformat. Während die Musik läuft, sind
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-* **Warten**: Die Noten halten an der Linie, bis du die richtigen Töne spielst. Unten steht, was zu spielen ist.
+* **Warten**: Die Noten halten an der Linie, bis du die richtigen Töne spielst. Oben steht, was zu spielen ist.
+  Akkorde zählen nur, wenn ihre Tasten zusammen angeschlagen oder gemeinsam gehalten werden. Musst du eine Taste
+  loslassen, während eine andere weiterklingt, wird sie weiß mit Pfeil markiert („Loslassen“); lässt du eine Note zu
+  früh los, leuchtet ihre Taste grün umrandet („Halten“).
 * **Fließend**: Läuft im gewählten Tempo; mit Mikrofon wird die Trefferquote angezeigt.
 * **Anhören**: Die App spielt vor.
 * **L / L+R / R**: Welche Hand du übst. Die andere Hand wird blasser dargestellt und mitgespielt.

@@ -12,6 +12,12 @@
   Aufbereitung (Papier finden, Licht ausgleichen, gerade drehen, zuschneiden, skalieren).
 * Bibliothek 2.0: Titelbild, ▶ Abspielen direkt auf der Karte, Fortschrittsring, Regale/Filter, Sortierung nach
   Schwierigkeit, „Weiter üben“, Mehrfachauswahl (teilen/löschen).
+* **Akkorde & Halten**: Tasten eines Akkords müssen zusammen angeschlagen (innerhalb von 0,6 s) oder gemeinsam
+  gehalten werden. Bleibt eine Taste gedrückt, deren Note vorbei ist, während eine andere weiterklingt, wird sie
+  weiß mit Pfeil nach oben markiert („Loslassen: C4“); wird eine Note zu früh losgelassen, leuchtet ihre Taste grün
+  umrandet („Halten: E4“, nur mit Bildschirm-Tasten, da das Mikrofon den Nachklang hört).
+* **Hände**: halbtransparent und plastisch (Fingerglieder, Knöchel, Schatten); die Handflächen liegen unter der
+  Klaviatur, sodass nur die Finger auf den Tasten liegen.
 * **Neue Optik nach Vorlagen des Nutzers**: schwarzer Hintergrund, abgerundete leuchtende Notenbalken mit
   Notennamen unten im Balken, leuchtende Trefferlinie mit Funken, plastische Klaviatur mit rotem Filzstreifen und
   Oktav-Beschriftung (C2, C3 …); linke Hand blau-violett, rechte Hand orange. Beim Spielen verschwinden die
