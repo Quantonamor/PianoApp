@@ -72,6 +72,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.pianotiles.app.PianoTilesApp
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.practice.SheetPanel
 import de.pianotiles.app.ui.practice.drawLabel
 import de.pianotiles.app.ui.practice.handColor
@@ -81,11 +82,11 @@ import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
 import de.pianotiles.core.model.Pitch
 import de.pianotiles.core.model.SongUtils
-import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 /**
  * Editor 2.0: the original PDF above (current measure highlighted), the piano roll below.
@@ -123,19 +124,19 @@ fun EditorScreen(songId: String, onBack: () -> Unit, onOpenSettings: () -> Unit 
         // ---- top bar
         Surface(color = MaterialTheme.colorScheme.surface) {
             Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { if (vm.dirty) confirmLeave = true else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück") }
-                Text("Noten bearbeiten – ${song.title}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1)
-                IconButton(onClick = vm::undo, enabled = vm.canUndo) { Icon(Icons.AutoMirrored.Filled.Undo, "Rückgängig") }
-                IconButton(onClick = vm::redo, enabled = vm.canRedo) { Icon(Icons.AutoMirrored.Filled.Redo, "Wiederholen") }
-                IconButton(onClick = { pxPerBeat = (pxPerBeat / 1.3f).coerceAtLeast(20f) }) { Icon(Icons.Filled.ZoomOut, "Verkleinern") }
-                IconButton(onClick = { pxPerBeat = (pxPerBeat * 1.3f).coerceAtMost(400f) }) { Icon(Icons.Filled.ZoomIn, "Vergrößern") }
+                IconButton(onClick = { if (vm.dirty) confirmLeave = true else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
+                Text(tr("Noten bearbeiten – %s", song.title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1)
+                IconButton(onClick = vm::undo, enabled = vm.canUndo) { Icon(Icons.AutoMirrored.Filled.Undo, tr("Rückgängig")) }
+                IconButton(onClick = vm::redo, enabled = vm.canRedo) { Icon(Icons.AutoMirrored.Filled.Redo, tr("Wiederholen")) }
+                IconButton(onClick = { pxPerBeat = (pxPerBeat / 1.3f).coerceAtLeast(20f) }) { Icon(Icons.Filled.ZoomOut, tr("Verkleinern")) }
+                IconButton(onClick = { pxPerBeat = (pxPerBeat * 1.3f).coerceAtMost(400f) }) { Icon(Icons.Filled.ZoomIn, tr("Vergrößern")) }
                 if (vm.pdf != null) {
                     FilledTonalButton(onClick = { if (showAi && !vm.aiRunning && vm.proposals.isNotEmpty()) showAi = false else if (vm.aiRunning || vm.proposals.isNotEmpty()) showAi = !showAi else startAi() }) {
-                        Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text(if (vm.aiRunning) "KI prüft …" else "KI-nachbessern")
+                        Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text(if (vm.aiRunning) tr("KI prüft …") else tr("KI-nachbessern"))
                     }
                     Spacer(Modifier.width(8.dp))
                 }
-                Button(onClick = { vm.save() }, enabled = vm.dirty) { Text("Speichern") }
+                Button(onClick = { vm.save() }, enabled = vm.dirty) { Text(tr("Speichern")) }
             }
         }
 
@@ -145,19 +146,19 @@ fun EditorScreen(songId: String, onBack: () -> Unit, onOpenSettings: () -> Unit 
                 Modifier.fillMaxWidth().height(48.dp).horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                IconButton(onClick = { vm.measure = (vm.measure - 1).coerceAtLeast(0) }) { Icon(Icons.Filled.ChevronLeft, "Vorheriger Takt") }
-                Text("Takt ${vm.measure + 1} / ${song.measureCount}", Modifier.width(110.dp), style = MaterialTheme.typography.titleSmall)
-                IconButton(onClick = { vm.measure = (vm.measure + 1).coerceAtMost(song.measureCount - 1) }) { Icon(Icons.Filled.ChevronRight, "Nächster Takt") }
+                IconButton(onClick = { vm.measure = (vm.measure - 1).coerceAtLeast(0) }) { Icon(Icons.Filled.ChevronLeft, tr("Vorheriger Takt")) }
+                Text(tr("Takt %s / %s", vm.measure + 1, song.measureCount), Modifier.width(130.dp), style = MaterialTheme.typography.titleSmall)
+                IconButton(onClick = { vm.measure = (vm.measure + 1).coerceAtMost(song.measureCount - 1) }) { Icon(Icons.Filled.ChevronRight, tr("Nächster Takt")) }
                 Box {
                     FilterChip(
                         selected = vm.issues.isNotEmpty(), onClick = { showIssues = true },
-                        label = { Text(if (vm.issues.isEmpty()) "Alles plausibel" else "Bitte prüfen (${vm.issues.size})") },
+                        label = { Text(if (vm.issues.isEmpty()) tr("Alles plausibel") else tr("Bitte prüfen (%s)", vm.issues.size)) },
                         leadingIcon = { Icon(Icons.Filled.Warning, null, tint = if (vm.issues.isEmpty()) PtColors.Hit else Color(0xFFFF9800)) },
                     )
                     DropdownMenu(expanded = showIssues, onDismissRequest = { showIssues = false }) {
-                        if (vm.issues.isEmpty()) DropdownMenuItem(text = { Text("Keine auffälligen Takte gefunden") }, onClick = { showIssues = false })
+                        if (vm.issues.isEmpty()) DropdownMenuItem(text = { Text(tr("Keine auffälligen Takte gefunden")) }, onClick = { showIssues = false })
                         for (issue in vm.issues) DropdownMenuItem(
-                            text = { Text("Takt ${issue.measure + 1}: ${issue.reasons.joinToString("; ")}") },
+                            text = { Text(tr("Takt %s: %s", issue.measure + 1, issue.reasons.joinToString("; "))) },
                             onClick = { vm.measure = issue.measure; showIssues = false },
                         )
                     }
@@ -165,24 +166,24 @@ fun EditorScreen(songId: String, onBack: () -> Unit, onOpenSettings: () -> Unit 
                 TextButton(onClick = {
                     val next = vm.issues.firstOrNull { it.measure > vm.measure } ?: vm.issues.firstOrNull()
                     next?.let { vm.measure = it.measure }
-                }, enabled = vm.issues.isNotEmpty()) { Text("Nächster prüfen ›") }
+                }, enabled = vm.issues.isNotEmpty()) { Text(tr("Nächster prüfen ›")) }
                 IconButton(onClick = vm::togglePlay) {
-                    Icon(if (vm.playing) Icons.Filled.Stop else Icons.Filled.PlayArrow, if (vm.playing) "Stopp" else "Ab Takt anhören")
+                    Icon(if (vm.playing) Icons.Filled.Stop else Icons.Filled.PlayArrow, if (vm.playing) tr("Stopp") else tr("Ab Takt anhören"))
                 }
                 Box {
-                    TextButton(onClick = { showTools = true }) { Icon(Icons.Filled.Build, null); Spacer(Modifier.width(4.dp)); Text("Takt-Werkzeuge") }
+                    TextButton(onClick = { showTools = true }) { Icon(Icons.Filled.Build, null); Spacer(Modifier.width(4.dp)); Text(tr("Takt-Werkzeuge")) }
                     DropdownMenu(expanded = showTools, onDismissRequest = { showTools = false }) {
                         val m = vm.measure
-                        MenuItem("Takt ${m + 1} kopieren") { showTools = false; vm.copyMeasure() }
-                        MenuItem("In Takt ${m + 1} einfügen (ersetzen)", vm.clipboard != null) { showTools = false; vm.pasteMeasure() }
-                        MenuItem("Leeren Takt davor einfügen") { showTools = false; vm.edit { MeasureOps.insertBefore(it, m) } }
-                        MenuItem("Takt ${m + 1} löschen") { showTools = false; vm.edit { MeasureOps.delete(it, m) } }
-                        MenuItem("Takt ${m + 1} leeren") { showTools = false; vm.edit { MeasureOps.replace(it, m, emptyList()) } }
-                        MenuItem("Hände tauschen in Takt ${m + 1}") { showTools = false; vm.edit { MeasureOps.swapHands(it, m) } }
-                        MenuItem("Takt ${m + 1} ½ Ton höher") { showTools = false; vm.edit { MeasureOps.transpose(it, m, 1) } }
-                        MenuItem("Takt ${m + 1} ½ Ton tiefer") { showTools = false; vm.edit { MeasureOps.transpose(it, m, -1) } }
+                        MenuItem(tr("Takt %s kopieren", m + 1)) { showTools = false; vm.copyMeasure() }
+                        MenuItem(tr("In Takt %s einfügen (ersetzen)", m + 1), vm.clipboard != null) { showTools = false; vm.pasteMeasure() }
+                        MenuItem(tr("Leeren Takt davor einfügen")) { showTools = false; vm.edit { MeasureOps.insertBefore(it, m) } }
+                        MenuItem(tr("Takt %s löschen", m + 1)) { showTools = false; vm.edit { MeasureOps.delete(it, m) } }
+                        MenuItem(tr("Takt %s leeren", m + 1)) { showTools = false; vm.edit { MeasureOps.replace(it, m, emptyList()) } }
+                        MenuItem(tr("Hände tauschen in Takt %s", m + 1)) { showTools = false; vm.edit { MeasureOps.swapHands(it, m) } }
+                        MenuItem(tr("Takt %s ½ Ton höher", m + 1)) { showTools = false; vm.edit { MeasureOps.transpose(it, m, 1) } }
+                        MenuItem(tr("Takt %s ½ Ton tiefer", m + 1)) { showTools = false; vm.edit { MeasureOps.transpose(it, m, -1) } }
                         HorizontalDivider()
-                        MenuItem("Taktart: ${song.beatsPerMeasure}/${song.beatUnit} → ändern") {
+                        MenuItem(tr("Taktart: %s/%s → ändern", song.beatsPerMeasure, song.beatUnit)) {
                             showTools = false
                             vm.edit { s ->
                                 val opts = listOf(2 to 4, 3 to 4, 4 to 4, 6 to 8, 3 to 8, 2 to 2, 5 to 4, 9 to 8, 12 to 8)
@@ -191,18 +192,18 @@ fun EditorScreen(songId: String, onBack: () -> Unit, onOpenSettings: () -> Unit 
                                 s.copy(beatsPerMeasure = n, beatUnit = d)
                             }
                         }
-                        MenuItem("Ganzes Stück ½ Ton höher") { showTools = false; vm.edit { s -> s.copy(notes = s.notes.map { it.copy(pitch = (it.pitch + 1).coerceAtMost(108)) }) } }
-                        MenuItem("Ganzes Stück ½ Ton tiefer") { showTools = false; vm.edit { s -> s.copy(notes = s.notes.map { it.copy(pitch = (it.pitch - 1).coerceAtLeast(21)) }) } }
-                        MenuItem("Alles am Raster ausrichten") { showTools = false; vm.edit { s -> s.copy(notes = SongUtils.quantize(s.notes, grid)) } }
+                        MenuItem(tr("Ganzes Stück ½ Ton höher")) { showTools = false; vm.edit { s -> s.copy(notes = s.notes.map { it.copy(pitch = (it.pitch + 1).coerceAtMost(108)) }) } }
+                        MenuItem(tr("Ganzes Stück ½ Ton tiefer")) { showTools = false; vm.edit { s -> s.copy(notes = s.notes.map { it.copy(pitch = (it.pitch - 1).coerceAtLeast(21)) }) } }
+                        MenuItem(tr("Alles am Raster ausrichten")) { showTools = false; vm.edit { s -> s.copy(notes = SongUtils.quantize(s.notes, grid)) } }
                     }
                 }
-                Text("Raster:", color = PtColors.TextDim)
-                for ((g, label) in listOf(0.25 to "1/16", 0.5 to "1/8", 1.0 to "1/4", 1.0 / 3 to "Triole")) {
+                Text(tr("Raster:"), color = PtColors.TextDim)
+                for ((g, label) in listOf(0.25 to "1/16", 0.5 to "1/8", 1.0 to "1/4", 1.0 / 3 to tr("Triole"))) {
                     FilterChip(selected = grid == g, onClick = { grid = g }, label = { Text(label) })
                 }
-                FilterChip(selected = addMode, onClick = { addMode = !addMode }, label = { Text("Hinzufügen") }, leadingIcon = { Icon(Icons.Filled.Add, null) })
+                FilterChip(selected = addMode, onClick = { addMode = !addMode }, label = { Text(tr("Hinzufügen")) }, leadingIcon = { Icon(Icons.Filled.Add, null) })
                 if (addMode) FilterChip(selected = true, onClick = { addHand = if (addHand == Hand.RIGHT) Hand.LEFT else Hand.RIGHT },
-                    label = { Text(if (addHand == Hand.RIGHT) "rechte Hand" else "linke Hand") })
+                    label = { Text(if (addHand == Hand.RIGHT) tr("rechte Hand") else tr("linke Hand")) })
             }
         }
 
@@ -226,36 +227,32 @@ fun EditorScreen(songId: String, onBack: () -> Unit, onOpenSettings: () -> Unit 
 
     if (confirmLeave) AlertDialog(
         onDismissRequest = { confirmLeave = false },
-        title = { Text("Änderungen speichern?") },
-        confirmButton = { TextButton(onClick = { confirmLeave = false; vm.save(onBack) }) { Text("Speichern") } },
-        dismissButton = { TextButton(onClick = { confirmLeave = false; onBack() }) { Text("Verwerfen") } },
+        title = { Text(tr("Änderungen speichern?")) },
+        confirmButton = { TextButton(onClick = { confirmLeave = false; vm.save(onBack) }) { Text(tr("Speichern")) } },
+        dismissButton = { TextButton(onClick = { confirmLeave = false; onBack() }) { Text(tr("Verwerfen")) } },
     )
     if (askKey) AlertDialog(
         onDismissRequest = { askKey = false },
         icon = { Icon(Icons.Filled.AutoAwesome, null) },
-        title = { Text("KI-nachbessern einrichten") },
+        title = { Text(tr("KI-nachbessern einrichten")) },
         text = {
             Text(
-                "Die KI vergleicht jede Seite des Notenblatts mit den erkannten Noten und schlägt Korrekturen vor. " +
-                    "Dafür brauchst du einen eigenen API-Schlüssel von Anthropic (console.anthropic.com). " +
-                    "Trage ihn in den Einstellungen unter „KI-nachbessern“ ein – er bleibt verschlüsselt auf diesem Gerät.",
+                tr("Die KI vergleicht jede Seite des Notenblatts mit den erkannten Noten und schlägt Korrekturen vor. Dafür brauchst du einen eigenen API-Schlüssel von Anthropic (console.anthropic.com). Trage ihn in den Einstellungen unter „KI-nachbessern“ ein – er bleibt verschlüsselt auf diesem Gerät."),
             )
         },
-        confirmButton = { TextButton(onClick = { askKey = false; onOpenSettings() }) { Text("Zu den Einstellungen") } },
-        dismissButton = { TextButton(onClick = { askKey = false }) { Text("Abbrechen") } },
+        confirmButton = { TextButton(onClick = { askKey = false; onOpenSettings() }) { Text(tr("Zu den Einstellungen")) } },
+        dismissButton = { TextButton(onClick = { askKey = false }) { Text(tr("Abbrechen")) } },
     )
     if (askConsent) AlertDialog(
         onDismissRequest = { askConsent = false },
-        title = { Text("Daten an die KI senden?") },
+        title = { Text(tr("Daten an die KI senden?")) },
         text = {
             Text(
-                "Für jede der ${vm.aiPages.size} Seite(n) werden ein Bild der Notenseite und die erkannten Noten an " +
-                    "Anthropic (Claude) geschickt. Die Kosten werden über deinen API-Schlüssel abgerechnet (ein Aufruf pro Seite). " +
-                    "Es werden keine anderen Daten übertragen. Die Vorschläge werden erst übernommen, wenn du sie bestätigst.",
+                tr("Für jede der %s Seite(n) werden ein Bild der Notenseite und die erkannten Noten an Anthropic (Claude) geschickt. Die Kosten werden über deinen API-Schlüssel abgerechnet (ein Aufruf pro Seite). Es werden keine anderen Daten übertragen. Die Vorschläge werden erst übernommen, wenn du sie bestätigst.", vm.aiPages.size),
             )
         },
-        confirmButton = { TextButton(onClick = { askConsent = false; vm.aiConsent = true; showAi = true; vm.startAi() }) { Text("Verstanden, senden") } },
-        dismissButton = { TextButton(onClick = { askConsent = false }) { Text("Abbrechen") } },
+        confirmButton = { TextButton(onClick = { askConsent = false; vm.aiConsent = true; showAi = true; vm.startAi() }) { Text(tr("Verstanden, senden")) } },
+        dismissButton = { TextButton(onClick = { askConsent = false }) { Text(tr("Abbrechen")) } },
     )
 }
 
@@ -403,7 +400,7 @@ private fun PianoRoll(vm: EditorViewModel, grid: Double, addMode: Boolean, addHa
                 }
             }
         }
-        if (song.notes.isEmpty()) Text("Noch keine Noten – „Hinzufügen“ wählen und auf das Raster tippen.", Modifier.align(Alignment.Center), color = PtColors.TextDim)
+        if (song.notes.isEmpty()) Text(tr("Noch keine Noten – „Hinzufügen“ wählen und auf das Raster tippen."), Modifier.align(Alignment.Center), color = PtColors.TextDim)
     }
 }
 
@@ -419,41 +416,41 @@ private fun SelectionBar(vm: EditorViewModel, grid: Double, naming: de.pianotile
             val sel = song.notes.getOrNull(vm.selected)
             if (sel == null) {
                 Text(
-                    "Note antippen = auswählen · Note ziehen = verschieben (am rechten Rand: Länge) · freie Fläche ziehen = blättern",
+                    tr("Note antippen = auswählen · Note ziehen = verschieben (am rechten Rand: Länge) · freie Fläche ziehen = blättern"),
                     color = PtColors.TextDim,
                 )
             } else {
-                Text("${Pitch.fullName(sel.pitch, naming)} · Takt ${song.measureIndexAt(sel.start) + 1} · ${durationName(sel.duration)}", Modifier.width(200.dp))
+                Text(tr("%s · Takt %s · %s", Pitch.fullName(sel.pitch, naming), song.measureIndexAt(sel.start) + 1, durationName(sel.duration)), Modifier.width(200.dp))
                 TextButton(onClick = { vm.modifySelected { it.copy(pitch = (it.pitch + 1).coerceAtMost(108)) } }) { Text("♯", style = MaterialTheme.typography.titleLarge) }
                 TextButton(onClick = { vm.modifySelected { it.copy(pitch = (it.pitch - 1).coerceAtLeast(21)) } }) { Text("♭", style = MaterialTheme.typography.titleLarge) }
-                IconButton(onClick = { vm.modifySelected { it.copy(pitch = (it.pitch + 12).coerceAtMost(108)) } }) { Icon(Icons.Filled.KeyboardDoubleArrowUp, "Oktave höher") }
-                IconButton(onClick = { vm.modifySelected { it.copy(pitch = (it.pitch - 12).coerceAtLeast(21)) } }) { Icon(Icons.Filled.KeyboardDoubleArrowDown, "Oktave tiefer") }
-                IconButton(onClick = { vm.modifySelected { it.copy(start = max(0.0, it.start - grid)) } }) { Icon(Icons.Filled.ChevronLeft, "früher") }
-                IconButton(onClick = { vm.modifySelected { it.copy(start = it.start + grid) } }) { Icon(Icons.Filled.ChevronRight, "später") }
-                IconButton(onClick = { vm.modifySelected { it.copy(duration = max(grid / 2, it.duration - grid)) } }) { Icon(Icons.Filled.Remove, "kürzer") }
-                IconButton(onClick = { vm.modifySelected { it.copy(duration = it.duration + grid) } }) { Icon(Icons.Filled.Add, "länger") }
+                IconButton(onClick = { vm.modifySelected { it.copy(pitch = (it.pitch + 12).coerceAtMost(108)) } }) { Icon(Icons.Filled.KeyboardDoubleArrowUp, tr("Oktave höher")) }
+                IconButton(onClick = { vm.modifySelected { it.copy(pitch = (it.pitch - 12).coerceAtLeast(21)) } }) { Icon(Icons.Filled.KeyboardDoubleArrowDown, tr("Oktave tiefer")) }
+                IconButton(onClick = { vm.modifySelected { it.copy(start = max(0.0, it.start - grid)) } }) { Icon(Icons.Filled.ChevronLeft, tr("früher")) }
+                IconButton(onClick = { vm.modifySelected { it.copy(start = it.start + grid) } }) { Icon(Icons.Filled.ChevronRight, tr("später")) }
+                IconButton(onClick = { vm.modifySelected { it.copy(duration = max(grid / 2, it.duration - grid)) } }) { Icon(Icons.Filled.Remove, tr("kürzer")) }
+                IconButton(onClick = { vm.modifySelected { it.copy(duration = it.duration + grid) } }) { Icon(Icons.Filled.Add, tr("länger")) }
                 for ((d, label) in listOf(0.25 to "1/16", 0.5 to "1/8", 1.0 to "1/4", 1.5 to "1/4.", 2.0 to "1/2", 4.0 to "1/1")) {
                     TextButton(onClick = { vm.modifySelected { it.copy(duration = d) } }) { Text(label) }
                 }
                 FilterChip(selected = true, onClick = { vm.modifySelected { it.copy(hand = if (it.hand == Hand.RIGHT) Hand.LEFT else Hand.RIGHT) } },
-                    label = { Text(if (sel.hand == Hand.RIGHT) "Rechte Hand" else "Linke Hand") })
+                    label = { Text(if (sel.hand == Hand.RIGHT) tr("Rechte Hand") else tr("Linke Hand")) })
                 IconButton(onClick = {
                     scope.launch { song.notes.filter { abs(it.start - sel.start) < 0.02 }.forEach { vm.preview(it.pitch) } }
-                }) { Icon(Icons.Filled.PlayArrow, "Anhören") }
-                IconButton(onClick = vm::deleteSelected) { Icon(Icons.Filled.Delete, "Löschen", tint = PtColors.Miss) }
+                }) { Icon(Icons.Filled.PlayArrow, tr("Anhören")) }
+                IconButton(onClick = vm::deleteSelected) { Icon(Icons.Filled.Delete, tr("Löschen"), tint = PtColors.Miss) }
             }
         }
     }
 }
 
 internal fun durationName(beats: Double): String = when ((beats * 100).roundToInt()) {
-    in 23..25 -> "Sechzehntel"; in 31..34 -> "Triolen-Achtel"; in 45..50 -> "Achtel"; in 70..75 -> "punkt. Achtel"
-    in 95..100 -> "Viertel"; in 140..150 -> "punkt. Viertel"; in 190..200 -> "Halbe"; in 285..300 -> "punkt. Halbe"; in 380..400 -> "Ganze"
-    else -> "%.2f Schläge".format(beats)
+    in 23..25 -> tr("Sechzehntel"); in 31..34 -> tr("Triolen-Achtel"); in 45..50 -> tr("Achtel"); in 70..75 -> tr("punkt. Achtel")
+    in 95..100 -> tr("Viertel"); in 140..150 -> tr("punkt. Viertel"); in 190..200 -> tr("Halbe"); in 285..300 -> tr("punkt. Halbe"); in 380..400 -> tr("Ganze")
+    else -> tr("%.2f Schläge", beats)
 }
 
 internal fun durationSymbol(beats: Double): String = when ((beats * 100).roundToInt()) {
-    in 23..25 -> "1/16"; in 31..34 -> "1/8 (Triole)"; in 45..50 -> "1/8"; in 70..75 -> "1/8."; in 95..100 -> "1/4"; in 140..150 -> "1/4."
+    in 23..25 -> "1/16"; in 31..34 -> tr("1/8 (Triole)"); in 45..50 -> "1/8"; in 70..75 -> "1/8."; in 95..100 -> "1/4"; in 140..150 -> "1/4."
     in 190..200 -> "1/2"; in 285..300 -> "1/2."; in 380..400 -> "1/1"
     else -> "%.2f".format(beats)
 }

@@ -1,5 +1,6 @@
 package de.pianotiles.core.model
 
+import de.pianotiles.core.i18n.CoreText.t
 import kotlin.math.pow
 
 enum class NoteNaming { GERMAN, ENGLISH, SOLFEGE, NONE }
@@ -67,21 +68,21 @@ object Pitch {
     }
 
     fun keyName(keyFifths: Int): String = when (keyFifths) {
-        0 -> "C-Dur / a-Moll"
-        1 -> "G-Dur / e-Moll"
-        2 -> "D-Dur / h-Moll"
-        3 -> "A-Dur / fis-Moll"
-        4 -> "E-Dur / cis-Moll"
-        5 -> "H-Dur / gis-Moll"
-        6 -> "Fis-Dur / dis-Moll"
-        7 -> "Cis-Dur / ais-Moll"
-        -1 -> "F-Dur / d-Moll"
-        -2 -> "B-Dur / g-Moll"
-        -3 -> "Es-Dur / c-Moll"
-        -4 -> "As-Dur / f-Moll"
-        -5 -> "Des-Dur / b-Moll"
-        -6 -> "Ges-Dur / es-Moll"
-        -7 -> "Ces-Dur / as-Moll"
+        0 -> t("C-Dur / a-Moll", "C major / A minor")
+        1 -> t("G-Dur / e-Moll", "G major / E minor")
+        2 -> t("D-Dur / h-Moll", "D major / B minor")
+        3 -> t("A-Dur / fis-Moll", "A major / F♯ minor")
+        4 -> t("E-Dur / cis-Moll", "E major / C♯ minor")
+        5 -> t("H-Dur / gis-Moll", "B major / G♯ minor")
+        6 -> t("Fis-Dur / dis-Moll", "F♯ major / D♯ minor")
+        7 -> t("Cis-Dur / ais-Moll", "C♯ major / A♯ minor")
+        -1 -> t("F-Dur / d-Moll", "F major / D minor")
+        -2 -> t("B-Dur / g-Moll", "B♭ major / G minor")
+        -3 -> t("Es-Dur / c-Moll", "E♭ major / C minor")
+        -4 -> t("As-Dur / f-Moll", "A♭ major / F minor")
+        -5 -> t("Des-Dur / b-Moll", "D♭ major / B♭ minor")
+        -6 -> t("Ges-Dur / es-Moll", "G♭ major / E♭ minor")
+        -7 -> t("Ces-Dur / as-Moll", "C♭ major / A♭ minor")
         else -> "?"
     }
 }

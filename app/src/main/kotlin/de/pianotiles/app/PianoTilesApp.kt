@@ -5,6 +5,7 @@ import de.pianotiles.app.audio.Synth
 import de.pianotiles.app.data.SecretStore
 import de.pianotiles.app.data.SettingsStore
 import de.pianotiles.app.data.SongRepository
+import de.pianotiles.app.i18n.I18n
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,6 +26,10 @@ class PianoTilesApp : Application() {
         super.onCreate()
         songs = SongRepository(this)
         settings = SettingsStore(this)
+        applyLanguage()
         secrets = SecretStore(this)
     }
+
+    /** Applies the language from the settings to the UI texts ([I18n]) and the core module. */
+    fun applyLanguage() = I18n.apply(settings.settings.value.language)
 }

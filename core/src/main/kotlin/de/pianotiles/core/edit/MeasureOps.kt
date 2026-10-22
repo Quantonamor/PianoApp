@@ -1,5 +1,6 @@
 package de.pianotiles.core.edit
 
+import de.pianotiles.core.i18n.CoreText.t
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
 import de.pianotiles.core.model.Song
@@ -89,13 +90,13 @@ object MeasureOps {
         val last = song.measureCount - 1
         for (m in 0..last) {
             val reasons = ArrayList<String>()
-            if (m in song.flaggedMeasures) reasons.add("Rhythmus wurde geschätzt")
+            if (m in song.flaggedMeasures) reasons.add(t("Rhythmus wurde geschätzt", "Rhythm was estimated"))
             val len = lengthOf(song, m)
             val start = song.measureStart(m)
             for (hand in Hand.entries) {
                 val ns = notesIn(song, m, hand)
                 if (ns.isEmpty()) continue
-                val name = if (hand == Hand.RIGHT) "rechte Hand" else "linke Hand"
+                val name = if (hand == Hand.RIGHT) t("rechte Hand", "right hand") else t("linke Hand", "left hand")
                 // Coverage: time in the measure during which the hand plays something.
                 val steps = ns.toSteps()
                 var covered = 0.0
@@ -104,11 +105,11 @@ object MeasureOps {
                     val end = minOf(st.notes.maxOf { it.end }, next, start + len)
                     covered += (end - st.start).coerceAtLeast(0.0)
                 }
-                if (m != last && m != 0 && covered < len * 0.55) reasons.add("$name: Takt nicht gefüllt (Pausen oder fehlende Noten?)")
+                if (m != last && m != 0 && covered < len * 0.55) reasons.add(t("$name: Takt nicht gefüllt (Pausen oder fehlende Noten?)", "$name: measure not filled (rests or missing notes?)"))
                 val over = ns.maxOf { it.end } - (start + len)
-                if (over > 0.3 && ns.none { abs(it.end - (start + len)) < 0.1 }) reasons.add("$name: Noten ragen über den Taktstrich")
+                if (over > 0.3 && ns.none { abs(it.end - (start + len)) < 0.1 }) reasons.add(t("$name: Noten ragen über den Taktstrich", "$name: notes extend past the bar line"))
                 val pitches = steps.map { st -> st.notes.sumOf { it.pitch } / st.notes.size }
-                if (pitches.zipWithNext().any { (a, b) -> abs(a - b) > 19 }) reasons.add("$name: ungewöhnlich großer Sprung")
+                if (pitches.zipWithNext().any { (a, b) -> abs(a - b) > 19 }) reasons.add(t("$name: ungewöhnlich großer Sprung", "$name: unusually large leap"))
             }
             if (reasons.isNotEmpty()) out.add(MeasureIssue(m, reasons))
         }

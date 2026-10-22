@@ -23,10 +23,12 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
+import de.pianotiles.core.model.NoteNaming
+import java.io.File
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 
 /**
  * Clicks through the main flows on a real device/emulator. Screenshots are written to
@@ -39,6 +41,17 @@ class SmokeTest {
     @get:Rule val mic: GrantPermissionRule = GrantPermissionRule.grant(Manifest.permission.RECORD_AUDIO)
 
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+
+    /**
+     * The emulator runs in English, but the checks below use the German texts: force the German UI
+     * (the activity applies the language setting again in onCreate).
+     */
+    @Before
+    fun forceGerman() {
+        val app = context.applicationContext as PianoTilesApp
+        app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN) }
+        app.applyLanguage()
+    }
 
     private fun shot(name: String) {
         val dir = File(context.getExternalFilesDir(null), "screenshots").apply { mkdirs() }

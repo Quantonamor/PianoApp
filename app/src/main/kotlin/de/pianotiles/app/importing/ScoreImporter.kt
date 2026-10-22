@@ -7,19 +7,20 @@ import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.core.io.ImportException
 import de.pianotiles.core.io.MidiImporter
 import de.pianotiles.core.io.MusicXmlImporter
 import de.pianotiles.core.model.Song
 import de.pianotiles.core.omr.GrayImage
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 enum class ScoreType { PDF, MIDI, MUSICXML, UNKNOWN }
 
 class LoadedFile(val name: String, val bytes: ByteArray) {
-    val baseName: String get() = name.substringBeforeLast('.').replace('_', ' ').trim().ifEmpty { "Neues Stück" }
+    val baseName: String get() = name.substringBeforeLast('.').replace('_', ' ').trim().ifEmpty { tr("Neues Stück") }
     val type: ScoreType
         get() = when {
             bytes.size > 4 && String(bytes, 0, 4, Charsets.ISO_8859_1) == "%PDF" -> ScoreType.PDF
@@ -40,12 +41,12 @@ object ScoreImporter {
     const val MAX_PAGES = 30
 
     suspend fun read(context: Context, uri: Uri): LoadedFile = withContext(Dispatchers.IO) {
-        var name = "Neues Stück"
+        var name = tr("Neues Stück")
         context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
             if (c.moveToFirst()) c.getString(0)?.let { name = it }
         }
         val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            ?: throw ImportException("Datei konnte nicht geöffnet werden")
+            ?: throw ImportException(tr("Datei konnte nicht geöffnet werden"))
         LoadedFile(name, bytes)
     }
 
@@ -53,7 +54,7 @@ object ScoreImporter {
         when (file.type) {
             ScoreType.MIDI -> MidiImporter.import(file.bytes, file.baseName)
             ScoreType.MUSICXML -> MusicXmlImporter.import(file.bytes, file.baseName)
-            else -> throw ImportException("Unbekanntes Dateiformat. Unterstützt: PDF, MIDI (.mid), MusicXML (.xml, .musicxml, .mxl)")
+            else -> throw ImportException(tr("Unbekanntes Dateiformat. Unterstützt: PDF, MIDI (.mid), MusicXML (.xml, .musicxml, .mxl)"))
         }
     }
 
@@ -65,7 +66,7 @@ object ScoreImporter {
         ParcelFileDescriptor.open(tmp, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
             PdfRenderer(pfd).use { renderer ->
                 val count = minOf(renderer.pageCount, MAX_PAGES)
-                if (count == 0) throw ImportException("Das PDF enthält keine Seiten")
+                if (count == 0) throw ImportException(tr("Das PDF enthält keine Seiten"))
                 for (i in 0 until count) {
                     progress(i, count)
                     renderer.openPage(i).use { page ->

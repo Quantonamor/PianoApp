@@ -22,8 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,11 +39,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 import de.pianotiles.core.model.SheetMeasure
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 /**
  * The original PDF next to the falling notes. The current measure is highlighted and kept in view;
@@ -88,7 +89,7 @@ fun SheetPanel(
     BoxWithConstraints(modifier.background(Color.White)) {
         val img = pages[page]
         if (renderer == null) {
-            Text("Notenblatt nicht verfügbar", Modifier.align(Alignment.Center).padding(16.dp), color = Color.DarkGray)
+            Text(tr("Notenblatt nicht verfügbar"), Modifier.align(Alignment.Center).padding(16.dp), color = Color.DarkGray)
             return@BoxWithConstraints
         }
         if (img == null) {
@@ -107,7 +108,7 @@ fun SheetPanel(
             }
         }
         Box(Modifier.fillMaxWidth().verticalScroll(scroll)) {
-            Image(img, "Notenblatt Seite ${page + 1}", Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+            Image(img, tr("Notenblatt Seite %s", page + 1), Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
             Canvas(
                 Modifier.fillMaxWidth().height(with(density) { heightPx.toDp() })
                     .pointerInput(page, measures) {
@@ -134,7 +135,7 @@ fun SheetPanel(
             }
         }
         Text(
-            "Seite ${page + 1}",
+            tr("Seite %s", page + 1),
             Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color(0xAA0E1220)).padding(horizontal = 6.dp, vertical = 2.dp),
             color = Color.White,
         )

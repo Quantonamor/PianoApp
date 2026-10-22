@@ -1,6 +1,7 @@
 package de.pianotiles.app.data
 
 import android.content.Context
+import de.pianotiles.app.i18n.I18n
 import de.pianotiles.core.model.NoteNaming
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,8 @@ data class AppSettings(
     val octaveTolerant: Boolean = true,
     val volume: Float = 0.8f,
     val showMeasureNumbers: Boolean = true,
+    /** UI language: "auto" (device language), "de" or "en". */
+    val language: String = "auto",
 )
 
 class SettingsStore(context: Context) {
@@ -27,20 +30,26 @@ class SettingsStore(context: Context) {
     private val _settings = MutableStateFlow(read())
     val settings: StateFlow<AppSettings> = _settings
 
-    private fun read() = AppSettings(
-        noteNaming = runCatching { NoteNaming.valueOf(prefs.getString("naming", null) ?: "GERMAN") }.getOrDefault(NoteNaming.GERMAN),
-        lookaheadSeconds = prefs.getFloat("lookahead", 3f),
-        micSensitivity = prefs.getFloat("micSensitivity", 0.5f),
-        latencyMs = prefs.getInt("latency", 80),
-        showNamesOnTiles = prefs.getBoolean("namesTiles", true),
-        showNamesOnKeys = prefs.getBoolean("namesKeys", true),
-        countIn = prefs.getBoolean("countIn", true),
-        metronome = prefs.getBoolean("metronome", false),
-        accompaniment = prefs.getBoolean("accompaniment", true),
-        octaveTolerant = prefs.getBoolean("octaveTolerant", true),
-        volume = prefs.getFloat("volume", 0.8f),
-        showMeasureNumbers = prefs.getBoolean("measureNumbers", true),
-    )
+    private fun read(): AppSettings {
+        val language = prefs.getString("language", null) ?: "auto"
+        // Without an explicit choice, English UIs get English note names (… B) instead of German (… H).
+        val defaultNaming = if (I18n.isEnglish(language)) NoteNaming.ENGLISH else NoteNaming.GERMAN
+        return AppSettings(
+            noteNaming = runCatching { NoteNaming.valueOf(prefs.getString("naming", null) ?: defaultNaming.name) }.getOrDefault(defaultNaming),
+            lookaheadSeconds = prefs.getFloat("lookahead", 3f),
+            micSensitivity = prefs.getFloat("micSensitivity", 0.5f),
+            latencyMs = prefs.getInt("latency", 80),
+            showNamesOnTiles = prefs.getBoolean("namesTiles", true),
+            showNamesOnKeys = prefs.getBoolean("namesKeys", true),
+            countIn = prefs.getBoolean("countIn", true),
+            metronome = prefs.getBoolean("metronome", false),
+            accompaniment = prefs.getBoolean("accompaniment", true),
+            octaveTolerant = prefs.getBoolean("octaveTolerant", true),
+            volume = prefs.getFloat("volume", 0.8f),
+            showMeasureNumbers = prefs.getBoolean("measureNumbers", true),
+            language = language,
+        )
+    }
 
     fun update(transform: (AppSettings) -> AppSettings) {
         val s = transform(_settings.value)
@@ -57,6 +66,7 @@ class SettingsStore(context: Context) {
             .putBoolean("octaveTolerant", s.octaveTolerant)
             .putFloat("volume", s.volume)
             .putBoolean("measureNumbers", s.showMeasureNumbers)
+            .putString("language", s.language)
             .apply()
         _settings.value = s
     }

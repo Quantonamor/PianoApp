@@ -5,10 +5,10 @@ import de.pianotiles.core.edit.RelNote
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Pitch
 import de.pianotiles.core.model.Song
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /** One corrected measure/hand as proposed by the AI (measure is 0-based). */
 data class AiCorrection(val measure: Int, val hand: Hand, val notes: List<RelNote>, val reason: String)
@@ -29,7 +29,20 @@ internal data class WireNote(val pitch: String, val start: Double, val duration:
  */
 object AiPrompt {
 
-    val SYSTEM = """
+    /** The system prompt with "reason"/"summary" requested in German (default). */
+    val SYSTEM: String get() = system()
+
+    /**
+     * The system prompt. [language] is the language the model writes "reason" and "summary" in
+     * ("German" by default; the app passes "English" when its UI is English).
+     */
+    fun system(language: String = "German"): String {
+        val examples = if (language.equals("German", ignoreCase = true)) {
+            "\"Fis statt F (Vorzeichen)\",\n  \"Achtel statt Viertel\", \"fehlender Akkordton E4\""
+        } else {
+            "\"F# instead of F (key signature)\",\n  \"eighth instead of quarter\", \"missing chord tone E4\""
+        }
+        return """
 You are an expert music engraver and proofreader for piano sheet music. A piano practice app read a
 printed score with optical music recognition (OMR). You receive the image of one page of that score and
 the notes the OMR produced for every measure on the page. Your job is to find where the transcription
@@ -61,10 +74,10 @@ How to answer
   that hand (not only the changed notes) - the app replaces that hand of that measure with your list.
 - If the transcription is already right, return an empty corrections list.
 - When the image is unclear, keep the transcription as it is; do not guess wildly.
-- "reason": a very short explanation in German for a piano student (e.g. "Fis statt F (Vorzeichen)",
-  "Achtel statt Viertel", "fehlender Akkordton E4").
-- "summary": one or two German sentences about what you checked and changed on this page.
+- "reason": a very short explanation in $language for a piano student (e.g. $examples).
+- "summary": one or two $language sentences about what you checked and changed on this page.
 """.trimIndent()
+    }
 
     /** JSON schema for structured output (output_config.format). */
     val outputSchema: Map<String, Any> = mapOf(

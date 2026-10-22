@@ -36,13 +36,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 
 @Composable
 fun SpeedDialog(vm: PracticeViewModel, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Fertig") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Fertig")) } },
         title = { Text("Tempo") },
         text = {
             Column {
@@ -55,7 +56,7 @@ fun SpeedDialog(vm: PracticeViewModel, onDismiss: () -> Unit) {
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Tipp: Im Modus „Warten“ bestimmst du das Tempo selbst – die Noten bleiben stehen, bis du sie spielst.",
+                    tr("Tipp: Im Modus „Warten“ bestimmst du das Tempo selbst – die Noten bleiben stehen, bis du sie spielst."),
                     style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim,
                 )
             }
@@ -67,9 +68,9 @@ fun SpeedDialog(vm: PracticeViewModel, onDismiss: () -> Unit) {
 private fun Stepper(label: String, value: Int, onChange: (Int) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.width(90.dp))
-        IconButton(onClick = { onChange(value - 1) }) { Icon(Icons.Filled.Remove, "weniger") }
+        IconButton(onClick = { onChange(value - 1) }) { Icon(Icons.Filled.Remove, tr("weniger")) }
         Text("$value", Modifier.width(36.dp), fontWeight = FontWeight.Bold)
-        IconButton(onClick = { onChange(value + 1) }) { Icon(Icons.Filled.Add, "mehr") }
+        IconButton(onClick = { onChange(value + 1) }) { Icon(Icons.Filled.Add, tr("mehr")) }
     }
 }
 
@@ -84,18 +85,18 @@ fun LoopPanel(vm: PracticeViewModel, onDismiss: () -> Unit) {
     val hasRange = loop.endBeat > loop.startBeat
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Fertig") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Fertig")) } },
         dismissButton = {
             if (hasRange) TextButton(onClick = { vm.updateLoop(loop.copy(enabled = !loop.enabled)) }) {
-                Text(if (loop.enabled) "Schleife aus" else "Schleife an")
+                Text(if (loop.enabled) tr("Schleife aus") else tr("Schleife an"))
             }
         },
-        title = { Text("Übungsschleife") },
+        title = { Text(tr("Übungsschleife")) },
         modifier = Modifier.widthIn(max = 640.dp),
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(
-                    "Tipp: Ziehe mit dem Finger über die Zeitleiste unten, um Takte zu markieren. Doppeltippen auf die Noten wiederholt den aktuellen Takt.",
+                    tr("Tipp: Ziehe mit dem Finger über die Zeitleiste unten, um Takte zu markieren. Doppeltippen auf die Noten wiederholt den aktuellen Takt."),
                     style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim,
                 )
                 Spacer(Modifier.height(8.dp))
@@ -103,11 +104,11 @@ fun LoopPanel(vm: PracticeViewModel, onDismiss: () -> Unit) {
                 val b = if (hasRange) vm.loopEndMeasure + 1 else a
                 Row {
                     Column(Modifier.weight(1f)) {
-                        Stepper("Von Takt", a) { vm.setLoopMeasures(it - 1, maxOf(it, b) - 1) }
-                        Stepper("Bis Takt", b) { vm.setLoopMeasures(minOf(a, it) - 1, it - 1) }
+                        Stepper(tr("Von Takt"), a) { vm.setLoopMeasures(it - 1, maxOf(it, b) - 1) }
+                        Stepper(tr("Bis Takt"), b) { vm.setLoopMeasures(minOf(a, it) - 1, it - 1) }
                     }
                     Column(Modifier.weight(1f)) {
-                        Text("Wiederholungen", style = MaterialTheme.typography.labelLarge)
+                        Text(tr("Wiederholungen"), style = MaterialTheme.typography.labelLarge)
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             for ((n, label) in listOf(0 to "∞", 3 to "3×", 5 to "5×", 10 to "10×")) {
                                 FilterChip(selected = loop.repetitions == n, onClick = { vm.updateLoop(loop.copy(repetitions = n)) }, label = { Text(label) })
@@ -118,44 +119,44 @@ fun LoopPanel(vm: PracticeViewModel, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Tempo-Treppe", style = MaterialTheme.typography.titleSmall)
+                        Text(tr("Tempo-Treppe"), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "Startet langsamer und wird nach jedem Durchgang mit ≥ ${loop.rampThreshold} % Treffern um ${(loop.rampStep * 100).toInt()} % schneller – bis ${(loop.rampTarget * 100).toInt()} %.",
+                            tr("Startet langsamer und wird nach jedem Durchgang mit ≥ %s %% Treffern um %s %% schneller – bis %s %%.", loop.rampThreshold, (loop.rampStep * 100).toInt(), (loop.rampTarget * 100).toInt()),
                             style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim,
                         )
                     }
                     Switch(checked = loop.tempoRamp, onCheckedChange = { vm.updateLoop(loop.copy(tempoRamp = it, enabled = true)) })
                 }
                 if (loop.tempoRamp) {
-                    Text("Zieltempo: ${(loop.rampTarget * 100).toInt()} %")
+                    Text(tr("Zieltempo: %s %%", (loop.rampTarget * 100).toInt()))
                     Slider(value = loop.rampTarget.toFloat(), onValueChange = { vm.updateLoop(loop.copy(rampTarget = (it * 20).toInt() / 20.0)) }, valueRange = 0.5f..1.5f, steps = 19)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for (st in listOf(0.05, 0.1)) FilterChip(selected = loop.rampStep == st, onClick = { vm.updateLoop(loop.copy(rampStep = st)) }, label = { Text("+${(st * 100).toInt()} % je Runde") })
+                        for (st in listOf(0.05, 0.1)) FilterChip(selected = loop.rampStep == st, onClick = { vm.updateLoop(loop.copy(rampStep = st)) }, label = { Text(tr("+%s %% je Runde", (st * 100).toInt())) })
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Abschnitte", style = MaterialTheme.typography.titleSmall)
+                Text(tr("Abschnitte"), style = MaterialTheme.typography.titleSmall)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (s in vm.song.sections) {
                         InputChip(
                             selected = loop.enabled && loop.startBeat == s.startBeat && loop.endBeat == s.endBeat,
                             onClick = { vm.selectSection(s) },
                             label = { Text(s.name) },
-                            trailingIcon = { Icon(Icons.Filled.Close, "Abschnitt löschen", Modifier.clickable { vm.deleteSection(s) }) },
+                            trailingIcon = { Icon(Icons.Filled.Close, tr("Abschnitt löschen"), Modifier.clickable { vm.deleteSection(s) }) },
                         )
                     }
-                    if (vm.song.sections.isEmpty()) Text("Noch keine gespeichert.", color = PtColors.TextDim, style = MaterialTheme.typography.bodySmall)
+                    if (vm.song.sections.isEmpty()) Text(tr("Noch keine gespeichert."), color = PtColors.TextDim, style = MaterialTheme.typography.bodySmall)
                 }
                 if (hasRange) Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(sectionName, { sectionName = it }, label = { Text("Name, z. B. „Refrain“") }, singleLine = true, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { vm.saveLoopAsSection(sectionName); sectionName = "" }) { Text("Speichern") }
+                    OutlinedTextField(sectionName, { sectionName = it }, label = { Text(tr("Name, z. B. „Refrain“")) }, singleLine = true, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { vm.saveLoopAsSection(sectionName); sectionName = "" }) { Text(tr("Speichern")) }
                 }
                 val difficult = vm.difficultMeasures()
                 if (difficult.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
-                    Text("Schwierige Takte (die meisten Fehler)", style = MaterialTheme.typography.titleSmall)
+                    Text(tr("Schwierige Takte (die meisten Fehler)"), style = MaterialTheme.typography.titleSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for (m in difficult) FilterChip(selected = false, onClick = { vm.setLoopMeasures(m, m) }, label = { Text("Takt ${m + 1}") })
+                        for (m in difficult) FilterChip(selected = false, onClick = { vm.setLoopMeasures(m, m) }, label = { Text(tr("Takt %s", m + 1)) })
                     }
                 }
             }
@@ -166,22 +167,22 @@ fun LoopPanel(vm: PracticeViewModel, onDismiss: () -> Unit) {
 @Composable
 fun FinishedDialog(vm: PracticeViewModel, info: FinishInfo, onBack: () -> Unit) {
     val praise = when {
-        info.accuracy >= 95 -> "Großartig! 🎉"
-        info.accuracy >= 80 -> "Sehr gut!"
-        info.accuracy >= 60 -> "Gut – weiter so!"
-        else -> "Übung macht den Meister"
+        info.accuracy >= 95 -> tr("Großartig! 🎉")
+        info.accuracy >= 80 -> tr("Sehr gut!")
+        info.accuracy >= 60 -> tr("Gut – weiter so!")
+        else -> tr("Übung macht den Meister")
     }
     AlertDialog(
         onDismissRequest = { vm.finished = null },
         title = { Text(praise) },
         text = {
             Column {
-                Text("${info.accuracy} % richtig", style = MaterialTheme.typography.headlineMedium, color = PtColors.Hit)
-                Text("Dauer: ${info.seconds / 60}:${"%02d".format(info.seconds % 60)} min", color = PtColors.TextDim)
-                info.worstMeasure?.let { Text("Die meisten Fehler in Takt ${it + 1}.", color = PtColors.TextDim) }
+                Text(tr("%s %% richtig", info.accuracy), style = MaterialTheme.typography.headlineMedium, color = PtColors.Hit)
+                Text(tr("Dauer: %s:%s min", info.seconds / 60, "%02d".format(info.seconds % 60)), color = PtColors.TextDim)
+                info.worstMeasure?.let { Text(tr("Die meisten Fehler in Takt %s.", it + 1), color = PtColors.TextDim) }
             }
         },
-        confirmButton = { TextButton(onClick = { vm.finished = null; vm.restart(); vm.togglePlay() }) { Text("Nochmal") } },
+        confirmButton = { TextButton(onClick = { vm.finished = null; vm.restart(); vm.togglePlay() }) { Text(tr("Nochmal")) } },
         dismissButton = {
             Row {
                 info.worstMeasure?.let { m ->
@@ -189,9 +190,9 @@ fun FinishedDialog(vm: PracticeViewModel, info: FinishInfo, onBack: () -> Unit) 
                         vm.finished = null
                         vm.setLoopMeasures(m, m)
                         vm.updateLoop(vm.loop.copy(tempoRamp = true, rampTarget = 1.0))
-                    }) { Text("Takt ${m + 1} üben") }
+                    }) { Text(tr("Takt %s üben", m + 1)) }
                 }
-                TextButton(onClick = { vm.finished = null; onBack() }) { Text("Bibliothek") }
+                TextButton(onClick = { vm.finished = null; onBack() }) { Text(tr("Bibliothek")) }
             }
         },
     )

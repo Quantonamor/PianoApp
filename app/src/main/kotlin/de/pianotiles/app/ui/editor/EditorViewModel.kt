@@ -13,6 +13,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.pianotiles.app.PianoTilesApp
+import de.pianotiles.app.i18n.I18n
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.core.ai.AiCorrection
 import de.pianotiles.core.ai.AiEvent
 import de.pianotiles.core.ai.AiFixRunner
@@ -25,12 +27,12 @@ import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
 import de.pianotiles.core.model.Song
 import de.pianotiles.core.model.SongUtils
+import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 
 /** A measure/hand correction suggested by the AI, waiting for the user's decision. */
 data class Proposal(
@@ -189,13 +191,13 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         aiLog.clear(); proposals.clear(); previewProposal = null
         val snapshot = song
         val model = pt.secrets.aiModel
-        aiLog.add("Starte KI-Prüfung mit $model – ${aiPages.size} Seite(n).")
+        aiLog.add(tr("Starte KI-Prüfung mit %s – %s Seite(n).", model, aiPages.size))
         aiJob = viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
                         PdfRenderer(fd).use { renderer ->
-                            ClaudeReviewer(key, model).use { reviewer ->
+                            ClaudeReviewer(key, model, language = I18n.aiLanguage).use { reviewer ->
                                 AiFixRunner(reviewer).run(
                                     snapshot, aiPages,
                                     loadPage = { page -> renderPage(renderer, page) },
@@ -207,15 +209,15 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
                     }
                 }
             }
-            result.exceptionOrNull()?.let { aiLog.add("Fehler: ${it.message ?: it.javaClass.simpleName}") }
+            result.exceptionOrNull()?.let { aiLog.add(tr("Fehler: %s", it.message ?: it.javaClass.simpleName)) }
             aiRunning = false
             aiProgress = 1f
             val open = proposals.count { it.status == Proposal.Status.OPEN }
-            aiStatus = if (aiCancelled) "Abgebrochen" else if (open == 0) "Fertig – keine Änderungen vorgeschlagen" else "Fertig – $open Vorschläge"
+            aiStatus = if (aiCancelled) tr("Abgebrochen") else if (open == 0) tr("Fertig – keine Änderungen vorgeschlagen") else tr("Fertig – %s Vorschläge", open)
         }
     }
 
-    fun cancelAi() { aiCancelled = true; aiStatus = "Wird abgebrochen …" }
+    fun cancelAi() { aiCancelled = true; aiStatus = tr("Wird abgebrochen …") }
 
     private fun onAiEvent(ev: AiEvent, snapshot: Song) {
         when (ev) {
@@ -264,7 +266,7 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         previewProposal = null
     }
 
-    fun handName(h: Hand) = if (h == Hand.RIGHT) "rechte Hand" else "linke Hand"
+    fun handName(h: Hand) = if (h == Hand.RIGHT) tr("rechte Hand") else tr("linke Hand")
 
     override fun onCleared() {
         aiCancelled = true

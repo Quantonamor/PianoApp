@@ -31,8 +31,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Hearing
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.HourglassTop
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
@@ -52,8 +52,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.pianotiles.app.PianoTilesApp
+import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Pitch
@@ -107,7 +108,7 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit)
     }
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) vm.setMic(true) else vm.message = "Ohne Mikrofon-Erlaubnis kannst du die Tasten auf dem Bildschirm benutzen"
+        if (granted) vm.setMic(true) else vm.message = tr("Ohne Mikrofon-Erlaubnis kannst du die Tasten auf dem Bildschirm benutzen")
     }
     fun requestMic(on: Boolean) {
         if (!on) { vm.setMic(false); return }
@@ -188,21 +189,21 @@ private fun TopBar(
             Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück") }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
             Column(Modifier.weight(1f)) {
                 Text(vm.song.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 vm.frame.also { }
                 val m = vm.engine.currentMeasure + 1
                 Text(
-                    "Takt $m / ${vm.song.measureCount} · ${(vm.song.bpmAt(vm.engine.position) * vm.speed).toInt()} BPM",
+                    tr("Takt %s / %s · %s BPM", m, vm.song.measureCount, (vm.song.bpmAt(vm.engine.position) * vm.speed).toInt()),
                     style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim,
                 )
             }
             Segmented(
                 listOf(
-                    Triple(PracticeMode.WAIT, Icons.Filled.HourglassTop, "Warten"),
-                    Triple(PracticeMode.FLOW, Icons.Filled.PlayArrow, "Fließend"),
-                    Triple(PracticeMode.LISTEN, Icons.Filled.Hearing, "Anhören"),
+                    Triple(PracticeMode.WAIT, Icons.Filled.HourglassTop, tr("Warten")),
+                    Triple(PracticeMode.FLOW, Icons.Filled.PlayArrow, tr("Fließend")),
+                    Triple(PracticeMode.LISTEN, Icons.Filled.Hearing, tr("Anhören")),
                 ),
                 selected = vm.mode, onSelect = vm::changeMode,
             )
@@ -210,10 +211,10 @@ private fun TopBar(
             HandSelector(vm.hands, vm::changeHands)
             Spacer(Modifier.width(8.dp))
             Chip(text = "${(vm.speed * 100).toInt()} %", icon = Icons.Filled.Tune, active = vm.speed != 1f, onClick = onSpeed)
-            ToggleIcon(Icons.Filled.Timer, "Metronom", vm.metronome, vm::toggleMetronome)
+            ToggleIcon(Icons.Filled.Timer, tr("Metronom"), vm.metronome, vm::toggleMetronome)
             MicButton(vm.micActive, vm.micLevel, onMic)
-            if (sheetAvailable) ToggleIcon(Icons.Filled.MenuBook, "Notenblatt", sheetShown, onSheet)
-            IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, "Noten bearbeiten") }
+            if (sheetAvailable) ToggleIcon(Icons.Filled.MenuBook, tr("Notenblatt"), sheetShown, onSheet)
+            IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, tr("Noten bearbeiten")) }
         }
     }
 }
@@ -277,7 +278,7 @@ private fun ToggleIcon(icon: ImageVector, desc: String, active: Boolean, onClick
 private fun MicButton(active: Boolean, level: Float, onClick: () -> Unit) {
     Box(contentAlignment = Alignment.BottomCenter) {
         IconButton(onClick = onClick) {
-            Icon(if (active) Icons.Filled.Mic else Icons.Filled.MicOff, "Mikrofon", tint = if (active) PtColors.Hit else PtColors.TextDim)
+            Icon(if (active) Icons.Filled.Mic else Icons.Filled.MicOff, tr("Mikrofon"), tint = if (active) PtColors.Hit else PtColors.TextDim)
         }
         if (active) LinearProgressIndicator(progress = { level }, modifier = Modifier.width(28.dp).height(3.dp).padding(bottom = 2.dp), color = PtColors.Hit)
     }
@@ -287,12 +288,12 @@ private fun MicButton(active: Boolean, level: Float, onClick: () -> Unit) {
 private fun BottomBar(vm: PracticeViewModel, onLoopOptions: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surface) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = vm::restart) { Icon(Icons.Filled.Replay, "Von vorn") }
-            IconButton(onClick = { vm.seekMeasureDelta(-1) }) { Icon(Icons.Filled.FastRewind, "Takt zurück") }
+            IconButton(onClick = vm::restart) { Icon(Icons.Filled.Replay, tr("Von vorn")) }
+            IconButton(onClick = { vm.seekMeasureDelta(-1) }) { Icon(Icons.Filled.FastRewind, tr("Takt zurück")) }
             FilledIconButton(onClick = vm::togglePlay, modifier = Modifier.size(48.dp), shape = CircleShape) {
                 Icon(if (vm.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, if (vm.isPlaying) "Pause" else "Start", Modifier.size(30.dp))
             }
-            IconButton(onClick = { vm.seekMeasureDelta(1) }) { Icon(Icons.Filled.FastForward, "Takt vor") }
+            IconButton(onClick = { vm.seekMeasureDelta(1) }) { Icon(Icons.Filled.FastForward, tr("Takt vor")) }
             Spacer(Modifier.width(6.dp))
             vm.frame.also { }
             Timeline(
@@ -304,10 +305,10 @@ private fun BottomBar(vm: PracticeViewModel, onLoopOptions: () -> Unit) {
             )
             Spacer(Modifier.width(6.dp))
             val loopText = if (vm.loop.endBeat > vm.loop.startBeat) {
-                if (vm.loopStartMeasure == vm.loopEndMeasure) "T. ${vm.loopStartMeasure + 1}" else "T. ${vm.loopStartMeasure + 1}–${vm.loopEndMeasure + 1}"
-            } else "Schleife"
+                if (vm.loopStartMeasure == vm.loopEndMeasure) tr("T. %s", vm.loopStartMeasure + 1) else tr("T. %s–%s", vm.loopStartMeasure + 1, vm.loopEndMeasure + 1)
+            } else tr("Schleife")
             IconButton(onClick = vm::toggleLoop) {
-                Icon(if (vm.loop.enabled) Icons.Filled.RepeatOne else Icons.Filled.Repeat, "Schleife an/aus", tint = if (vm.loop.enabled) PtColors.Loop else PtColors.TextDim)
+                Icon(if (vm.loop.enabled) Icons.Filled.RepeatOne else Icons.Filled.Repeat, tr("Schleife an/aus"), tint = if (vm.loop.enabled) PtColors.Loop else PtColors.TextDim)
             }
             Chip(text = loopText, icon = null, active = vm.loop.enabled, onClick = onLoopOptions)
         }
@@ -327,7 +328,7 @@ private fun Overlays(vm: PracticeViewModel) {
                 ) { Icon(Icons.Filled.PlayArrow, "Start", Modifier.size(44.dp)) }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Tippen = Start/Pause · Wischen = Spulen · Doppeltipp = Takt wiederholen",
+                    tr("Tippen = Start/Pause · Wischen = Spulen · Doppeltipp = Takt wiederholen"),
                     style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim,
                 )
             }
@@ -336,7 +337,7 @@ private fun Overlays(vm: PracticeViewModel) {
         if (vm.engine.isWaiting) {
             val names = vm.engine.expectedPitches.sorted().joinToString("  ") { Pitch.fullName(it, vm.settings.noteNaming) }
             Text(
-                "Spiele: $names",
+                tr("Spiele: %s", names),
                 Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp).clip(RoundedCornerShape(12.dp))
                     .background(Color(0xAA0E1220)).padding(horizontal = 12.dp, vertical = 4.dp),
                 color = PtColors.Hit, fontWeight = FontWeight.Bold,
@@ -349,8 +350,8 @@ private fun Overlays(vm: PracticeViewModel) {
         AnimatedVisibility(showPass && pass != null, Modifier.align(Alignment.TopCenter).padding(top = 12.dp), enter = fadeIn(), exit = fadeOut()) {
             pass?.let {
                 Toast(buildString {
-                    append("Durchgang ${it.pass}: ${it.accuracy} %")
-                    it.newSpeed?.let { s -> append(" · schneller: ${(s * 100).toInt()} %") }
+                    append(tr("Durchgang %s: %s %%", it.pass, it.accuracy))
+                    it.newSpeed?.let { s -> append(tr(" · schneller: %s %%", (s * 100).toInt())) }
                 })
             }
         }
