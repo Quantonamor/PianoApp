@@ -12,6 +12,9 @@
   Aufbereitung (Papier finden, Licht ausgleichen, gerade drehen, zuschneiden, skalieren).
 * Bibliothek 2.0: Titelbild, ▶ Abspielen direkt auf der Karte, Fortschrittsring, Regale/Filter, Sortierung nach
   Schwierigkeit, „Weiter üben“, Mehrfachauswahl (teilen/löschen).
+* **3D-Hände**: gezeichnete, schattierte Hände über der Klaviatur zeigen, welcher Finger welche Taste spielt
+  (Schalter ✋ im Übungsbildschirm); Fingerzahlen auf den fallenden Noten. Automatischer Fingersatz für alle Stücke
+  ohne Fingersatz (dynamische Programmierung nach Parncutt), Fingersätze aus Dateien bleiben erhalten.
 
 ## 0.2.0
 

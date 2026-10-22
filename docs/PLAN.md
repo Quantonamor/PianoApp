@@ -136,9 +136,9 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
       erkennen; Fotos werden als Original gespeichert
 
 **D) 3D-Hände** – ein-/ausblendbar über der Klaviatur, zeigen welcher Finger welche Taste spielt
-- [ ] Core: automatischer Fingersatz (dynamische Programmierung über Spannweite, Daumen-Unter-/Übersatz,
-      schwarze Tasten, Akkorde) + Handhaltung über die Zeit (`core/hands/`), Tests
-- [ ] App: 3D-Hände (perspektivisch gezeichnet, schattiert, Finger beugen sich beim Anschlag), Fingerzahlen auf den
+- [x] Core: automatischer Fingersatz (dynamische Programmierung über Spannweite, Daumen-Unter-/Übersatz,
+      schwarze Tasten, Akkorde) + Handhaltung über die Zeit (`core/hands/`), Tests (`HandsTest`)
+- [x] App: 3D-Hände (perspektivisch gezeichnet, schattiert, Finger beugen sich beim Anschlag), Fingerzahlen auf den
       fallenden Noten, Schalter „Hände“
 - [ ] Optional „Fingersatz per KI“ (gleicher Schlüssel wie KI-nachbessern) und Fingersatz im Editor ändern
 

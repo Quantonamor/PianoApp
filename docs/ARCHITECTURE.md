@@ -68,6 +68,20 @@ Töne, die der eigene Synthesizer gerade spielt, ignoriert die App (sonst „hö
 (`.github/workflows/android.yml`) führt die Core-Tests aus und baut Debug- und Release-APK
 (Release mit Debug-Schlüssel signiert, damit direkt installierbar) als Download-Artefakt.
 
+## Hände & Fingersatz
+
+* `core/hands/AutoFingering.kt`: Fingersatz je Hand per dynamischer Programmierung (Viterbi) über Akkord-Schritte;
+  Kandidaten = alle Finger-Zuordnungen, die mit der Tonhöhe steigen (links gespiegelt). Kosten nach Parncutt et al.
+  (1997): bequeme/mögliche Spannweite je Fingerpaar (im Akkord streng, nacheinander etwas großzügiger),
+  Daumen-Untersatz/Übersatz (mit 3/4 leicht, mit 2/5 teuer), Daumen/kleiner Finger auf schwarzen Tasten, gleicher
+  Finger auf anderer Taste. `ensure()` rechnet automatische Fingersätze nach Änderungen neu, Fingersätze aus Datei,
+  KI oder von Hand bleiben und nur Lücken werden gefüllt. Tests: `HandsTest`.
+* `core/hands/HandMotion.kt`: Handhaltung über die Zeit (Fingerpositionen in Weißtasten-Einheiten `KeyX`,
+  freie Finger mit natürlichem Abstand, Gleiten zur nächsten Lage im letzten Teil der Lücke, Tastendruck 0..1).
+* App: `ui/practice/HandsOverlay.kt` zeichnet die Hände (Handfläche vom unteren Rand, schattierte, perspektivisch
+  verjüngte Finger, Fingernägel mit Zahl, Schatten auf den Tasten) über der Klaviatur; Fingerzahl auf den fallenden
+  Noten in `FallingNotes.kt`.
+
 ## KI-nachbessern
 
 * `core/ai/AiPrompt.kt`: fester System-Prompt (Rolle Notensatz-Korrektor), Seitentext je PDF-Seite

@@ -30,6 +30,8 @@ private val topics = listOf(
         "• Warten: Die Noten bleiben an der Linie stehen, bis du die richtigen Tasten spielst. Ideal zum Lernen – du bestimmst das Tempo.\n• Fließend: Die Noten laufen im eingestellten Tempo durch. Mit Mikrofon wird mitgezählt, wie viele du triffst.\n• Anhören: Die App spielt das Stück vor.",
     "Hände getrennt üben" to
         "Wähle oben L (links), R (rechts) oder L+R. Die andere Hand wird leiser angezeigt und – wenn eingeschaltet – automatisch mitgespielt.",
+    "Hände & Fingersatz" to
+        "Der Knopf ✋ blendet Hände über der Klaviatur ein: Sie gleiten mit dem Stück mit, der spielende Finger drückt seine Taste. Die Zahlen (1 = Daumen … 5 = kleiner Finger) stehen auch in den fallenden Noten. Hat ein Stück keinen Fingersatz, rechnet die App automatisch einen aus; Fingersätze aus MusicXML- oder MuseScore-Dateien bleiben erhalten. Abschalten geht auch in den Einstellungen.",
     "Teile wiederholen (Schleife)" to
         "• Ziehe mit dem Finger über die Zeitleiste unten, um Takte zu markieren – die Schleife startet sofort.\n• Doppeltippe auf die fallenden Noten, um den aktuellen Takt zu wiederholen.\n• Über den Schleifen-Knopf: Anzahl Wiederholungen, Tempo-Treppe (wird nach jedem guten Durchgang schneller), Abschnitte speichern und schwierige Takte direkt üben.",
     "Steuerung" to

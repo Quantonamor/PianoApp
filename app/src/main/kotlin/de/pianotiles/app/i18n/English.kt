@@ -18,6 +18,9 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Namen auf den Tasten" to "Names on the keys",
     "Taktnummern" to "Measure numbers",
     "Hände" to "Hands",
+    "Hände & Fingersatz" to "Hands & fingering",
+    "Der Knopf ✋ blendet Hände über der Klaviatur ein: Sie gleiten mit dem Stück mit, der spielende Finger drückt seine Taste. Die Zahlen (1 = Daumen … 5 = kleiner Finger) stehen auch in den fallenden Noten. Hat ein Stück keinen Fingersatz, rechnet die App automatisch einen aus; Fingersätze aus MusicXML- oder MuseScore-Dateien bleiben erhalten. Abschalten geht auch in den Einstellungen." to
+        "The ✋ button shows hands over the keyboard: they move along with the piece, the playing finger presses its key. The numbers (1 = thumb … 5 = little finger) also appear in the falling notes. If a piece has no fingering, the app works one out automatically; fingerings from MusicXML or MuseScore files are kept. You can also switch this off in the settings.",
     "Hände über der Klaviatur" to "Hands over the keyboard",
     "Fingersatz auf den Noten" to "Fingering on the notes",
     "Vorschau / Zoom: %.1f s sichtbar" to "Preview / zoom: %.1f s visible",
