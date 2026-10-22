@@ -5,6 +5,8 @@
 * **Haltepedal**: aus MIDI (Controller 64) und MusicXML („Ped.“-Zeichen, auch Pedalwechsel) übernommen; beim
   Abspielen klingen losgelassene Töne bis zum Lösen des Pedals weiter; grüner Streifen „Ped.“ am rechten Rand
   der fallenden Noten; MIDI-Export schreibt das Pedal mit (`PedalTest`).
+* **Dynamik aus MusicXML** (pp … ff, sf/sfz als Akzent, `sound dynamics`) wird zur Anschlagstärke – mit den drei
+  Anschlagstufen des Flügels klingt das Vorspiel lebendig statt gleichförmig.
 * **Lernpfad**: 13 Lektionen vom ersten Ton (fünf Finger je Hand) über Kinderlieder und beide Hände bis „Für Elise“;
   jede Lektion stellt Hand, Modus und Tempo ein, 1–3 Sterne je nach Treffsicherheit, „Nächste Lektion“ im
   Abschluss-Dialog. Karte oben in der Bibliothek, „Los geht's“ der Begrüßung öffnet ihn (`core/practice/Course.kt`).

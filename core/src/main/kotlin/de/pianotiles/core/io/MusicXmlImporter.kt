@@ -1,5 +1,6 @@
 package de.pianotiles.core.io
 
+import kotlin.math.abs
 import de.pianotiles.core.i18n.CoreText.t
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
@@ -20,6 +21,10 @@ import org.xml.sax.InputSource
  * grace notes (skipped), tempo, time and key signatures. Repeats are played as written (not expanded).
  */
 object MusicXmlImporter {
+    /** Velocity of the dynamic markings. */
+    private val DYNAMICS = mapOf("pppp" to 16, "ppp" to 24, "pp" to 36, "p" to 50, "mp" to 64, "mf" to 80, "f" to 96, "ff" to 110, "fff" to 120, "ffff" to 127)
+    private val ACCENTS = setOf("sf", "sfz", "sffz", "fz", "sfp", "rfz", "rf")
+
 
     private val stepIndex = mapOf('C' to 0, 'D' to 2, 'E' to 4, 'F' to 5, 'G' to 7, 'A' to 9, 'B' to 11)
 
@@ -65,6 +70,8 @@ object MusicXmlImporter {
             var divisions = 1.0
             var measureStart = 0.0
             val tieOpen = HashMap<Int, Int>() // pitch -> index in partNotes
+            var dynamic = 80 // MIDI velocity of the current dynamic marking (mf)
+            var accentAt = -1.0 // sf / sfz / fz: louder notes at this time
             for ((measureIdx, measure) in part.children("measure").withIndex()) {
                 val info = MeasureInfo(measureStart)
                 if (parts.indexOf(part) == 0) {
@@ -95,6 +102,12 @@ object MusicXmlImporter {
                             if (keyFifths == null) el.child("key")?.child("fifths")?.text()?.toIntOrNull()?.let { keyFifths = it }
                         }
                         "direction" -> {
+                            // dynamics (pp … ff) set the loudness of the following notes; sf/sfz/fz only accent the next one
+                            el.descendants("dynamics").firstOrNull()?.childElements()?.firstOrNull()?.tagName?.let { d ->
+                                DYNAMICS[d]?.let { dynamic = it }
+                                if (d in ACCENTS) accentAt = measureStart + cursor
+                            }
+                            el.child("sound")?.getAttribute("dynamics")?.toDoubleOrNull()?.let { dynamic = (it * 0.9).toInt().coerceIn(16, 127) }
                             // sustain pedal marks ("Ped." … "*"), from any part
                             for (pd in el.descendants("pedal")) {
                                 val type = pd.getAttribute("type")
@@ -140,7 +153,9 @@ object MusicXmlImporter {
                                 partNotes[idx] = prev.copy(duration = absStart + dur - prev.start) to st
                                 if ("start" !in ties) tieOpen.remove(midi)
                             } else {
-                                partNotes.add(Note(midi, absStart, dur.coerceAtLeast(1.0 / 32), finger = finger) to staff)
+                                val accent = if (accentAt >= 0 && abs(absStart - accentAt) < 0.26) 20 else 0
+                                val vel = el.getAttribute("dynamics").toDoubleOrNull()?.let { (it * 0.9).toInt() } ?: (dynamic + accent)
+                                partNotes.add(Note(midi, absStart, dur.coerceAtLeast(1.0 / 32), velocity = vel.coerceIn(16, 127), finger = finger) to staff)
                                 if ("start" in ties) tieOpen[midi] = partNotes.lastIndex
                             }
                         }

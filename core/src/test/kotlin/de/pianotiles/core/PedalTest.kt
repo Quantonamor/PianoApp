@@ -50,4 +50,20 @@ class PedalTest {
         val s = MusicXmlImporter.import(xml.toByteArray(), "x")
         assertEquals(listOf(PedalSpan(0.0, 2.0), PedalSpan(2.0, 4.0)), s.pedal)
     }
+
+    @Test
+    fun musicXmlDynamicsBecomeVelocities() {
+        val xml = """<?xml version="1.0"?><score-partwise><part-list><score-part id="P1"><part-name>P</part-name></score-part></part-list>
+            <part id="P1"><measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+            <direction><direction-type><dynamics><p/></dynamics></direction-type></direction>
+            <note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration></note>
+            <note><pitch><step>D</step><octave>4</octave></pitch><duration>1</duration></note>
+            <direction><direction-type><dynamics><ff/></dynamics></direction-type></direction>
+            <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration></note>
+            <direction><direction-type><dynamics><sfz/></dynamics></direction-type></direction>
+            <note><pitch><step>F</step><octave>4</octave></pitch><duration>1</duration></note>
+            </measure></part></score-partwise>"""
+        val v = MusicXmlImporter.import(xml.toByteArray(), "x").notes.sortedBy { it.start }.map { it.velocity }
+        assertEquals(listOf(50, 50, 110, 127), v)
+    }
 }
