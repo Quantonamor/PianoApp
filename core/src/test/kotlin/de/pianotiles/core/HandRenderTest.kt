@@ -30,7 +30,7 @@ class HandRenderTest {
     private fun render(name: String, song0: de.pianotiles.core.model.Song, beat: Double, lo0: Int?, hi0: Int?, w: Int, keysH: Int, scale: Float, out: File?) {
         val song = AutoFingering.apply(song0)
         val lo = lo0 ?: (song.lowestPitch / 12) * 12; val hi = hi0 ?: ((song.highestPitch / 12) * 12 + 11)
-        val h = keysH + (keysH * 0.63).toInt()
+        val h = keysH + (keysH * 0.6).toInt()
         val img = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
         keyboard(img, lo, hi, keysH)
         val whites = (lo..hi).count { !Pitch.isBlackKey(it) }
@@ -63,6 +63,8 @@ class HandRenderTest {
         render("closeup", DemoSongs.odeToJoy(), 0.5, 57, 74, 1080, 420, 1f, out)
         render("closeup_left", DemoSongs.odeToJoy(), 0.5, 40, 57, 1080, 420, 1f, out)
         render("closeup_black", DemoSongs.furElise(), 0.3, 62, 79, 1080, 420, 1f, out)
+        // proportions of the app in portrait (Ode: 15 white keys on a 1080 px phone, keys 5.2 key widths long)
+        render("app_portrait", DemoSongs.odeToJoy(), 2.5, 48, 72, 1080, (1080 / 15 * 5.2).toInt(), 0.4f, out)
         // a film strip of the motion (right hand, Ode: E E F G G F E D C), for checking smoothness and key presses
         if (out != null) {
             strip(out, "strip", DemoSongs.odeToJoy(), (0 until 8).map { k -> 2.0 + k * 0.5 }, 59, 69)
