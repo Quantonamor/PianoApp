@@ -38,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Piano
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
@@ -122,7 +123,8 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit,
         else micPermission.launch(Manifest.permission.RECORD_AUDIO)
     }
     // Switch the microphone on automatically for "Warten" (the user can turn it off again).
-    LaunchedEffect(vm.mode) { if (vm.mode == PracticeMode.WAIT && !vm.micActive) requestMic(true) }
+    // (not when a MIDI keyboard is connected: its keys are exact)
+    LaunchedEffect(vm.mode, vm.midiDevices) { if (vm.mode == PracticeMode.WAIT && !vm.micActive && vm.midiDevices.isEmpty()) requestMic(true) }
     DisposableEffect(Unit) { onDispose { vm.setMic(false) } }
 
     var showSpeed by remember { mutableStateOf(false) }
@@ -232,7 +234,7 @@ private fun PlayArea(vm: PracticeViewModel, settings: de.pianotiles.app.data.App
                 Box(Modifier.fillMaxWidth().height(keyboardHeight).background(Color.Black)) {
                 Keyboard(
                     range = range, expected = expected, sounding = sounding, heard = vm.heardPitches,
-                    pressed = vm.tappedPitches, wrong = vm.wrongPitch, naming = settings.noteNaming,
+                    pressed = vm.tappedPitches + vm.midiPitches, wrong = vm.wrongPitch, naming = settings.noteNaming,
                     showNames = settings.showNamesOnKeys, release = hints.release, keepHolding = hints.keepHolding, pulse = pulse,
                     onKeyDown = vm::keyDown, onKeyUp = vm::keyUp,
                 )
@@ -282,7 +284,8 @@ private fun TopBar(
             }
             @Composable
             fun actions() {
-                MicButton(vm.micActive, vm.micLevel, onMic)
+                if (vm.midiDevices.isNotEmpty()) Icon(Icons.Filled.Piano, tr("MIDI-Keyboard verbunden: %s", vm.midiDevices.joinToString()), tint = PtColors.Hit, modifier = Modifier.padding(horizontal = 6.dp))
+                else MicButton(vm.micActive, vm.micLevel, onMic)
                 if (sheetAvailable) ToggleIcon(Icons.AutoMirrored.Filled.MenuBook, tr("Notenblatt"), sheetShown, onSheet)
                 ViewMenu(vm)
                 IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, tr("Noten bearbeiten")) }

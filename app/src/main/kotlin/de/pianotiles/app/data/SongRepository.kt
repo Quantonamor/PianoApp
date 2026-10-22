@@ -34,7 +34,12 @@ class SongRepository(private val context: Context) {
         val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
         if (!prefs.getBoolean("demos_installed_v1", false)) {
             DemoSongs.all().forEach { writeSong(it) }
-            prefs.edit().putBoolean("demos_installed_v1", true).apply()
+            prefs.edit().putBoolean("demos_installed_v1", true).putBoolean("demos_installed_v2", true).apply()
+        } else if (!prefs.getBoolean("demos_installed_v2", false)) {
+            // pieces added in 0.3: installed once, without bringing back demos the user deleted
+            val old = setOf("demo-scale", "demo-entchen", "demo-ode", "demo-elise")
+            DemoSongs.all().filter { it.id !in old && !dir(it.id).exists() }.forEach { writeSong(it) }
+            prefs.edit().putBoolean("demos_installed_v2", true).apply()
         }
         val all = readAll().map { song ->
             // songs without an original get their engraved sheet (also for libraries from older versions)

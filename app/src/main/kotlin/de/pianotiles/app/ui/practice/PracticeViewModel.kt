@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import de.pianotiles.app.PianoTilesApp
 import de.pianotiles.app.audio.MicInput
+import de.pianotiles.app.audio.MidiInput
 import de.pianotiles.app.i18n.tr
 import de.pianotiles.core.audio.DetectionFrame
 import de.pianotiles.core.hands.AutoFingering
@@ -61,6 +62,19 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
     var message by mutableStateOf<String?>(null)
 
     private val mic = MicInput(::onMicFrame)
+    /** Keys held on a connected MIDI keyboard. */
+    var midiPitches by mutableStateOf<Set<Int>>(emptySet()); private set
+    /** Names of connected MIDI keyboards (empty = none). */
+    var midiDevices by mutableStateOf<List<String>>(emptyList()); private set
+    private val midi = MidiInput(app, ::onMidiKey) { names ->
+        val added = names.firstOrNull { it !in midiDevices }
+        midiDevices = names
+        if (added != null) {
+            message = tr("MIDI-Keyboard verbunden: %s", added)
+            if (micActive) setMic(false) // the keyboard is exact; the microphone is not needed
+        }
+        syncHeld()
+    }
     /** Pitches recently produced by the synthesizer – ignored by the microphone to avoid self-triggering. */
     private val synthRecent = HashMap<Int, Long>()
     private var sessionStart = System.currentTimeMillis()
@@ -75,6 +89,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         synth.volume = settings.volume
         mic.sensitivity = settings.micSensitivity.toDouble()
         synth.start()
+        runCatching { midi.start() }
         engine.playOwnHand = true // until the microphone listens to the real piano
         engine.audioLookaheadSeconds = 0.12 // schedule playback slightly ahead for exact timing
         engine.scoreInFlow = false // without microphone nothing can be "missed" in FLOW mode
@@ -145,12 +160,24 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         bump()
     }
 
+    private fun onMidiKey(pitch: Int, velocity: Int, down: Boolean) {
+        if (down) {
+            midiPitches = midiPitches + pitch
+            syncHeld()
+            handle(engine.onNotesPlayed(setOf(pitch), midiPitches))
+        } else {
+            midiPitches = midiPitches - pitch
+            syncHeld()
+        }
+        bump()
+    }
+
     fun keyUp(pitch: Int) { tappedPitches = tappedPitches - pitch; syncHeld() }
 
     /** The engine needs to know which keys are held (chords played together, "let go" / "keep holding" hints). */
     private fun syncHeld() {
-        engine.heldPitches = tappedPitches + heardPitches
-        engine.heldIsExact = !micActive
+        engine.heldPitches = tappedPitches + heardPitches + midiPitches
+        engine.heldIsExact = !micActive || midiDevices.isNotEmpty()
     }
 
     // ---------------------------------------------------------------- controls
@@ -303,6 +330,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
 
     override fun onCleared() {
         mic.stop()
+        midi.stop()
         synth.allNotesOff()
         saveStats(null)
         super.onCleared()

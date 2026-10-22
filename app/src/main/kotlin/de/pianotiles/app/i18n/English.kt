@@ -19,6 +19,7 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Taktnummern" to "Measure numbers",
     "Hände" to "Hands",
     "Ansicht" to "View",
+    "MIDI-Keyboard verbunden: %s" to "MIDI keyboard connected: %s",
     "Einstellungen zeigen" to "Show controls",
     "Akkorde & Halten" to "Chords & holding",
     "Akkorde zählen nur, wenn ihre Tasten zusammen angeschlagen oder gemeinsam gehalten werden. Musst du eine Taste loslassen, während eine andere weiterklingt, wird sie weiß mit Pfeil nach oben markiert („Loslassen“). Lässt du eine Note zu früh los, leuchtet ihre Taste grün umrandet („Halten“) – das geht nur mit den Bildschirm-Tasten, weil das Mikrofon den Nachklang hört." to
