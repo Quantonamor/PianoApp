@@ -49,7 +49,8 @@ class SmokeTest {
     @Before
     fun forceGerman() {
         val app = context.applicationContext as PianoTilesApp
-        app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN) }
+        // hands are switched on explicitly in libraryPracticeEditorSettings
+        app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN, showHands = false) }
         app.applyLanguage()
     }
 
@@ -102,10 +103,12 @@ class SmokeTest {
             shot("03_practice_playing")
             compose.onNodeWithContentDescription("Pause").performClick()
 
-            // 3D hands over the keyboard: off and on again
+            // 3D hands over the keyboard: on while playing, then off again
             compose.onNodeWithContentDescription("Hände").performClick()
-            play(300)
-            shot("03b_hands_off")
+            compose.onAllNodesWithContentDescription("Start")[0].performClick()
+            play(2000)
+            shot("03b_hands")
+            compose.onNodeWithContentDescription("Pause").performClick()
             compose.onNodeWithContentDescription("Hände").performClick()
             play(300)
 

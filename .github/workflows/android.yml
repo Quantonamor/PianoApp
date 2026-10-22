@@ -76,8 +76,8 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
-            ./gradlew :app:connectedDebugAndroidTest --console=plain || (adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots; adb logcat -d | grep -E "AndroidRuntime|FATAL" | tail -60; echo "==== FAILED TESTS ===="; find app/build/outputs/androidTest-results -name "*.xml" -exec grep -h -A14 "<failure" {} + | head -80; exit 1)
-            adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots || true
+            ./gradlew :app:connectedDebugAndroidTest --console=plain || (timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots; timeout 60 adb logcat -d | grep -E "AndroidRuntime|FATAL|ANR|Fatal signal" | tail -60; echo "==== FAILED TESTS ===="; find app/build/outputs/androidTest-results -name "*.xml" -exec grep -h -A14 "<failure" {} + | head -80; exit 1)
+            timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots || true
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
