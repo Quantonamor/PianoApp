@@ -19,6 +19,7 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Taktnummern" to "Measure numbers",
     "Hände" to "Hands",
     "Ansicht" to "View",
+    "Einstellungen zeigen" to "Show controls",
     "Akkorde & Halten" to "Chords & holding",
     "Akkorde zählen nur, wenn ihre Tasten zusammen angeschlagen oder gemeinsam gehalten werden. Musst du eine Taste loslassen, während eine andere weiterklingt, wird sie weiß mit Pfeil nach oben markiert („Loslassen“). Lässt du eine Note zu früh los, leuchtet ihre Taste grün umrandet („Halten“) – das geht nur mit den Bildschirm-Tasten, weil das Mikrofon den Nachklang hört." to
         "Chords count only when their keys are struck together or held together. If you have to let go of a key while another one goes on, it is marked white with an arrow up (\"Let go\"). If you let go of a note too early, its key gets a green outline (\"Keep holding\") – this works only with the on-screen keys, because the microphone hears the sound ringing on.",

@@ -39,7 +39,8 @@ data class LoopSettings(
 )
 
 sealed class EngineEvent {
-    data class PlayNote(val pitch: Int, val velocity: Int, val durationSeconds: Double, val hand: Hand) : EngineEvent()
+    /** [delaySeconds]: the note is due this much later than now (playback scheduled ahead). */
+    data class PlayNote(val pitch: Int, val velocity: Int, val durationSeconds: Double, val hand: Hand, val delaySeconds: Double = 0.0) : EngineEvent()
     data class Click(val accent: Boolean) : EngineEvent()
     data class PassCompleted(val pass: Int, val accuracy: Int, val newSpeed: Double?) : EngineEvent()
     data class LoopFinished(val passes: Int) : EngineEvent()
@@ -67,6 +68,8 @@ class PracticeEngine(val song: Song) {
     var accompaniment: Boolean = true
     /** FLOW mode: also sound the practised hand (useful without microphone, so the whole piece is heard). */
     var playOwnHand: Boolean = false
+    /** How far ahead (seconds) notes are handed to the sound output in FLOW/LISTEN (0 = when they are due). */
+    var audioLookaheadSeconds: Double = 0.0
     /** Score hits in FLOW mode (requires microphone or on-screen input). */
     var scoreInFlow: Boolean = true
     /** Accept a played note one octave off (microphone harmonics can confuse octaves). */
@@ -293,14 +296,17 @@ class PracticeEngine(val song: Song) {
             }
         }
 
-        // Auto-played notes (accompaniment / listen mode).
-        while (autoCursor < sortedIdx.size && song.notes[sortedIdx[autoCursor]].start <= target + 1e-9) {
+        // Auto-played notes (accompaniment / listen mode). Outside WAIT they are handed out a little ahead of time
+        // with their exact delay, so the sound does not jitter with the screen frames.
+        val ahead = if (mode == PracticeMode.WAIT) 0.0 else audioLookaheadSeconds * beatsPerSecond
+        while (autoCursor < sortedIdx.size && song.notes[sortedIdx[autoCursor]].start <= target + ahead + 1e-9) {
             val idx = sortedIdx[autoCursor]
             val n = song.notes[idx]
             if (n.start >= position - 1e-9 && inRange(n.start)) {
                 val shouldPlay = mode == PracticeMode.LISTEN || (!hands.includes(n.hand) && accompaniment) ||
                     (mode == PracticeMode.FLOW && playOwnHand && hands.includes(n.hand))
-                if (shouldPlay) events.add(EngineEvent.PlayNote(n.pitch, n.velocity, n.duration / beatsPerSecond, n.hand))
+                val delay = ((n.start - target) / beatsPerSecond).coerceAtLeast(0.0)
+                if (shouldPlay) events.add(EngineEvent.PlayNote(n.pitch, n.velocity, n.duration / beatsPerSecond, n.hand, delay))
             }
             autoCursor++
         }

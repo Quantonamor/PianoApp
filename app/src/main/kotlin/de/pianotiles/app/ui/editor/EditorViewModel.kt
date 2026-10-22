@@ -160,15 +160,15 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         playJob = viewModelScope.launch {
             // tones rendered beforehand, so chord notes start together
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { pt.synth.prepare(ns.map { it.pitch }.toSet()) }
+            // all notes scheduled at once with their exact start delay (no timing jitter)
+            var sec = 0.0
             var t = from
             for (n in ns) {
-                if (n.start > t) {
-                    delay(((n.start - t) * 60_000 / s.bpmAt(t)).toLong())
-                    t = n.start
-                }
-                pt.synth.noteOn(n.pitch, n.velocity, n.duration * 60 / s.bpmAt(n.start))
+                if (n.start > t) { sec += (n.start - t) * 60.0 / s.bpmAt(t); t = n.start }
+                pt.synth.noteOn(n.pitch, n.velocity, n.duration * 60 / s.bpmAt(n.start), sec)
             }
-            delay(((to - t) * 60_000 / s.bpmAt(t)).toLong().coerceAtMost(3000))
+            sec += (to - t) * 60.0 / s.bpmAt(t)
+            delay((sec * 1000).toLong().coerceAtMost(30_000))
             playing = false
         }
     }

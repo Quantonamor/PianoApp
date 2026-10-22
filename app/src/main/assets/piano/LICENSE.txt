@@ -1,0 +1,2 @@
+Piano samples from the npm package tonejs-instrument-piano-mp3 (tonejs-instruments, MIT License,
+https://github.com/Makefully-Studios/tonejs-instruments), converted with tools/samples/make_piano.py.

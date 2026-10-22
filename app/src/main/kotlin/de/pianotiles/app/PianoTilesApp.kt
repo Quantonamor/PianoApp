@@ -28,6 +28,8 @@ class PianoTilesApp : Application() {
         settings = SettingsStore(this)
         applyLanguage()
         secrets = SecretStore(this)
+        // the piano recordings (~6 MB) are read in the background; until then the synthesizer stands in
+        Thread({ runCatching { synth.loadSamples(assets) } }, "PianoSamples").start()
     }
 
     /** Applies the language from the settings to the UI texts ([I18n]) and the core module. */

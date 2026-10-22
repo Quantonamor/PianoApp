@@ -69,6 +69,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -130,10 +131,24 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit,
     var showLoop by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        BoxWithConstraints(Modifier.fillMaxSize()) {
+        // any touch shows the controls again for a while
+        var lastTouch by remember { mutableStateOf(System.currentTimeMillis()) }
+        BoxWithConstraints(
+            Modifier.fillMaxSize().pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        lastTouch = System.currentTimeMillis()
+                    }
+                }
+            },
+        ) {
             val portrait = maxHeight > maxWidth
             // while the music runs only notes and keys are visible; pausing brings the controls back
-            val controls = !vm.isPlaying || vm.finished != null
+            // hidden while the music runs and after a few seconds without touching (paused); dialogs keep them
+            vm.frame.also { }
+            val idle = System.currentTimeMillis() - lastTouch > 6000
+            val controls = vm.finished != null || showSpeed || showLoop || (!vm.isPlaying && !idle)
             Column(Modifier.fillMaxSize()) {
                 AnimatedVisibility(controls, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
                     TopBar(
@@ -170,7 +185,8 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit,
                     contentAlignment = Alignment.Center,
                 ) { Icon(icon, desc, tint = Color.White.copy(alpha = 0.85f)) }
                 round(Alignment.TopStart, Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück"), onBack)
-                round(Alignment.TopEnd, Icons.Filled.Pause, "Pause") { vm.togglePlay() }
+                if (vm.isPlaying) round(Alignment.TopEnd, Icons.Filled.Pause, "Pause") { vm.togglePlay() }
+                else round(Alignment.TopEnd, Icons.Filled.Tune, tr("Einstellungen zeigen")) { lastTouch = System.currentTimeMillis() }
             }
         }
 

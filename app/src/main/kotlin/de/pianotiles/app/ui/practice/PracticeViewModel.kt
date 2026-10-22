@@ -76,6 +76,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         mic.sensitivity = settings.micSensitivity.toDouble()
         synth.start()
         engine.playOwnHand = true // until the microphone listens to the real piano
+        engine.audioLookaheadSeconds = 0.12 // schedule playback slightly ahead for exact timing
         engine.scoreInFlow = false // without microphone nothing can be "missed" in FLOW mode
         // render the piano tones of this piece (and the visible keys) before they are needed
         val pitches = song.notes.map { it.pitch }.toSet().let { ps -> ps + ((ps.minOrNull() ?: 60) - 12..(ps.maxOrNull() ?: 72) + 12) }
@@ -100,8 +101,8 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         synth.prepare(events.mapNotNull { (it as? EngineEvent.PlayNote)?.pitch })
         for (e in events) when (e) {
             is EngineEvent.PlayNote -> {
-                synth.noteOn(e.pitch, e.velocity, e.durationSeconds)
-                synthRecent[e.pitch] = System.currentTimeMillis() + (e.durationSeconds * 1000).toLong() + 400
+                synth.noteOn(e.pitch, e.velocity, e.durationSeconds, e.delaySeconds)
+                synthRecent[e.pitch] = System.currentTimeMillis() + ((e.delaySeconds + e.durationSeconds) * 1000).toLong() + 400
             }
             is EngineEvent.Click -> synth.click(e.accent)
             is EngineEvent.PassCompleted -> {
