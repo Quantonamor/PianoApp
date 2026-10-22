@@ -88,9 +88,11 @@ private fun LessonRow(number: Int, lesson: Lesson, stars: Int, isNext: Boolean, 
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(36.dp).background(if (stars > 0) Gold else PtColors.SurfaceHigh, CircleShape),
+                Modifier.size(36.dp).background(
+                    when { stars > 0 -> Gold; isNext -> MaterialTheme.colorScheme.primary; else -> PtColors.SurfaceHigh }, CircleShape,
+                ),
                 contentAlignment = Alignment.Center,
-            ) { Text("$number", fontWeight = FontWeight.Bold, color = if (stars > 0) Color.Black else Color.White) }
+            ) { Text("$number", fontWeight = FontWeight.Bold, color = if (stars > 0 || isNext) Color.Black else Color.White) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(lesson.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -99,8 +101,8 @@ private fun LessonRow(number: Int, lesson: Lesson, stars: Int, isNext: Boolean, 
                     listOf(
                         when (lesson.hands) { HandSelection.RIGHT -> tr("rechte Hand"); HandSelection.LEFT -> tr("linke Hand"); HandSelection.BOTH -> tr("beide Hände") },
                         when (lesson.mode) { PracticeMode.WAIT -> tr("Warten"); PracticeMode.FLOW -> tr("Fließend"); PracticeMode.LISTEN -> tr("Anhören") },
-                        "${(lesson.speed * 100).toInt()} %",
-                        tr("Ziel %s %%", lesson.goal),
+                        "${(lesson.speed * 100).toInt()}\u00A0%",
+                        tr("Ziel %s %%", lesson.goal).replace(" %", "\u00A0%"),
                     ).joinToString(" · "),
                     fontSize = 11.sp, color = PtColors.TextDim,
                 )
