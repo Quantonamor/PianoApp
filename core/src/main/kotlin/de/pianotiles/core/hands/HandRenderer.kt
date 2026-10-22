@@ -39,9 +39,13 @@ object HandRenderer {
         val dir = if (pose.hand == Hand.RIGHT) 1f else -1f
         val fw = (keyW * 0.66f).coerceIn(9f, 40f)
         val zone = (height - keysH).coerceAtLeast(keysH * 0.3f)
+        // where each fingertip touches its key (fraction of the key length, 1 = front edge): like a real hand the
+        // long middle finger reaches furthest in, thumb and little finger play nearer the front
+        val whiteY = floatArrayOf(0.88f, 0.76f, 0.71f, 0.74f, 0.81f)
+        val blackY = floatArrayOf(0.52f, 0.42f, 0.38f, 0.40f, 0.46f)
         val tips = Array(5) { f ->
             val black = pose.pitch[f] >= 0 && Pitch.isBlackKey(pose.pitch[f])
-            floatArrayOf(keyX(pose.x[f]), keysH * (if (black) 0.40f else 0.74f) + keysH * 0.05f * pose.down[f])
+            floatArrayOf(keyX(pose.x[f]), keysH * (if (black) blackY[f] else whiteY[f]) + keysH * 0.04f * pose.down[f])
         }
         val centre = (tips[1][0] + tips[2][0] + tips[3][0] + tips[4][0]) / 4f
         val knuckleY = floatArrayOf(0f, 0.10f, 0.05f, 0.10f, 0.18f)

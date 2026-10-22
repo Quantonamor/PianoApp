@@ -161,6 +161,14 @@ object AutoFingering {
         return c
     }
 
+    /** How much a same-finger repetition on another key costs, by the time between the two onsets (beats). */
+    private fun sameFingerWeight(ioi: Double): Double = when {
+        ioi <= 0.5 -> 1.0
+        ioi <= 1.0 -> 0.6
+        ioi <= 2.0 -> 0.3
+        else -> 0.12
+    }
+
     private val crossCost = doubleArrayOf(0.0, 0.0, 4.0, 1.0, 1.5, 8.0)
 
     private fun keyCost(pitch: Int, finger: Int): Double {
@@ -175,6 +183,11 @@ object AutoFingering {
         for (a in used.indices) for (b in a + 1 until used.size) {
             val i = used[a]; val j = used[b]
             c += spanCost(fingers[i], fingers[j], (notes[j].pitch - notes[i].pitch) * mirror, 0.5)
+        }
+        // wide chords (a fifth and more) are taken with thumb and little finger on the outer notes
+        if (used.size >= 2) {
+            val lo = used.first(); val hi = used.last()
+            if ((notes[hi].pitch - notes[lo].pitch) * mirror >= 7 && (fingers[lo] != 1 || fingers[hi] != 5)) c += 0.8
         }
         return c
     }
@@ -192,7 +205,9 @@ object AutoFingering {
                 val pa = prev[i].pitch * mirror
                 val pb = cur[j].pitch * mirror
                 if (fa == fb) {
-                    if (pa != pb) c += 5.0 + abs(pb - pa)
+                    // the same finger on another key: hard in quick succession, normal when there is time to move
+                    // the hand (block chords, long notes)
+                    if (pa != pb) c += (5.0 + abs(pb - pa)) * sameFingerWeight(cur.first().start - prev.first().start)
                     continue
                 }
                 val d = if (fa < fb) pb - pa else pa - pb

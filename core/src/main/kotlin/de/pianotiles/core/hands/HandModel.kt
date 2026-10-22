@@ -23,9 +23,12 @@ import kotlin.math.sqrt
  */
 class HandModel private constructor(
     val positions: FloatArray, val normals: FloatArray, val joints: ByteArray, val weights: FloatArray,
-    val indices: ShortArray, val jointPos: FloatArray, val names: List<String>,
+    val indices: IntArray, val jointPos: FloatArray, val names: List<String>,
 ) {
     val vertexCount = positions.size / 3
+    /** Per vertex 0..1: how much it belongs to a fingernail (set by [markNails]). */
+    var nail = FloatArray(vertexCount)
+        private set
 
     fun joint(name: String) = names.indexOf(name)
 
@@ -43,13 +46,136 @@ class HandModel private constructor(
                 val nor = FloatArray(v * 3) { b.float }
                 val jts = ByteArray(v * 4).also { b.get(it) }
                 val wts = FloatArray(v * 4) { b.float }
-                val idx = ShortArray(t * 3) { b.short }
+                val idx = IntArray(t * 3) { b.short.toInt() and 0xFFFF }
                 val jp = FloatArray(j * 3) { b.float }
                 val names = (0 until j).map { val n = b.get().toInt() and 0xFF; val a = ByteArray(n); b.get(a); String(a) }
-                HandModel(pos, nor, jts, wts, idx, jp, names)
+                thickenFingers(pos, jts, wts, jp, names)
+                subdivide(HandModel(pos, nor, jts, wts, idx, jp, names)).also { it.markNails(if (hand == Hand.RIGHT) 1f else -1f) }
             }.getOrNull()
         }
+
+        /**
+         * The model's fingers are slim (game hand); real fingers are about 16–20 mm wide. Every finger vertex moves
+         * away from its bone axis (weighted by its skin weights), so the fingers get fuller without changing length.
+         */
+        private fun thickenFingers(pos: FloatArray, jts: ByteArray, wts: FloatArray, jp: FloatArray, names: List<String>) {
+            // bone segment (from joint → to joint) and widening factor for every finger joint
+            val seg = HashMap<Int, Triple<Int, Int, Float>>()
+            fun chain(names2: List<String>, factor: Float) {
+                val ids = names2.map { names.indexOf(it) }
+                if (ids.any { it < 0 }) return
+                for (k in 0 until ids.size - 1) seg[ids[k]] = Triple(ids[k], ids[k + 1], factor)
+                seg[ids.last()] = Triple(ids[ids.size - 2], ids.last(), factor)
+            }
+            chain(listOf("thumb-phalanx-proximal", "thumb-phalanx-distal", "thumb-tip"), 1.12f)
+            for (f in listOf("index-finger", "middle-finger", "ring-finger", "pinky-finger"))
+                chain(listOf("$f-phalanx-proximal", "$f-phalanx-intermediate", "$f-phalanx-distal", "$f-tip"), 1.24f)
+            val v = pos.size / 3
+            for (i in 0 until v) {
+                var dx = 0f; var dy = 0f; var dz = 0f
+                for (k in 0 until 4) {
+                    val w = wts[i * 4 + k]; if (w <= 0f) continue
+                    val (a, b, factor) = seg[jts[i * 4 + k].toInt() and 0xFF] ?: continue
+                    val ax = jp[a * 3]; val ay = jp[a * 3 + 1]; val az = jp[a * 3 + 2]
+                    val ux = jp[b * 3] - ax; val uy = jp[b * 3 + 1] - ay; val uz = jp[b * 3 + 2] - az
+                    val px = pos[i * 3] - ax; val py = pos[i * 3 + 1] - ay; val pz = pos[i * 3 + 2] - az
+                    val t = ((px * ux + py * uy + pz * uz) / (ux * ux + uy * uy + uz * uz)).coerceIn(-0.2f, 1.3f)
+                    // offset from the axis, scaled
+                    dx += w * (px - t * ux) * (factor - 1); dy += w * (py - t * uy) * (factor - 1); dz += w * (pz - t * uz) * (factor - 1)
+                }
+                pos[i * 3] += dx; pos[i * 3 + 1] += dy; pos[i * 3 + 2] += dz
+            }
+        }
+
+        /**
+         * One step of smooth subdivision: every triangle becomes four. The new point on an edge lies on the curved
+         * surface the vertex normals describe (PN triangle edge curve), so the silhouette gets round instead of
+         * faceted; normals and skin weights are blended from both ends.
+         */
+        private fun subdivide(m: HandModel): HandModel {
+            val pos = ArrayList<Float>(m.positions.size * 4); m.positions.forEach { pos.add(it) }
+            val nor = ArrayList<Float>(m.normals.size * 4); m.normals.forEach { nor.add(it) }
+            val jts = ArrayList<Byte>(m.joints.size * 4); m.joints.forEach { jts.add(it) }
+            val wts = ArrayList<Float>(m.weights.size * 4); m.weights.forEach { wts.add(it) }
+            val mid = HashMap<Long, Int>()
+            fun edge(a: Int, b: Int): Int = mid.getOrPut(min(a, b).toLong() shl 32 or max(a, b).toLong()) {
+                val p = m.positions; val n = m.normals
+                val out = FloatArray(3)
+                // cubic edge curve: b1 = (2 p0 + p1 - w01 n0) / 3, b2 = (2 p1 + p0 - w10 n1) / 3, midpoint = (p0 + 3 b1 + 3 b2 + p1) / 8
+                var w01 = 0f; var w10 = 0f
+                for (k in 0 until 3) { w01 += (p[b * 3 + k] - p[a * 3 + k]) * n[a * 3 + k]; w10 += (p[a * 3 + k] - p[b * 3 + k]) * n[b * 3 + k] }
+                for (k in 0 until 3) {
+                    val p0 = p[a * 3 + k]; val p1 = p[b * 3 + k]
+                    val b1 = (2 * p0 + p1 - w01 * n[a * 3 + k]) / 3; val b2 = (2 * p1 + p0 - w10 * n[b * 3 + k]) / 3
+                    out[k] = (p0 + 3 * b1 + 3 * b2 + p1) / 8
+                }
+                out.forEach { pos.add(it) }
+                var nx = n[a * 3] + n[b * 3]; var ny = n[a * 3 + 1] + n[b * 3 + 1]; var nz = n[a * 3 + 2] + n[b * 3 + 2]
+                val l = sqrt(nx * nx + ny * ny + nz * nz).coerceAtLeast(1e-6f); nx /= l; ny /= l; nz /= l
+                nor.add(nx); nor.add(ny); nor.add(nz)
+                // skin weights: the union of both ends, the strongest four kept
+                val w = HashMap<Int, Float>()
+                for (v in intArrayOf(a, b)) for (k in 0 until 4) {
+                    val ww = m.weights[v * 4 + k]; if (ww <= 0f) continue
+                    val j = m.joints[v * 4 + k].toInt() and 0xFF
+                    w[j] = (w[j] ?: 0f) + ww * 0.5f
+                }
+                val top = w.entries.sortedByDescending { it.value }.take(4)
+                val sum = top.sumOf { it.value.toDouble() }.toFloat().coerceAtLeast(1e-6f)
+                for (k in 0 until 4) {
+                    val e = top.getOrNull(k)
+                    jts.add((e?.key ?: 0).toByte()); wts.add((e?.value ?: 0f) / sum)
+                }
+                pos.size / 3 - 1
+            }
+            val idx = m.indices
+            val out = IntArray(idx.size * 4)
+            var o = 0
+            for (t in 0 until idx.size / 3) {
+                val a = idx[t * 3]; val b = idx[t * 3 + 1]; val c = idx[t * 3 + 2]
+                val ab = edge(a, b); val bc = edge(b, c); val ca = edge(c, a)
+                for (tri in arrayOf(intArrayOf(a, ab, ca), intArrayOf(ab, b, bc), intArrayOf(ca, bc, c), intArrayOf(ab, bc, ca))) {
+                    out[o++] = tri[0]; out[o++] = tri[1]; out[o++] = tri[2]
+                }
+            }
+            return HandModel(pos.toFloatArray(), nor.toFloatArray(), jts.toByteArray(), wts.toFloatArray(), out, m.jointPos, m.names)
+        }
     }
+
+    /**
+     * Marks the fingernails: vertices on the back of each fingertip ([dorsalX] = direction of the back of the hand
+     * along x), from about the middle of the last phalanx to the tip.
+     */
+    private fun markNails(dorsalX: Float) {
+        val fingers = listOf("thumb", "index-finger", "middle-finger", "ring-finger", "pinky-finger")
+        val n = FloatArray(vertexCount)
+        for (f in fingers) {
+            val d = joint("$f-phalanx-distal"); val t = joint("$f-tip")
+            if (d < 0 || t < 0) continue
+            val ax = jointPos[t * 3] - jointPos[d * 3]; val ay = jointPos[t * 3 + 1] - jointPos[d * 3 + 1]; val az = jointPos[t * 3 + 2] - jointPos[d * 3 + 2]
+            val len2 = ax * ax + ay * ay + az * az
+            // back of this finger: the hand's back (x), for the thumb turned towards its outer side (-z)
+            var bx = dorsalX; var by = 0f; var bz = if (f == "thumb") -0.9f else 0f
+            // make it perpendicular to the finger axis
+            val dot = (bx * ax + by * ay + bz * az) / len2
+            bx -= dot * ax; by -= dot * ay; bz -= dot * az
+            val bl = sqrt(bx * bx + by * by + bz * bz); bx /= bl; by /= bl; bz /= bl
+            for (v in 0 until vertexCount) {
+                val px = positions[v * 3] - jointPos[d * 3]; val py = positions[v * 3 + 1] - jointPos[d * 3 + 1]; val pz = positions[v * 3 + 2] - jointPos[d * 3 + 2]
+                val along = (px * ax + py * ay + pz * az) / len2
+                if (along < 0.25f || along > 1.25f) continue
+                val ox = px - along * ax; val oy = py - along * ay; val oz = pz - along * az
+                val ol = sqrt(ox * ox + oy * oy + oz * oz).coerceAtLeast(1e-6f)
+                val back = (ox * bx + oy * by + oz * bz) / ol // 1 = straight on the back of the finger
+                val nd = normals[v * 3] * bx + normals[v * 3 + 1] * by + normals[v * 3 + 2] * bz
+                val w = smooth(0.45f, 0.75f, back) * smooth(0.25f, 0.5f, along) * smooth(0.3f, 0.6f, nd)
+                n[v] = max(n[v], w)
+            }
+        }
+        nail = n
+    }
+
+    private fun smooth(e0: Float, e1: Float, x: Float): Float { val t = ((x - e0) / (e1 - e0)).coerceIn(0f, 1f); return t * t * (3 - 2 * t) }
 }
 
 /** 3×4 affine transform (rotation + translation) in model space. */
@@ -142,7 +268,7 @@ object Hand3D {
             var worst = 0f
             val xf = solve(model, view, tips, side) { f, err -> if (f == 0 || f == 4) worst = maxOf(worst, err) }
             result = xf to view
-            if (worst < keyW * 0.12f || lift > midLen * scale * 0.4f) break
+            if (worst < keyW * 0.12f || lift > midLen * scale * 0.18f) break
             lift += worst * 0.9f
         }
         return result!!
@@ -224,9 +350,12 @@ object Hand3D {
     private var zbuf = FloatArray(0)
     private var nbuf = FloatArray(0)
     private var cover = ByteArray(0)
+    private var aoR = 1
+    private var aoRange = 1f
     private var rowMin = 0 // rows that contain hand pixels (shading skips the rest)
     private var rowMax = -1
     private var fbuf = FloatArray(0) // forearm fade: 1 = opaque, 0 = gone
+    private var kbuf = FloatArray(0) // fingernail: 0..1
 
     /** Renders [hands] (tips in screen pixels) into [out]; see HandRenderer.render. */
     @Synchronized
@@ -235,7 +364,7 @@ object Hand3D {
         keysBottom: Float, alphaOverKeys: Float,
     ): Boolean {
         val n = width * height
-        if (n > zcap) { zcap = n; zbuf = FloatArray(n); nbuf = FloatArray(n * 3); cover = ByteArray(n); fbuf = FloatArray(n) }
+        if (n > zcap) { zcap = n; zbuf = FloatArray(n); nbuf = FloatArray(n * 3); cover = ByteArray(n); fbuf = FloatArray(n); kbuf = FloatArray(n) }
         java.util.Arrays.fill(out, 0)
         java.util.Arrays.fill(zbuf, 0, n, -Float.MAX_VALUE)
         java.util.Arrays.fill(cover, 0, n, 0)
@@ -258,7 +387,7 @@ object Hand3D {
         for (v in 0 until vc) {
             val x = model.positions[v * 3]; val y = model.positions[v * 3 + 1]; val z = model.positions[v * 3 + 2]
             // the model ends at the wrist (+y): fade the forearm out instead of showing the cut
-            fade[v] = ((0.074f - y) / 0.038f).coerceIn(0f, 1f)
+            fade[v] = ((0.068f - y) / 0.036f).coerceIn(0f, 1f)
             val nx = model.normals[v * 3]; val ny = model.normals[v * 3 + 1]; val nz = model.normals[v * 3 + 2]
             acc[0] = 0f; acc[1] = 0f; acc[2] = 0f; nacc[0] = 0f; nacc[1] = 0f; nacc[2] = 0f
             for (k in 0 until 4) {
@@ -278,11 +407,14 @@ object Hand3D {
             sn[v * 3] = qx; sn[v * 3 + 1] = qy; sn[v * 3 + 2] = qz
         }
         val idx = model.indices
+        val nail = model.nail
         for (tri in 0 until idx.size / 3) {
-            val a = idx[tri * 3].toInt() and 0xFFFF; val b = idx[tri * 3 + 1].toInt() and 0xFFFF; val c = idx[tri * 3 + 2].toInt() and 0xFFFF
+            val a = idx[tri * 3]; val b = idx[tri * 3 + 1]; val c = idx[tri * 3 + 2]
             val ax = sp[a * 3]; val ay = sp[a * 3 + 1]; val bx = sp[b * 3]; val by = sp[b * 3 + 1]; val cx = sp[c * 3]; val cy = sp[c * 3 + 1]
             val area = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
             if (abs(area) < 1e-6f) continue
+            // faces turned away from the viewer are hidden anyway (and inside the open forearm they would show)
+            if (sn[a * 3 + 2] + sn[b * 3 + 2] + sn[c * 3 + 2] < -0.15f) continue
             val x0 = max(0, kotlin.math.floor(min(ax, min(bx, cx))).toInt()); val x1 = min(width - 1, kotlin.math.ceil(max(ax, max(bx, cx))).toInt())
             val y0 = max(0, kotlin.math.floor(min(ay, min(by, cy))).toInt()); val y1 = min(height - 1, kotlin.math.ceil(max(ay, max(by, cy))).toInt())
             if (x0 > x1 || y0 > y1) continue
@@ -303,6 +435,7 @@ object Hand3D {
                     zbuf[i] = d
                     cover[i] = 1
                     fbuf[i] = w0 * fade[a] + w1 * fade[b] + w2 * fade[c]
+                    kbuf[i] = w0 * nail[a] + w1 * nail[b] + w2 * nail[c]
                     nbuf[i * 3] = w0 * sn[a * 3] + w1 * sn[b * 3] + w2 * sn[c * 3]
                     nbuf[i * 3 + 1] = w0 * sn[a * 3 + 1] + w1 * sn[b * 3 + 1] + w2 * sn[c * 3 + 1]
                     nbuf[i * 3 + 2] = w0 * sn[a * 3 + 2] + w1 * sn[b * 3 + 2] + w2 * sn[c * 3 + 2]
@@ -315,6 +448,8 @@ object Hand3D {
         val hxv = LX; val hyv = LY; val hzv = LZ + 1f
         val hl = sqrt(hxv * hxv + hyv * hyv + hzv * hzv)
         val shX = (keyW * 0.12f * scale).toInt().coerceAtLeast(1); val shY = (keyW * 0.22f * scale).toInt().coerceAtLeast(1)
+        aoR = (keyW * 0.10f * scale).toInt().coerceAtLeast(1)
+        aoRange = keyW * 0.35f * scale
         for (y in rowMin..min(height - 1, rowMax + shY + 1)) {
             val sy = (y + 0.5f) / scale
             val aHand = if (sy < keysBottom - 4) alphaKeys else if (sy > keysBottom + 8) 0.95f else alphaKeys + (0.95f - alphaKeys) * ((sy - keysBottom + 4) / 12f)
@@ -335,21 +470,44 @@ object Hand3D {
                 }
                 var nx = nbuf[i * 3]; var ny = nbuf[i * 3 + 1]; var nz = nbuf[i * 3 + 2]
                 val l = sqrt(nx * nx + ny * ny + nz * nz).coerceAtLeast(1e-6f); nx /= l; ny /= l; nz /= l
-                val diffuse = max(0f, nx * LX + ny * LY + nz * LZ)
-                val spec = max(0f, (nx * hxv + ny * hyv + nz * hzv) / hl).let { val s2 = it * it; val s4 = s2 * s2; s4 * s4 * s2 }
-                val rim = (1f - max(0f, nz)).let { it * it } // edges seen at a grazing angle: warm, light shines through
-                val lit = 0.38f + 0.62f * diffuse
-                var r = 128f + (246f - 128f) * lit + 40f * rim
-                var g = 76f + (212f - 76f) * lit + 8f * rim
-                var b = 62f + (188f - 62f) * lit
-                r += 255f * 0.22f * spec; g += 255f * 0.22f * spec; b += 255f * 0.22f * spec
+                // soft "wrapped" light (skin scatters light into the shadow side) + a cool fill from below
+                val ndl = nx * LX + ny * LY + nz * LZ
+                val diffuse = ((ndl + 0.35f) / 1.35f).coerceIn(0f, 1f)
+                val fill = max(0f, ny * 0.6f + nz * 0.4f) * 0.12f
+                val h = max(0f, (nx * hxv + ny * hyv + nz * hzv) / hl)
+                val nailW = kbuf[i].coerceIn(0f, 1f)
+                // broad, faint sheen on skin; a sharper, brighter one on the nails
+                val sheen = h.let { val h2 = it * it; val h4 = h2 * h2; h4 * h2 } * (0.10f + 0.25f * nailW) +
+                    h.let { val h2 = it * it; val h4 = h2 * h2; val h8 = h4 * h4; h8 * h8 * h2 } * 0.35f * nailW
+                val rim = (1f - max(0f, nz)).let { it * it * it } // grazing edges: light shines through, warm
+                // contact shadow: neighbours clearly nearer to the viewer occlude this pixel (between fingers, under knuckles)
+                var occ = 0f
+                val z0 = zbuf[i]
+                val rr = aoR
+                if (x >= rr && x < width - rr && y >= rr && y < height - rr) {
+                    occ += max(0f, zbuf[i - rr] - z0); occ += max(0f, zbuf[i + rr] - z0)
+                    occ += max(0f, zbuf[i - rr * width] - z0); occ += max(0f, zbuf[i + rr * width] - z0)
+                    occ = (occ / aoRange).coerceIn(0f, 1f)
+                }
+                val ao = 1f - 0.45f * occ
+                val lit = (0.30f + 0.70f * diffuse) * ao + fill
+                // skin: deeper and redder in shadow, light and warm in the light; nails pinker and paler
+                var r = 150f + (250f - 150f) * lit + 34f * rim
+                var g = 92f + (214f - 92f) * lit + 6f * rim
+                var b = 78f + (190f - 78f) * lit - 4f * rim
+                if (nailW > 0f) {
+                    r += (238f - r) * 0.55f * nailW; g += (196f - g) * 0.55f * nailW * lit; b += (190f - b) * 0.55f * nailW * lit
+                }
+                r += 255f * sheen; g += 248f * sheen; b += 240f * sheen
                 // anti-aliased silhouette: pixels at the border of the hand are partly transparent
-                var edge = 0
-                if (x > 0 && cover[i - 1].toInt() == 0) edge++
-                if (x < width - 1 && cover[i + 1].toInt() == 0) edge++
-                if (y > 0 && cover[i - width].toInt() == 0) edge++
-                if (y < height - 1 && cover[i + width].toInt() == 0) edge++
-                val a = aHand * (1f - 0.18f * edge) * fbuf[i].let { it * (2f - it) }
+                // (coverage of the 3×3 neighbourhood, weighted towards the centre)
+                var cov = 1f
+                if (x > 0 && y > 0 && x < width - 1 && y < height - 1) {
+                    val e = cover[i - 1] + cover[i + 1] + cover[i - width] + cover[i + width]
+                    val d = cover[i - width - 1] + cover[i - width + 1] + cover[i + width - 1] + cover[i + width + 1]
+                    if (e + d < 8) cov = (4f + 2f * e + d) / 16f
+                }
+                val a = aHand * cov * fbuf[i].let { it * (2f - it) }
                 out[i] = ((a * 255).toInt().coerceIn(0, 255) shl 24) or (r.toInt().coerceIn(0, 255) shl 16) or
                     (g.toInt().coerceIn(0, 255) shl 8) or b.toInt().coerceIn(0, 255)
             }

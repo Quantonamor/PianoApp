@@ -27,33 +27,40 @@ class HandRenderTest {
         g.dispose()
     }
 
+    private fun render(name: String, song0: de.pianotiles.core.model.Song, beat: Double, lo0: Int?, hi0: Int?, w: Int, keysH: Int, scale: Float, out: File?) {
+        val song = AutoFingering.apply(song0)
+        val lo = lo0 ?: (song.lowestPitch / 12) * 12; val hi = hi0 ?: ((song.highestPitch / 12) * 12 + 11)
+        val h = keysH + (keysH * 0.63).toInt()
+        val img = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
+        keyboard(img, lo, hi, keysH)
+        val whites = (lo..hi).count { !Pitch.isBlackKey(it) }
+        val ww = w.toFloat() / whites
+        val origin = KeyX.of(lo) - 0.5f
+        val motion = HandMotion(song)
+        val geos = Hand.entries.mapNotNull { hnd -> motion.pose(hnd, beat)?.let { HandRenderer.layout(it, { k -> (k - origin) * ww }, ww, keysH.toFloat(), h.toFloat()) } }
+        val bw = (w * scale).toInt(); val bh = (h * scale).toInt()
+        val buf = IntArray(bw * bh)
+        repeat(20) { HandRenderer.render(geos, buf, bw, bh, scale, keysH.toFloat()) } // warm up
+        val t0 = System.nanoTime()
+        repeat(50) { HandRenderer.render(geos, buf, bw, bh, scale, keysH.toFloat()) }
+        println("$name render ${"%.2f".format((System.nanoTime() - t0) / 1e6 / 50)} ms per frame (${bw}x$bh)")
+        assertTrue(buf.any { it ushr 24 > 100 }, "hands visible")
+        val hand = BufferedImage(bw, bh, BufferedImage.TYPE_INT_ARGB).apply { setRGB(0, 0, bw, bh, buf, 0, bw) }
+        val g = img.createGraphics()
+        g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+        g.drawImage(hand, 0, 0, w, h, null); g.dispose()
+        out?.let { javax.imageio.ImageIO.write(img, "png", File(it, "$name.png")) }
+    }
+
     @Test
     fun handsRenderInsideTheirArea() {
         val out = System.getProperty("hands.out")?.let { File(it).apply { mkdirs() } }
-        for ((name, song0, beat) in listOf(Triple("ode", DemoSongs.odeToJoy(), 2.5), Triple("scale", DemoSongs.scale(), 3.5), Triple("elise", DemoSongs.furElise(), 2.1))) {
-            val song = AutoFingering.apply(song0)
-            val lo = (song.lowestPitch / 12) * 12; val hi = (song.highestPitch / 12) * 12 + 11
-            val w = 1080; val keysH = 300; val h = keysH + 190
-            val img = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
-            keyboard(img, lo, hi, keysH)
-            val whites = (lo..hi).count { !Pitch.isBlackKey(it) }
-            val ww = w.toFloat() / whites
-            val origin = KeyX.of(lo) - 0.5f
-            val motion = HandMotion(song)
-            val geos = Hand.entries.mapNotNull { hnd -> motion.pose(hnd, beat)?.let { HandRenderer.layout(it, { k -> (k - origin) * ww }, ww, keysH.toFloat(), h.toFloat()) } }
-            val scale = 0.4f
-            val bw = (w * scale).toInt(); val bh = (h * scale).toInt()
-            val buf = IntArray(bw * bh)
-            val t0 = System.nanoTime()
-            HandRenderer.render(geos, buf, bw, bh, scale, keysH.toFloat())
-            val ms = (System.nanoTime() - t0) / 1e6
-            println("$name render ${"%.1f".format(ms)} ms")
-            assertTrue(buf.any { it ushr 24 > 100 }, "hands visible")
-            val hand = BufferedImage(bw, bh, BufferedImage.TYPE_INT_ARGB).apply { setRGB(0, 0, bw, bh, buf, 0, bw) }
-            val g = img.createGraphics()
-            g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR)
-            g.drawImage(hand, 0, 0, w, h, null); g.dispose()
-            out?.let { javax.imageio.ImageIO.write(img, "png", File(it, "$name.png")) }
-        }
+        // as in the app (40 % resolution) …
+        render("ode", DemoSongs.odeToJoy(), 2.5, null, null, 1080, 300, 0.4f, out)
+        render("scale", DemoSongs.scale(), 3.5, null, null, 1080, 300, 0.4f, out)
+        render("elise", DemoSongs.furElise(), 2.1, null, null, 1080, 300, 0.4f, out)
+        // … and a close-up at full resolution to judge the details
+        render("closeup", DemoSongs.odeToJoy(), 0.5, 57, 74, 1080, 420, 1f, out)
+        render("closeup_left", DemoSongs.odeToJoy(), 0.5, 40, 57, 1080, 420, 1f, out)
     }
 }
