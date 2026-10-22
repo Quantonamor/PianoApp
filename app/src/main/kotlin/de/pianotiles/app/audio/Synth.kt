@@ -154,6 +154,8 @@ class Synth(private val sampleRate: Int = 44100) {
         val out = ShortArray(frames * 2)
         val left = FloatArray(frames)
         val right = FloatArray(frames)
+        val startNanos = System.nanoTime()
+        var written = 0L
         while (running) {
             mixer.mix(left, right, frames)
             for (i in 0 until frames) {
@@ -161,6 +163,11 @@ class Synth(private val sampleRate: Int = 44100) {
                 out[2 * i + 1] = (right[i] * 32000f).toInt().toShort()
             }
             at.write(out, 0, out.size)
+            written += frames
+            // an output that does not block (no audio device, e.g. an emulator) would let this thread spin at full
+            // speed: stay at most 0.2 s ahead of real time
+            val ahead = written.toDouble() / sampleRate - (System.nanoTime() - startNanos) / 1e9
+            if (ahead > 0.2) Thread.sleep(((ahead - 0.1) * 1000).toLong())
         }
         at.stop()
         at.release()
