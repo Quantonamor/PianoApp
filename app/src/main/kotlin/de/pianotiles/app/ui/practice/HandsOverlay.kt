@@ -53,7 +53,7 @@ fun HandsOverlay(
     }
 }
 
-private const val HAND_ALPHA = 0.6f
+private const val HAND_ALPHA = 0.66f
 private val Skin = Color(0xFFF3D3B8)
 private val SkinShade = Color(0xFFB98468)
 
@@ -66,8 +66,8 @@ private fun DrawScope.drawHand(
     val dir = if (pose.hand == Hand.RIGHT) 1f else -1f
     val tint = handColor(pose.hand)
     val light = lerp(Skin, tint, 0.10f).copy(alpha = HAND_ALPHA)
-    val dark = lerp(SkinShade, handColorDark(pose.hand), 0.15f).copy(alpha = HAND_ALPHA)
-    val fingerW = (keyW * 0.48f).coerceIn(7f, 30f)
+    val dark = lerp(Skin, SkinShade, 0.55f).copy(alpha = HAND_ALPHA)
+    val fingerW = (keyW * 0.62f).coerceIn(9f, 34f)
 
     // fingertips on the keys: front part of white keys, middle of black keys; pressing pulls them in a little
     val tips = Array(5) { f ->
@@ -83,12 +83,12 @@ private fun DrawScope.drawHand(
     }
 
     // palm: rounded block below the knuckles with a soft shadow and a highlight
-    val left = minOf(knuckles[1].x, knuckles[4].x) - fingerW * 0.8f
-    val right = maxOf(knuckles[1].x, knuckles[4].x) + fingerW * 0.8f
+    val left = minOf(knuckles[1].x, knuckles[4].x) - fingerW * 0.9f
+    val right = maxOf(knuckles[1].x, knuckles[4].x) + fingerW * 0.9f
     val top = keysH + zone * 0.05f
     val palmH = h - top + fingerW * 2
     drawRoundRect(Color.Black.copy(alpha = 0.15f), Offset(left + fingerW * 0.2f, top + fingerW * 0.3f), Size(right - left, palmH), CornerRadius(fingerW * 1.4f))
-    drawRoundRect(Brush.verticalGradient(listOf(light, dark), startY = top, endY = h), Offset(left, top), Size(right - left, palmH), CornerRadius(fingerW * 1.4f))
+    drawRoundRect(Brush.verticalGradient(listOf(light, lerp(light, dark, 0.6f)), startY = top, endY = h), Offset(left, top), Size(right - left, palmH), CornerRadius(fingerW * 1.8f))
     drawRoundRect(Color.White.copy(alpha = 0.12f), Offset(left + (right - left) * 0.2f, top + zone * 0.12f), Size((right - left) * 0.5f, zone * 0.3f), CornerRadius(zone * 0.15f))
 
     // fingers: thumb first, then from the outside in so the middle finger lies on top
@@ -115,7 +115,7 @@ private fun DrawScope.drawFinger(
     val shadow = Offset(width * 0.18f, width * 0.28f)
     for ((a, b, w) in segs) drawLine(Color.Black.copy(alpha = 0.16f), a + shadow, b + shadow, w, StrokeCap.Round)
     for ((a, b, w) in segs) drawLine(dark, a, b, w, StrokeCap.Round)
-    for ((a, b, w) in segs) drawLine(light, a, b, w * 0.7f, StrokeCap.Round)
+    for ((a, b, w) in segs) drawLine(light, a, b, w * 0.76f, StrokeCap.Round)
     // knuckle bumps
     for (j in listOf(j1, j2)) drawCircle(lerp(light, Color.White, 0.15f).copy(alpha = HAND_ALPHA * 0.8f), radius = width * 0.36f, center = j)
     // highlight along the upper side

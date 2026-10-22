@@ -211,7 +211,7 @@ private fun PlayArea(vm: PracticeViewModel, settings: de.pianotiles.app.data.App
             val hints = engine.holdHints()
             val pulse = ((kotlin.math.sin(System.nanoTime() / 1e9 * 6.0) + 1) / 2).toFloat()
             // with hands shown, a strip below the keys holds the palms, so only the fingers cover the keys
-            val handZone = if (settings.showHands) keyboardHeight * 0.45f else 0.dp
+            val handZone = if (settings.showHands) keyboardHeight * 0.6f else 0.dp
             Box(Modifier.fillMaxWidth().height(keyboardHeight + handZone)) {
                 Box(Modifier.fillMaxWidth().height(keyboardHeight).background(Color.Black)) {
                 Keyboard(
