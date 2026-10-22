@@ -38,6 +38,12 @@ private val topics = listOf(
         "Lege das Gerät auf das Notenpult. In ruhiger Umgebung funktioniert die Erkennung am besten. Die Empfindlichkeit lässt sich in den Einstellungen anpassen.",
     "PDF importieren" to
         "Tippe in der Bibliothek auf „Noten importieren“ und wähle ein PDF. Die App erkennt Notenlinien, Noten, Vorzeichen, Pausen und Rhythmus und zeigt das Ergebnis farbig über dem Notenblatt an. Tonart, Taktart und Notensystem kannst du dort korrigieren und neu erkennen lassen. Kleine Fehler behebst du im Noten-Editor. Am zuverlässigsten: digital gesetzte Noten. Alternativ MusicXML (.musicxml/.mxl) oder MIDI importieren.",
+    "Noten fotografieren" to
+        "„Noten importieren“ → „Noten fotografieren“: Nimm eine Seite nach der anderen auf (oder wähle Fotos aus der Galerie) und bringe sie mit ◀ ▶ in die richtige Reihenfolge. Die App sucht das Blatt, gleicht Licht und Schatten aus und dreht es gerade. Am besten: Blatt flach hinlegen, von oben, helles gleichmäßiges Licht.",
+    "Weitere Formate" to
+        "Außer PDF und Fotos kannst du MIDI (.mid/.kar), MusicXML (.musicxml/.xml/.mxl), ABC (.abc), MuseScore (.mscz/.mscx) und MEI (.mei) importieren – diese Dateien werden ohne Erkennung exakt übernommen.",
+    "Bibliothek, Abspielen & Teilen" to
+        "▶ auf einer Karte spielt das Stück sofort vor. Lange drücken wählt mehrere Stücke aus (teilen oder löschen). Über ⋮ teilst du ein Stück als Paket (.pianotiles) – darin sind Noten (MusicXML), Original, Übungsdaten und Fingersatz; andere öffnen es einfach mit PianoTiles. Außerdem als MusicXML oder MIDI für andere Programme.",
     "Noten-Editor" to
         "Tippe eine Note an und ändere Tonhöhe, Position, Länge oder Hand. Im Modus „Hinzufügen“ setzt ein Tipp auf eine freie Stelle eine neue Note. Rückgängig ist jederzeit möglich.",
 )

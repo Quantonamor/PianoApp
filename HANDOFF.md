@@ -6,7 +6,8 @@ Allgemeine Regeln und Befehle stehen in `CLAUDE.md`. Session wurde wegen Token-E
 ## CI-Stand
 Letzter Lauf (Commit `002ac5f`) **komplett grün**: Core-Tests, APK-Build und Emulator-Bedientest inkl. der neuen
 Tests `playFromLibrary`, `importAbc`, `importPhoto`, `packageRoundTrip`. Danach nur noch: Foto-Vorschaubilder
-berücksichtigen die EXIF-Drehung (`PhotoCaptureScreen.kt`) – nach dem Push kurz CI prüfen.
+berücksichtigen die EXIF-Drehung (CI grün, `ede33ef`); Hilfe-Seite um Fotos, Formate, Bibliothek/Teilen ergänzt
+(`HelpScreen.kt` + `English.kt`) – nach dem Push kurz CI prüfen.
 Englische Übersetzungen der neuen Texte sind eingetragen (`English.kt`, Abschnitt „M6“); bei neuen `tr("…")`-Texten
 weiterhin dort ergänzen.
 

@@ -312,4 +312,12 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Notendateien" to "Score files",
     "Demos" to "Demos",
     "Alle" to "All",
+    "„Noten importieren“ → „Noten fotografieren“: Nimm eine Seite nach der anderen auf (oder wähle Fotos aus der Galerie) und bringe sie mit ◀ ▶ in die richtige Reihenfolge. Die App sucht das Blatt, gleicht Licht und Schatten aus und dreht es gerade. Am besten: Blatt flach hinlegen, von oben, helles gleichmäßiges Licht." to
+        "“Import notes” → “Photograph sheet music”: take one page after another (or pick photos from the gallery) and put them in order with ◀ ▶. The app finds the sheet, evens out light and shadows and straightens it. Best: lay the sheet flat, shoot from above, bright even light.",
+    "Weitere Formate" to "More formats",
+    "Außer PDF und Fotos kannst du MIDI (.mid/.kar), MusicXML (.musicxml/.xml/.mxl), ABC (.abc), MuseScore (.mscz/.mscx) und MEI (.mei) importieren – diese Dateien werden ohne Erkennung exakt übernommen." to
+        "Besides PDF and photos you can import MIDI (.mid/.kar), MusicXML (.musicxml/.xml/.mxl), ABC (.abc), MuseScore (.mscz/.mscx) and MEI (.mei) – these files are taken over exactly, without recognition.",
+    "Bibliothek, Abspielen & Teilen" to "Library, playing & sharing",
+    "▶ auf einer Karte spielt das Stück sofort vor. Lange drücken wählt mehrere Stücke aus (teilen oder löschen). Über ⋮ teilst du ein Stück als Paket (.pianotiles) – darin sind Noten (MusicXML), Original, Übungsdaten und Fingersatz; andere öffnen es einfach mit PianoTiles. Außerdem als MusicXML oder MIDI für andere Programme." to
+        "▶ on a card plays the piece right away. A long press selects several pieces (share or delete). Via ⋮ you share a piece as a package (.pianotiles) – it contains the notes (MusicXML), the original, practice data and fingering; others simply open it with PianoTiles. Also as MusicXML or MIDI for other programs.",
 )
