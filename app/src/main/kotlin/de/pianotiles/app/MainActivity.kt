@@ -63,7 +63,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             PianoTilesTheme {
                 LaunchedEffect(Unit) { app.songs.load() }
-                Box(Modifier.fillMaxSize().background(PtColors.Background).safeDrawingPadding()) { Navigation() }
+                // light text on the dark background everywhere (titles were drawn in the default dark colour)
+                androidx.compose.material3.Surface(color = PtColors.Background, contentColor = androidx.compose.ui.graphics.Color.White) {
+                    Box(Modifier.fillMaxSize().background(PtColors.Background).safeDrawingPadding()) { Navigation() }
+                }
             }
         }
     }

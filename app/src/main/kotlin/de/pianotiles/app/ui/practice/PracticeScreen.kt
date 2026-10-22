@@ -225,7 +225,7 @@ private fun TopBar(
     vm: PracticeViewModel, portrait: Boolean, onBack: () -> Unit, onEdit: () -> Unit, onMic: () -> Unit, onSpeed: () -> Unit,
     sheetAvailable: Boolean, sheetShown: Boolean, onSheet: () -> Unit,
 ) {
-    Surface(color = Color(0xFF0B0D14)) {
+    Surface(color = Color(0xFF0B0D14), contentColor = Color.White) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val compact = maxWidth < 900.dp
             @Composable
@@ -379,7 +379,7 @@ private fun MicButton(active: Boolean, level: Float, onClick: () -> Unit) {
 
 @Composable
 private fun BottomBar(vm: PracticeViewModel, onLoopOptions: () -> Unit) {
-    Surface(color = Color(0xFF0B0D14)) {
+    Surface(color = Color(0xFF0B0D14), contentColor = Color.White) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = vm::restart) { Icon(Icons.Filled.Replay, tr("Von vorn")) }
             IconButton(onClick = { vm.seekMeasureDelta(-1) }) { Icon(Icons.Filled.FastRewind, tr("Takt zurück")) }
@@ -462,7 +462,7 @@ private fun Overlays(vm: PracticeViewModel) {
         if (vm.mode != PracticeMode.LISTEN && (vm.micActive || vm.tappedPitches.isNotEmpty() || vm.mode == PracticeMode.WAIT)) {
             Text(
                 "${vm.engine.accuracy()} %",
-                Modifier.align(Alignment.TopEnd).padding(10.dp).clip(RoundedCornerShape(10.dp)).background(Color(0x88171C30)).padding(horizontal = 10.dp, vertical = 4.dp),
+                Modifier.align(Alignment.TopCenter).padding(10.dp).clip(RoundedCornerShape(10.dp)).background(Color(0x88171C30)).padding(horizontal = 10.dp, vertical = 4.dp),
                 color = Color.White, fontWeight = FontWeight.Bold,
             )
         }

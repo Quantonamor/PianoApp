@@ -76,6 +76,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         mic.sensitivity = settings.micSensitivity.toDouble()
         synth.start()
         engine.playOwnHand = true // until the microphone listens to the real piano
+        engine.scoreInFlow = false // without microphone nothing can be "missed" in FLOW mode
         // render the piano tones of this piece (and the visible keys) before they are needed
         val pitches = song.notes.map { it.pitch }.toSet().let { ps -> ps + ((ps.minOrNull() ?: 60) - 12..(ps.maxOrNull() ?: 72) + 12) }
         Thread({ runCatching { synth.prepare(pitches) } }, "SynthPrepare").apply { priority = Thread.MIN_PRIORITY; start() }
@@ -178,10 +179,12 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
             mic.sensitivity = settings.micSensitivity.toDouble()
             micActive = mic.start()
             engine.playOwnHand = !micActive
+            engine.scoreInFlow = micActive
             if (!micActive) message = tr("Mikrofon konnte nicht gestartet werden")
         } else {
             mic.stop(); micActive = false; heardPitches = emptySet(); micLevel = 0f
             engine.playOwnHand = true
+            engine.scoreInFlow = false
         }
     }
 

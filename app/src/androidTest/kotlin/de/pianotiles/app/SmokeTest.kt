@@ -85,15 +85,6 @@ class SmokeTest {
                 val b = n.boundsInRoot
                 if (label != null && b.width > 1f && b.height > 1f) {
                     items.add(Item(label.take(40), b, anc, n.id))
-                    // text that does not fit (cut off or ellipsised)
-                    n.config.getOrNull(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult)?.action?.let { get ->
-                        val results = ArrayList<androidx.compose.ui.text.TextLayoutResult>()
-                        runCatching { get(results) }
-                        results.firstOrNull()?.let { r ->
-                            val cut = r.didOverflowWidth || (0 until r.lineCount).any { r.isLineEllipsized(it) }
-                            if (cut) lines.add("$screen: CUT '${label.take(40)}' ${b.width.toInt()}x${b.height.toInt()}")
-                        }
-                    }
                 }
                 for (c in n.children) walk(c, anc + n.id)
             }
@@ -165,6 +156,7 @@ class SmokeTest {
             play(4000)
             shot("03_practice_playing")
             compose.onNodeWithContentDescription("Pause").performClick()
+            play(600) // controls slide back in
 
             // sheet engraved from the notes next to the falling notes
             compose.onNodeWithContentDescription("Notenblatt").performClick()
@@ -203,6 +195,7 @@ class SmokeTest {
             play(2500)
             shot("04_wait_mode")
             compose.onNodeWithContentDescription("Pause").performClick()
+            play(600) // controls slide back in
 
             // Speed dialog
             compose.onNode(hasText("100 %") and hasClickAction()).performClick()
