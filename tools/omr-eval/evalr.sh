@@ -1,10 +1,13 @@
 # usage: evalr.sh <dir> [extra gradle args]
 D=$1; shift
-rm -f /home/user/PianoApp/core/build/test-results/test/TEST-de.pianotiles.core.OmrCorpusEval.xml
-cd /home/user/PianoApp && timeout 1500 ./gradlew :core:test --tests '*OmrCorpusEval*' -Pomr.corpus=$D -Pomr.debugDir=/tmp/claude-0/omr "$@" -q 2>&1 | grep -E "^e: " | head
+REPO=$(cd "$(dirname "$0")/../.." && pwd)
+W=${OMR_WORK:-/tmp/omr-work}
+export REPO
+rm -f $REPO/core/build/test-results/test/TEST-de.pianotiles.core.OmrCorpusEval.xml
+cd "$REPO" && timeout 1500 ./gradlew :core:test --tests '*OmrCorpusEval*' -Pomr.corpus=$D -Pomr.debugDir=$W/omr "$@" -q 2>&1 | grep -E "^e: " | head
 python3 - <<'PY'
-import re
-s=open('/home/user/PianoApp/core/build/test-results/test/TEST-de.pianotiles.core.OmrCorpusEval.xml').read()
+import re, os
+s=open(os.environ['REPO']+'/core/build/test-results/test/TEST-de.pianotiles.core.OmrCorpusEval.xml').read()
 for l in [x for x in re.findall(r'^\w+\s+(?:lilypond|verovio).*',s,re.M) if not x.startswith('DIFF')]:
     l=re.sub(r'\s+',' ',l); m=re.search(r'noten=\s*([\d.]+)%.*?präzision=\s*([\d.]+)%.*?rhythmus=\s*([\d.]+)%.*?(key=\S+ ts=\S+)',l)
     ok = m and float(m.group(1))==100 and float(m.group(2))==100 and float(m.group(3))==100

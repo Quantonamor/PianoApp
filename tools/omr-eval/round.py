@@ -1,25 +1,26 @@
 """Usage: round.py <round-number> <seed> [count]
-Creates /tmp/claude-0/rounds/r<N>/<piece>/{lilypond.pdf, verovio.pdf, truth.txt} for random pieces."""
+Creates $OMR_WORK/rounds/r<N>/<piece>/{lilypond.pdf, verovio.pdf, truth.txt} for random pieces."""
 import os, sys, random, subprocess, copy, traceback
-sys.path.insert(0, '/tmp/claude-0')
+W = os.environ.get('OMR_WORK', '/tmp/omr-work')
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 from music21 import corpus, stream, clef, layout, converter
 import importlib.util
-spec = importlib.util.spec_from_file_location('mc', '/tmp/claude-0/make_corpus.py')
 # reuse helpers without running the main loop
-src = open('/tmp/claude-0/make_corpus.py').read().split('for name, path, nmeas, kind in CASES:')[0]
-mc = {}
+src = open(os.path.join(HERE, 'make_corpus.py')).read().split('for name, path, nmeas, kind in CASES:')[0]
+mc = {'__file__': os.path.join(HERE, 'make_corpus.py')}
 exec(src, mc)
 
 N, SEED = int(sys.argv[1]), int(sys.argv[2])
 COUNT = int(sys.argv[3]) if len(sys.argv) > 3 else 5
 rnd = random.Random(SEED)
-OUT = f'/tmp/claude-0/rounds/r{N}'
+OUT = os.path.join(W, 'rounds', f'r{N}')
 os.makedirs(OUT, exist_ok=True)
 
 paths = [str(p) for p in corpus.getPaths()]
 chorales = [p for p in paths if '/bach/bwv' in p and p.endswith(('.mxl', '.xml'))]
 folk_opus = [p for p in paths if 'essenFolksong' in p or 'oneills1850' in p or 'ryansMammoth' in p]
-used = set(open('/tmp/claude-0/rounds/used.txt').read().split()) if os.path.exists('/tmp/claude-0/rounds/used.txt') else set()
+used = set(open(os.path.join(W, 'rounds/used.txt')).read().split()) if os.path.exists(os.path.join(W, 'rounds/used.txt')) else set()
 
 def truth_for(s, d):
     parts = list(s.parts)
@@ -68,4 +69,4 @@ while made < COUNT and attempts < 60:
         print('made', name)
     except Exception as e:
         print('skip', kind, e)
-open('/tmp/claude-0/rounds/used.txt', 'w').write('\n'.join(sorted(used)))
+open(os.path.join(W, 'rounds/used.txt'), 'w').write('\n'.join(sorted(used)))

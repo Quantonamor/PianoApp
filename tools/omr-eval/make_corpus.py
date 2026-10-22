@@ -2,8 +2,11 @@ import os, sys, subprocess, copy, traceback
 from music21 import corpus, stream, converter, layout, clef, meter
 import verovio, cairosvg
 
-OUT = '/tmp/claude-0/corpus2'
-LY = '/tmp/claude-0/lyenv/lib/python3.13/site-packages/lilypond-binaries/bin'
+W = os.environ.get('OMR_WORK', '/tmp/omr-work')  # working dir (see setup.sh)
+HERE = os.path.dirname(os.path.abspath(__file__))
+OUT = os.path.join(W, 'corpus2')
+import glob
+LY = (glob.glob(os.path.join(W, 'lyenv/lib/python3*/site-packages/lilypond-binaries/bin')) or ['/usr/bin'])[0]
 
 def first_measures(s, n):
     return s.measures(1, n) if n else s

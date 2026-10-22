@@ -1,6 +1,6 @@
 import os
 from music21 import converter
-D='/tmp/claude-0/corpus2'
+D=os.path.join(os.environ.get('OMR_WORK', '/tmp/omr-work'), 'corpus2')
 for n in sorted(os.listdir(D)):
     s=converter.parse(os.path.join(D,n,'score.musicxml'))
     parts=list(s.parts)
