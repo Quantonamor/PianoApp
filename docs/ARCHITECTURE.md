@@ -8,9 +8,9 @@
 │  ├─ LibraryScreen          Bibliothek, Suche, Sortierung, Favoriten             │
 │  ├─ PracticeScreen + VM    FallingNotes · Keyboard · Timeline · Dialoge          │
 │  ├─ ImportScreen + VM      PdfRenderer → OMR → Vorschau mit Overlay → Speichern  │
-│  ├─ EditorScreen           Piano-Roll                                           │
+│  ├─ EditorScreen + VM      PDF + Piano-Roll, Prüfliste, Takt-Werkzeuge, AiPanel   │
 │  └─ Settings/Help                                                               │
-│ data/  SongRepository (JSON-Dateien), SettingsStore (SharedPreferences)          │
+│ data/  SongRepository (JSON, ZIP-Backup), SettingsStore, SecretStore (Keystore)  │
 │ audio/ Synth (AudioTrack), MicInput (AudioRecord → NoteDetector)                 │
 └─────────────────────────────────────┬──────────────────────────────────────────┘
                                       │ benutzt
@@ -20,6 +20,8 @@
 │ omr/      GrayImage/BitImage, StaffDetector, OmrEngine                           │
 │ audio/    Fft, NoteDetector                                                      │
 │ practice/ PracticeEngine                                                         │
+│ edit/     MeasureOps (Takt-Werkzeuge, Prüfliste)                                 │
+│ ai/       AiPrompt (Prompt, JSON-Schema, Parser), AiFixer (Claude über Anthropic-SDK) │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -65,3 +67,16 @@ Töne, die der eigene Synthesizer gerade spielt, ignoriert die App (sonst „hö
 `settings.gradle.kts` bindet `:app` nur ein, wenn ein Android-SDK vorhanden ist. GitHub Actions
 (`.github/workflows/android.yml`) führt die Core-Tests aus und baut Debug- und Release-APK
 (Release mit Debug-Schlüssel signiert, damit direkt installierbar) als Download-Artefakt.
+
+## KI-nachbessern
+
+* `core/ai/AiPrompt.kt`: fester System-Prompt (Rolle Notensatz-Korrektor), Seitentext je PDF-Seite
+  (Takte mit Position auf der Seite in %, Noten je Hand als `Tonhöhe@Start/Dauer`), JSON-Schema der Antwort,
+  Parser mit Prüfung (Takt auf der Seite? Tonhöhe gültig? Start/Dauer im Takt?).
+* `core/ai/AiFixer.kt`: `ClaudeReviewer` ruft die Messages-API über das offizielle Java-SDK auf
+  (`claude-opus-5-5`, adaptives Denken mit Aufwand `high`, `output_config.format` = JSON-Schema,
+  `fallbacks: "default"` mit Beta-Header `server-side-fallback-2026-07-01`, Abbruch bei `refusal`/`max_tokens`).
+  `AiFixRunner` arbeitet Seite für Seite, meldet Fortschritt/Protokoll und fragt bei ungültiger Antwort einmal
+  mit der Fehlerliste nach.
+* `app/ui/editor/EditorViewModel.kt` rendert die PDF-Seiten (1600 px, JPEG), startet den Lauf im Hintergrund
+  und verwaltet die Vorschläge; Übernehmen ist ein normaler Editor-Schritt (Rückgängig möglich).

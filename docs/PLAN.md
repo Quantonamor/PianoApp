@@ -62,39 +62,47 @@ Eine Android-App (Tablet & Handy, Querformat), die beim Klavierüben hilft:
 - [x] Automatischer Bedien-Test auf Emulator in der CI (`app/src/androidTest/.../SmokeTest.kt`)
 - [ ] **Test auf echtem Gerät durch den Nutzer** (Rückmeldung → Fehlerbehebung)
 - [ ] Mikrofon-Erkennung mit echtem Klavier feinjustieren (Schwellen, Latenz)
-- [ ] Performance: Notennamen-Texte zwischenspeichern, große Stücke flüssig zeichnen
-- [ ] MusicXML: Wiederholungen ausklappen, Tempowechsel
-- [ ] Originale PDF-Seite parallel zum Üben anzeigen (Taktmarkierung)
-- [ ] Export/Backup der Bibliothek, Englische Übersetzung
+- [x] Performance: Notennamen-Texte zwischenspeichern (Text-Cache 512), große Stücke flüssig zeichnen
+- [x] MusicXML: Wiederholungen + Volta-Klammern ausklappen, Tempowechsel (MusicXML + MIDI, Tempo-Karte in der Engine)
+- [x] Originale PDF-Seite parallel zum Üben anzeigen (Taktmarkierung, Antippen springt zum Takt)
+- [x] Backup/Wiederherstellen der Bibliothek (ZIP), Export als MIDI (Teilen)
+- [ ] Englische Übersetzung (in Arbeit)
 
-### M5 – Noten-Editor 2.0 + „KI-nachbessern“ (Wunsch des Nutzers, **später angehen**)
+### M5 – Noten-Editor 2.0 + „KI-nachbessern“ (Wunsch des Nutzers) – **umgesetzt**, wartet auf Test am Gerät
 
 Für bereits importierte Stücke, mit denen man nicht zufrieden ist. Zwei Wege, beide aus dem Stück-Menü
 und aus dem Übungsbildschirm erreichbar („Noten korrigieren“):
 
 **A) Editor (händisch), intuitiv & schön**
-- [ ] Geteilte Ansicht: oben das Original-PDF (gespeichert unter `files/pdfs/<id>.pdf`) mit Takt-Markierung,
+- [x] Geteilte Ansicht: oben das Original-PDF (gespeichert unter `files/pdfs/<id>.pdf`) mit Takt-Markierung,
       unten der Piano-Roll / die Notenansicht des gleichen Takts – man sieht sofort, was abweicht.
-- [ ] Takt-für-Takt-Navigation mit Kennzeichnung „verdächtiger“ Takte (Rhythmus geschätzt, Taktsumme falsch,
+- [x] Takt-für-Takt-Navigation mit Kennzeichnung „verdächtiger“ Takte (Rhythmus geschätzt, Taktsumme falsch,
       ungewöhnliche Sprünge) – Liste „Bitte prüfen“.
-- [ ] Direktes Bearbeiten: Note antippen → ziehen (Tonhöhe/Zeit), Griffe zum Verlängern, Akkord-Modus,
+- [x] Direktes Bearbeiten: Note antippen → ziehen (Tonhöhe/Zeit), Griffe zum Verlängern, Akkord-Modus,
       Vorzeichen-Buttons (♯ ♭ ♮), Takt kopieren/einfügen, Rückgängig/Wiederholen, Anhören ab Takt.
-- [ ] Takt-Werkzeuge: „Taktart/Tonart ab hier“, „Takt einfügen/löschen“, „Hand tauschen“.
+- [x] Takt-Werkzeuge: „Taktart/Tonart ab hier“, „Takt einfügen/löschen“, „Hand tauschen“.
 
 **B) „KI-nachbessern“ (ein Knopf)**
-- [ ] Einstellungen: API-Schlüssel eingeben (sicher gespeichert mit EncryptedSharedPreferences),
+- [x] Einstellungen: API-Schlüssel eingeben (sicher gespeichert mit EncryptedSharedPreferences),
       Anbieter/Modell wählbar (Standard: Anthropic Claude, aktuelles Modell; Schlüssel bleibt auf dem Gerät).
-- [ ] Ein Knopf „KI-nachbessern“: die App schickt pro Seite das **Bild der PDF-Seite** + die **erkannten Noten
+- [x] Ein Knopf „KI-nachbessern“: die App schickt pro Seite das **Bild der PDF-Seite** + die **erkannten Noten
       als kompakten Text** (Takt, Hand, Tonhöhe, Dauer) + die Warnungen der Erkennung an die KI.
-- [ ] Fest hinterlegter, sorgfältig formulierter Prompt (Rolle „Notensatz-Korrektor“; Aufgabe: Abweichungen
+- [x] Fest hinterlegter, sorgfältig formulierter Prompt (Rolle „Notensatz-Korrektor“; Aufgabe: Abweichungen
       zwischen Bild und Notenliste finden; Ausgabe **nur** als strukturiertes JSON mit Korrekturen pro Takt
       `{measure, hand, notes:[{pitch, start, duration}]}` + kurzer Begründung; Taktsummen müssen aufgehen;
       Tonart/Taktart prüfen). JSON-Schema-Validierung, bei Fehler automatisch nachfragen.
-- [ ] Fortschrittsanzeige: „Seite 2/4 wird geprüft … 3 Takte korrigiert“, Live-Protokoll was geändert wurde.
-- [ ] Ergebnis als **Vorschlag** (Vorher/Nachher je Takt, farbig markiert), einzeln oder alles übernehmen,
+- [x] Fortschrittsanzeige: „Seite 2/4 wird geprüft … 3 Takte korrigiert“, Live-Protokoll was geändert wurde.
+- [x] Ergebnis als **Vorschlag** (Vorher/Nachher je Takt, farbig markiert), einzeln oder alles übernehmen,
       jederzeit rückgängig. Kosten-/Datenschutz-Hinweis vor dem ersten Senden.
-- [ ] Technik: Ktor/OkHttp-Client in `app/ai/`, Prompt + JSON-Schema in `core` (testbar), Bilder verkleinert
+- [x] Technik: Ktor/OkHttp-Client in `app/ai/`, Prompt + JSON-Schema in `core` (testbar), Bilder verkleinert
       (z. B. 1600 px Breite, PNG/JPEG), Abbruch-Knopf, Wiederholung bei Netzwerkfehler.
+
+  Umsetzung (2026-10-22): offizielles Anthropic-Java-SDK (`com.anthropic:anthropic-java`) in `core/ai/AiFixer.kt`
+  (Modell `claude-opus-5-5`, Aufwand `high`, strukturierte Ausgabe per JSON-Schema, Server-Fallback bei Ablehnung,
+  3 automatische Wiederholungen bei Netzwerk/Überlast), Prompt/Schema/Parser in `core/ai/AiPrompt.kt` (getestet in
+  `AiAndEditTest`), Schlüssel per Android-Keystore (AES-GCM) in `app/data/SecretStore.kt` statt der veralteten
+  EncryptedSharedPreferences. Der Editor zeigt Vorschläge als grün gestrichelte Vorschau im Piano-Roll.
+  Noch offen: echter Test mit API-Schlüssel (nur durch den Nutzer möglich).
 
 ### Konvergenz-Schleife der PDF-Erkennung (Wunsch des Nutzers, **läuft**)
 

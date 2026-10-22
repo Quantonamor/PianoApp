@@ -58,10 +58,30 @@ Titel, Tempo, Notensystem, Tonart und Taktart korrigieren und neu erkennen lasse
 
 ## Noten-Editor
 
-Note antippen → unten erscheinen Werkzeuge: ½ Ton ↑↓, Oktave ↑↓, früher/später, kürzer/länger,
-Hand wechseln, anhören, löschen. „Hinzufügen“ aktivieren und auf eine freie Stelle tippen fügt eine
-Note ein. Ziehen verschiebt die Ansicht, Lupe zoomt. Ohne Auswahl: alles transponieren, am Raster
-ausrichten, Taktart ändern. Rückgängig oben.
+Erreichbar über das Stift-Symbol beim Üben oder im Stück-Menü der Bibliothek.
+
+* **Aufbau**: oben das Original-PDF (bei importierten PDFs) mit dem aktuellen Takt blau markiert, verdächtige
+  Takte orange; unten der Piano-Roll desselben Takts. Antippen eines Takts im PDF springt dorthin.
+* **Takt-Leiste**: ‹ Takt n / N ›, **„Bitte prüfen (k)“** listet auffällige Takte (Rhythmus geschätzt, Takt
+  nicht gefüllt, Noten über dem Taktstrich, sehr große Sprünge), „Nächster prüfen ›“ springt weiter.
+  ▶ spielt zwei Takte ab dem aktuellen vor. **Takt-Werkzeuge**: kopieren/einfügen, leeren Takt davor
+  einfügen, Takt löschen/leeren, Hände tauschen, ½ Ton höher/tiefer, Taktart ändern, ganzes Stück
+  transponieren, am Raster ausrichten. Raster 1/16, 1/8, 1/4 oder Triole; „Hinzufügen“ + Hand.
+* **Noten bearbeiten**: antippen = auswählen; **ziehen** = verschieben (hoch/runter = Tonhöhe,
+  links/rechts = Zeit, am rechten Rand ziehen = Länge); freie Fläche ziehen = blättern. Unten: ♯ ♭,
+  Oktave, früher/später, kürzer/länger, Notenwert direkt (1/16 … 1/1), Hand, anhören, löschen.
+* **Rückgängig / Wiederholen** oben, „Speichern“ sichert das Stück.
+
+### KI-nachbessern
+
+1. Einmalig in den **Einstellungen → KI-nachbessern** einen eigenen API-Schlüssel von Anthropic eintragen
+   (console.anthropic.com → API Keys). Er wird verschlüsselt nur auf dem Gerät gespeichert.
+2. Im Editor **„KI-nachbessern“** tippen. Beim ersten Mal erscheint ein Hinweis, was gesendet wird (Bild jeder
+   Notenseite + erkannte Noten) – die Kosten laufen über deinen Schlüssel.
+3. Rechts erscheint das KI-Fenster: Fortschritt („Seite 2/4 wird geprüft …“), Protokoll und die **Vorschläge**
+   je Takt und Hand mit Begründung, „Vorher“ und „Nachher“. „Ansehen“ zeigt den Vorschlag grün gestrichelt im
+   Piano-Roll. **Übernehmen**, **Verwerfen** oder **Alle übernehmen** – alles lässt sich mit Rückgängig zurücknehmen.
+4. Danach „Speichern“.
 
 ## Tipps fürs Mikrofon
 

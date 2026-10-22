@@ -7,6 +7,16 @@
   Triolen, verbundene Taktziffern, Vorzeichen über ganze Zeichen.
 * Testkorpus mit 14 Stücken × 2 Notensatz-Programmen als Regressionstest in der CI; Konvergenz-Werkzeuge in `tools/omr-eval`.
 * Emulator-Bedientest in der CI, robustere Audio-Threads.
+* **Noten-Editor 2.0**: oben das Original-PDF mit Taktmarkierung, unten der Piano-Roll; Takt-Navigation,
+  Liste „Bitte prüfen“ (geschätzter Rhythmus, nicht gefüllte Takte, große Sprünge), Noten ziehen (Tonhöhe/Zeit,
+  rechter Rand = Länge), ♯/♭, Notenwerte, Takt-Werkzeuge (kopieren/einfügen, einfügen/löschen, leeren,
+  Hände tauschen, transponieren, Taktart), Rückgängig **und** Wiederholen, „Ab Takt anhören“.
+* **KI-nachbessern**: ein Knopf im Editor; Claude vergleicht jede PDF-Seite mit den erkannten Noten und schlägt
+  Korrekturen je Takt/Hand vor (Fortschritt, Live-Protokoll, Vorher/Nachher, Vorschau, einzeln/alle übernehmen,
+  rückgängig). Eigener API-Schlüssel in den Einstellungen, verschlüsselt gespeichert.
+* Originales Notenblatt neben den fallenden Noten beim Üben (Taktmarkierung, Antippen = springen).
+* MusicXML: Wiederholungen/Volta ausgeklappt, Tempowechsel (auch MIDI).
+* Bibliothek sichern/wiederherstellen (ZIP), Stück als MIDI teilen.
 
 ## 0.1.0 – erste Version
 
