@@ -60,10 +60,11 @@ class SongRepository(private val context: Context) {
     /** Writes all songs (+ original PDFs) as a ZIP backup. Returns the number of songs. */
     suspend fun backup(out: java.io.OutputStream): Int = withContext(Dispatchers.IO) {
         java.util.zip.ZipOutputStream(out).use { zip ->
-            val files = songsDir.listFiles { f -> f.extension == "json" }.orEmpty() + pdfDir.listFiles().orEmpty()
+            val files: List<File> = songsDir.listFiles().orEmpty().filter { it.extension == "json" } +
+                pdfDir.listFiles().orEmpty().toList()
             for (f in files) {
                 zip.putNextEntry(java.util.zip.ZipEntry("${f.parentFile!!.name}/${f.name}"))
-                f.inputStream().use { it.copyTo(zip) }
+                f.inputStream().use { input -> input.copyTo(zip) }
                 zip.closeEntry()
             }
         }
