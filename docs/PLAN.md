@@ -66,7 +66,7 @@ Eine Android-App (Tablet & Handy, Querformat), die beim Klavierüben hilft:
 - [x] MusicXML: Wiederholungen + Volta-Klammern ausklappen, Tempowechsel (MusicXML + MIDI, Tempo-Karte in der Engine)
 - [x] Originale PDF-Seite parallel zum Üben anzeigen (Taktmarkierung, Antippen springt zum Takt)
 - [x] Backup/Wiederherstellen der Bibliothek (ZIP), Export als MIDI (Teilen)
-- [ ] Englische Übersetzung (in Arbeit)
+- [x] Englische Übersetzung (automatisch nach Gerätesprache, umschaltbar in den Einstellungen; KI-Begründungen in der UI-Sprache)
 
 ### M5 – Noten-Editor 2.0 + „KI-nachbessern“ (Wunsch des Nutzers) – **umgesetzt**, wartet auf Test am Gerät
 

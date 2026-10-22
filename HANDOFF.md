@@ -1,8 +1,10 @@
 # Übergabe für die nächste Session („weiter“)
 
-**Wenn der Nutzer nur „weiter“ schreibt:** `docs/PLAN.md` lesen und den obersten offenen Punkt der
-**Konvergenz-Schleife** fortsetzen (Anleitung: `tools/omr-eval/README.md`). Der Punkt **M5 (Editor 2.0 +
-KI-nachbessern)** soll laut Nutzer **später** angegangen werden – erst wenn er es sagt oder die Schleife steht.
+**Wenn der Nutzer nur „weiter“ schreibt:** zuerst Rückmeldungen vom Gerätetest bearbeiten (falls vorhanden),
+sonst `docs/PLAN.md` lesen und den obersten offenen Punkt der **Konvergenz-Schleife** fortsetzen
+(Anleitung: `tools/omr-eval/README.md`). M1–M5 inkl. Editor 2.0, KI-nachbessern und englischer Oberfläche sind
+fertig (Stand 2026-10-22, CI komplett grün); offen sind nur Dinge, die der Nutzer selbst testen muss
+(echtes Gerät, Mikrofon am Klavier, KI-nachbessern mit eigenem API-Schlüssel).
 
 ## Wichtigste Fakten
 - Repo: `quantonamor/pianoapp`, Branch `ccr-257ad710-x5upqq` (alles committed & gepusht).
@@ -15,6 +17,10 @@ KI-nachbessern)** soll laut Nutzer **später** angegangen werden – erst wenn e
   (Erkennung + Qualitätszahlen), `docs/USER_GUIDE.md`, `docs/CHANGELOG.md`.
 
 ## Offene Punkte direkt vor der Übergabe
-- Emulator-Bedientest wurde auf manuell gesteuerte Compose-Uhr umgestellt (Übungsbildschirm animiert
-  dauernd) – Ergebnis des letzten CI-Laufs prüfen; falls rot: Log-Zeile mit `TestRunner: failed` ansehen.
+- Emulator-Bedientest ist grün (manuell gesteuerte Compose-Uhr; nach Klicks Uhr vorstellen, z. B. `waitText`/`play`).
+  Bei Fehlern druckt die CI unter „==== FAILED TESTS ====“ die Fehlermeldung.
+- KI-nachbessern nutzt das offizielle Anthropic-Java-SDK im `core`-Modul (`core/ai/`), Modell `claude-opus-5-5`;
+  ohne API-Schlüssel nicht live getestet (nur mit Fake-Reviewer in `AiAndEditTest`).
+- Texte: `tr("deutscher Text")` (App, Wörterbuch `app/i18n/English.kt`) bzw. `CoreText.t(de, en)` (Core).
+  Neue Texte immer mit Übersetzung anlegen.
 - Nutzer testet die App auf seinem Gerät → Rückmeldungen haben Vorrang vor der Schleife.

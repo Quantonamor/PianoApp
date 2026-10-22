@@ -17,6 +17,8 @@
 * Originales Notenblatt neben den fallenden Noten beim Üben (Taktmarkierung, Antippen = springen).
 * MusicXML: Wiederholungen/Volta ausgeklappt, Tempowechsel (auch MIDI).
 * Bibliothek sichern/wiederherstellen (ZIP), Stück als MIDI teilen.
+* Englische Oberfläche (Gerätesprache oder Einstellung „Sprache / Language“).
+* CI komplett grün: Core-Tests, APK-Build und Emulator-Bedientest.
 
 ## 0.1.0 – erste Version
 
