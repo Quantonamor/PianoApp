@@ -685,9 +685,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val to = minOf(firstNote - (ss * 0.3).toInt(), firstBar, timeSig, (st.xStart + ss * 14).toInt())
         var sharps = 0; var flats = 0; var other = 0
         var keyEnd = -1
+        val halfOfSharp = HashSet<Blob>()
         for (b in inStaff.sortedBy { it.minX }) {
             val x0 = b.minX + left; val x1 = b.maxX + left
-            if (x0 < from || x1 > to) continue
+            if (x0 < from || x1 > to || b in halfOfSharp) continue
             val w = b.width / ss; val h = b.height / ss
             if (h in 1.3..3.6 && w in 1.2..4.5) {
                 // several sharps touching each other: count stroke pairs
@@ -706,7 +707,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 o !== b && o.minX in b.maxX..(b.maxX + (ss * 0.35).toInt()) && o.height / ss in 0.5..1.3 &&
                     o.width / ss in 0.25..0.8 && o.maxY >= b.maxY - ss * 0.5 && o.maxY <= b.maxY + ss * 0.3
             }
+            // A sharp in a space whose cross bars lay on staff lines: the line removal cut it into two upright halves.
+            val otherHalf = if (!bowlNext && strokes.size == 1 && w < 0.6 && h >= 2.0) inStaff.firstOrNull { o ->
+                o !== b && o.minX > b.maxX && o.minX - b.maxX <= ss * 0.7 && o.width / ss < 0.6 && o.height / ss >= 2.0 &&
+                    min(o.maxY, b.maxY) - max(o.minY, b.minY) >= 0.7 * min(o.height, b.height) &&
+                    o.maxX + left <= to && verticalStrokes(img, o, ss * 1.2).size == 1
+            } else null
             when {
+                otherHalf != null -> { sharps++; halfOfSharp.add(otherHalf); keyEnd = maxOf(keyEnd, otherHalf.maxX + left) }
                 bowlNext -> { flats++; keyEnd = maxOf(keyEnd, x1) }
                 strokes.size >= 2 && w in 0.5..1.4 -> { sharps++; keyEnd = maxOf(keyEnd, x1) }
                 strokes.size == 1 && (strokes[0] - b.minX) < b.width * 0.4 && w in 0.45..1.2 && flatShape(img, b, ss) -> { flats++; keyEnd = maxOf(keyEnd, x1) }

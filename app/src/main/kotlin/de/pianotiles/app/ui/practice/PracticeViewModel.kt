@@ -253,7 +253,8 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
     /** Songs without (complete) fingering get the automatic one, saved to the hand file. */
     private fun withFingering(s: Song): Song {
         val fingered = runCatching { AutoFingering.ensure(s) }.getOrNull() ?: return s
-        pt.appScope.launch { pt.songs.save(fingered) }
+        // the engraved sheet shows the fingering too: take over its new measure positions once stored
+        pt.appScope.launch { val stored = pt.songs.save(fingered); song = song.copy(sheetMeasures = stored.sheetMeasures) }
         return fingered
     }
 

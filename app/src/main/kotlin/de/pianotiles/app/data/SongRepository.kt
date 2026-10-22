@@ -1,11 +1,14 @@
 package de.pianotiles.app.data
 
 import android.content.Context
+import de.pianotiles.core.engrave.Engraver
 import de.pianotiles.core.library.HandFile
 import de.pianotiles.core.library.SongPackage
 import de.pianotiles.core.model.DemoSongs
 import de.pianotiles.core.model.Song
 import de.pianotiles.core.model.SongJson
+import de.pianotiles.core.model.SongSource
+import de.pianotiles.core.model.SongStats
 import de.pianotiles.core.model.SongUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +36,12 @@ class SongRepository(private val context: Context) {
             DemoSongs.all().forEach { writeSong(it) }
             prefs.edit().putBoolean("demos_installed_v1", true).apply()
         }
-        val all = readAll()
+        val all = readAll().map { song ->
+            // songs without an original get their engraved sheet (also for libraries from older versions)
+            val engraved = runCatching { withEngravedSheet(song) }.getOrDefault(song)
+            if (engraved !== song) runCatching { writeSong(engraved) }
+            engraved
+        }
         // a song saved while the library was being read (e.g. an import right after start) wins over the disk copy
         _songs.update { cur -> cur + all.filter { a -> cur.none { it.id == a.id } } }
     }
@@ -74,9 +82,37 @@ class SongRepository(private val context: Context) {
 
     fun get(id: String): Song? = _songs.value.firstOrNull { it.id == id }
 
-    suspend fun save(song: Song) = withContext(Dispatchers.IO) {
-        writeSong(song)
-        _songs.update { cur -> cur.filter { it.id != song.id } + song }
+    /** Stores [song]; songs without an original also get their sheet engraved from the notes. Returns what was stored. */
+    suspend fun save(song: Song): Song = withContext(Dispatchers.IO) {
+        val s = runCatching { withEngravedSheet(song) }.getOrDefault(song)
+        writeSong(s)
+        _songs.update { cur -> cur.filter { it.id != s.id } + s }
+        s
+    }
+
+    /**
+     * Without an original (MIDI, MusicXML, ABC, demos, …) the sheet next to the falling notes is engraved from the
+     * notes: `sheet.pdf` plus the measure positions in [Song.sheetMeasures]. Redone only when the notation changed
+     * (`sheet.key` holds a fingerprint of everything that is printed).
+     */
+    private fun withEngravedSheet(song: Song): Song {
+        if (originalPages(song.id).isNotEmpty()) return song
+        val key = song.copy(
+            stats = SongStats(), sheetMeasures = emptyList(), favorite = false, sections = emptyList(),
+            flaggedMeasures = emptyList(), createdAt = 0, source = SongSource.MANUAL,
+        ).hashCode().toString() + "/" + Engraver.VERSION
+        val keyFile = File(dir(song.id), "sheet.key")
+        if (sheetFile(song.id).exists() && keyFile.exists() && keyFile.readText() == key) {
+            // unchanged notation: keep the measure positions (a caller's copy of the song may predate them)
+            val known = get(song.id)?.sheetMeasures?.takeIf { it.isNotEmpty() } ?: song.sheetMeasures
+            if (known.isNotEmpty()) return if (known == song.sheetMeasures) song else song.copy(sheetMeasures = known)
+        }
+        val sheet = Engraver.engrave(song)
+        dir(song.id).mkdirs()
+        writeAtomic(sheetFile(song.id), sheet.pdf)
+        writeAtomic(keyFile, key.toByteArray())
+        File(dir(song.id), "cover.jpg").delete()
+        return song.copy(sheetMeasures = sheet.measures)
     }
 
     suspend fun delete(id: String) = withContext(Dispatchers.IO) {
@@ -95,15 +131,19 @@ class SongRepository(private val context: Context) {
     fun pdfFile(id: String) = File(dir(id), "original.pdf")
     fun sheetFile(id: String) = File(dir(id), SongPackage.SHEET)
 
-    /**
-     * Pages of the original sheet music that [Song.sheetMeasures] refer to: the original PDF or the prepared
-     * photo pages. Empty if there is no original.
-     */
-    fun sheetPages(id: String): List<File> {
+    /** The original sheet music: the imported PDF or the prepared photo pages. Empty if there is no original. */
+    fun originalPages(id: String): List<File> {
         val d = dir(id)
         pdfFile(id).takeIf { it.exists() }?.let { return listOf(it) }
         return originalNames(id).filter { it.startsWith("scan-") }.map { File(d, it) }
     }
+
+    /**
+     * Pages that [Song.sheetMeasures] refer to: the original if there is one, otherwise the sheet engraved from the
+     * notes (`sheet.pdf`). Empty if neither exists.
+     */
+    fun sheetPages(id: String): List<File> =
+        originalPages(id).ifEmpty { listOfNotNull(sheetFile(id).takeIf { it.exists() }) }
 
     suspend fun storeOriginal(id: String, name: String, bytes: ByteArray) = withContext(Dispatchers.IO) {
         writeAtomic(File(dir(id).apply { mkdirs() }, name), bytes)

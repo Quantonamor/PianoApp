@@ -102,6 +102,13 @@ class SmokeTest {
             shot("03_practice_playing")
             compose.onNodeWithContentDescription("Pause").performClick()
 
+            // sheet engraved from the notes next to the falling notes
+            compose.onNodeWithContentDescription("Notenblatt").performClick()
+            play(1500)
+            shot("03a_engraved_sheet")
+            compose.onNodeWithContentDescription("Notenblatt").performClick()
+            play(300)
+
             // 3D hands over the keyboard: off and on again
             compose.onNodeWithContentDescription("Hände").performClick()
             play(300)

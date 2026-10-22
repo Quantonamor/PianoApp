@@ -121,7 +121,7 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit,
     DisposableEffect(Unit) { onDispose { vm.setMic(false) } }
 
     var showSpeed by remember { mutableStateOf(false) }
-    val sheetFile = remember(song.id) { (app as PianoTilesApp).songs.sheetPages(song.id).takeIf { it.isNotEmpty() && song.sheetMeasures.isNotEmpty() } }
+    val sheetFile = remember(song.id, song.sheetMeasures) { (app as PianoTilesApp).songs.sheetPages(song.id).takeIf { it.isNotEmpty() && song.sheetMeasures.isNotEmpty() } }
     var showSheet by remember { mutableStateOf(false) }
     var showLoop by remember { mutableStateOf(false) }
 

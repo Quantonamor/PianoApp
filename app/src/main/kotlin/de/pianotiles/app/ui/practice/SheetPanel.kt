@@ -59,9 +59,10 @@ fun SheetPanel(
     /** Measures to mark in orange (e.g. "Bitte prüfen" in the editor). */
     marked: Set<Int> = emptySet(),
 ) {
-    val renderer = remember(pages) { SheetDocument.open(pages) }
+    // keyed on the measures too: an engraved sheet is rewritten in place when the notes change
+    val renderer = remember(pages, measures) { SheetDocument.open(pages) }
     DisposableEffect(renderer) { onDispose { runCatching { renderer?.close() } } }
-    val rendered = remember(pages) { mutableStateMapOf<Int, ImageBitmap>() }
+    val rendered = remember(pages, measures) { mutableStateMapOf<Int, ImageBitmap>() }
     var page by remember { mutableIntStateOf(0) }
     measures.firstOrNull { it.measure == currentMeasure }?.let { if (it.page != page) page = it.page }
 
