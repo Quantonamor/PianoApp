@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Hearing
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -118,13 +119,27 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit)
     DisposableEffect(Unit) { onDispose { vm.setMic(false) } }
 
     var showSpeed by remember { mutableStateOf(false) }
+    val sheetFile = remember(song.id) { (app as PianoTilesApp).songs.pdfFile(song.id).takeIf { it.exists() && song.sheetMeasures.isNotEmpty() } }
+    var showSheet by remember { mutableStateOf(false) }
     var showLoop by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize()) {
-            TopBar(vm, onBack = onBack, onEdit = { vm.pause(); onEdit(songId) }, onMic = { requestMic(!vm.micActive) }, onSpeed = { showSpeed = true })
+            TopBar(
+                vm, onBack = onBack, onEdit = { vm.pause(); onEdit(songId) }, onMic = { requestMic(!vm.micActive) }, onSpeed = { showSpeed = true },
+                sheetAvailable = sheetFile != null, sheetShown = showSheet, onSheet = { showSheet = !showSheet },
+            )
 
-            BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+            Row(Modifier.fillMaxWidth().weight(1f)) {
+            if (showSheet && sheetFile != null) {
+                SheetPanel(
+                    pdf = sheetFile, measures = song.sheetMeasures, currentMeasure = vm.engine.currentMeasure.also { vm.frame },
+                    loopMeasures = if (vm.loop.enabled) vm.loopStartMeasure..vm.loopEndMeasure else null,
+                    onSeekMeasure = { vm.seekBeat(song.measureStart(it)) },
+                    modifier = Modifier.weight(0.42f).fillMaxHeight(),
+                )
+            }
+            BoxWithConstraints(Modifier.weight(0.58f).fillMaxHeight()) {
                 val keyboardHeight = (maxHeight * 0.30f).coerceIn(70.dp, 170.dp)
                 Column(Modifier.fillMaxSize()) {
                     Box(Modifier.fillMaxWidth().weight(1f)) {
@@ -153,6 +168,7 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit)
                     }
                 }
             }
+            }
             BottomBar(vm, onLoopOptions = { showLoop = true })
         }
 
@@ -163,7 +179,10 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit)
 }
 
 @Composable
-private fun TopBar(vm: PracticeViewModel, onBack: () -> Unit, onEdit: () -> Unit, onMic: () -> Unit, onSpeed: () -> Unit) {
+private fun TopBar(
+    vm: PracticeViewModel, onBack: () -> Unit, onEdit: () -> Unit, onMic: () -> Unit, onSpeed: () -> Unit,
+    sheetAvailable: Boolean, sheetShown: Boolean, onSheet: () -> Unit,
+) {
     Surface(color = MaterialTheme.colorScheme.surface) {
         Row(
             Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp),
@@ -193,6 +212,7 @@ private fun TopBar(vm: PracticeViewModel, onBack: () -> Unit, onEdit: () -> Unit
             Chip(text = "${(vm.speed * 100).toInt()} %", icon = Icons.Filled.Tune, active = vm.speed != 1f, onClick = onSpeed)
             ToggleIcon(Icons.Filled.Timer, "Metronom", vm.metronome, vm::toggleMetronome)
             MicButton(vm.micActive, vm.micLevel, onMic)
+            if (sheetAvailable) ToggleIcon(Icons.Filled.MenuBook, "Notenblatt", sheetShown, onSheet)
             IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, "Noten bearbeiten") }
         }
     }

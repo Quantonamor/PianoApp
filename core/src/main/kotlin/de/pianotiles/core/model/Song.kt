@@ -29,6 +29,10 @@ data class Note(
 @Serializable
 data class TempoChange(val beat: Double, val bpm: Double)
 
+/** Where a measure is printed in the original PDF (coordinates relative to the page, 0..1). */
+@Serializable
+data class SheetMeasure(val measure: Int, val page: Int, val x0: Float, val y0: Float, val x1: Float, val y1: Float)
+
 /** A named range of the piece that can be practised as a loop ("Teil A", "Refrain", ...). */
 @Serializable
 data class Section(
@@ -68,6 +72,8 @@ data class Song(
     val pickupBeats: Double = 0.0,
     /** Tempo changes after the start ([bpm] is the initial tempo). */
     val tempoChanges: List<TempoChange> = emptyList(),
+    /** Measure positions in the imported PDF (empty for other sources). */
+    val sheetMeasures: List<SheetMeasure> = emptyList(),
 ) {
     /** Tempo at [beat], following [tempoChanges]. */
     fun bpmAt(beat: Double): Double = tempoChanges.lastOrNull { it.beat <= beat + 1e-9 }?.bpm ?: bpm

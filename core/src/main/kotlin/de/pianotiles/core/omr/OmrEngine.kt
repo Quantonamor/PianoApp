@@ -153,6 +153,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
 
     private val warnings = ArrayList<String>()
     private val handKeys = HashMap<Hand, Int>()
+    private var pageSizes: List<Pair<Int, Int>> = emptyList()
     private var firstKey: Int? = null
 
     fun recognize(pages: List<GrayImage>, progress: (Int, Int) -> Unit = { _, _ -> }): OmrResult {
@@ -204,6 +205,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 .groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
             if (v != null) handKeys[hand] = v
         }
+        pageSizes = pages.map { it.width to it.height }
         val (song, estimated) = assemble(systems, keyFifths)
 
         for ((pageIdx, gray) in pages.withIndex()) {
@@ -1235,9 +1237,18 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         if (estimated.isNotEmpty()) warnings.add("Rhythmus geschätzt in Takt ${estimated.joinToString(", ")} – bitte prüfen")
 
+        val sheet = slots.mapIndexedNotNull { mi, slot ->
+            val page = slot.staves.first().page
+            val (pw, ph) = pageSizes.getOrNull(page) ?: return@mapIndexedNotNull null
+            val ss = slot.staves.first().staff.space
+            val y0 = slot.staves.minOf { it.staff.top } - ss * 2
+            val y1 = slot.staves.maxOf { it.staff.bottom } + ss * 2
+            de.pianotiles.core.model.SheetMeasure(mi, page, (slot.left / pw).toFloat(), (y0 / ph).toFloat(), (slot.right / pw).toFloat(), (y1 / ph).toFloat())
+        }
         val song = Song(
             id = SongUtils.newId(),
             title = options.title,
+            sheetMeasures = sheet,
             bpm = options.bpm,
             beatsPerMeasure = num,
             beatUnit = den,
