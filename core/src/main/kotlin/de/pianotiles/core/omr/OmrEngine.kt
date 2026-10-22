@@ -207,7 +207,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (v != null) handKeys[hand] = v
         }
         pageSizes = pages.map { it.width to it.height }
-        val (song, estimated) = assemble(systems, keyFifths)
+        val (assembled, estimated) = assemble(systems, keyFifths)
+        val song = assembled.copy(keyFifths = keyFifths)
 
         for ((pageIdx, gray) in pages.withIndex()) {
             val sds = pageStaves[pageIdx]

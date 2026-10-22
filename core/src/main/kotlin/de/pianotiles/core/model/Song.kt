@@ -21,6 +21,8 @@ data class Note(
     val duration: Double,
     val hand: Hand = Hand.RIGHT,
     val velocity: Int = 80,
+    /** Finger 1 (thumb) … 5 (little finger); 0 = no fingering. Stored in the hand file (`hands.json`). */
+    val finger: Int = 0,
 ) {
     val end: Double get() = start + duration
 }
@@ -42,7 +44,10 @@ data class Section(
 )
 
 @Serializable
-enum class SongSource { DEMO, MIDI, MUSICXML, PDF, MANUAL }
+enum class SongSource { DEMO, MIDI, MUSICXML, PDF, MANUAL, PHOTO, ABC, MUSESCORE, MEI, PACKAGE }
+
+@Serializable
+enum class FingeringSource { NONE, AUTO, AI, MANUAL, FILE }
 
 /** Practice statistics stored per song. */
 @Serializable
@@ -76,6 +81,10 @@ data class Song(
     val sheetMeasures: List<SheetMeasure> = emptyList(),
     /** Measures (0-based) the recognition was unsure about ("Bitte prüfen" in the editor). */
     val flaggedMeasures: List<Int> = emptyList(),
+    /** Key signature as number of sharps (>0) or flats (<0); null = unknown (guessed when needed). */
+    val keyFifths: Int? = null,
+    /** Where the fingering came from (see [FingeringSource]). */
+    val fingeringSource: FingeringSource = FingeringSource.NONE,
 ) {
     /** Tempo at [beat], following [tempoChanges]. */
     fun bpmAt(beat: Double): Double = tempoChanges.lastOrNull { it.beat <= beat + 1e-9 }?.bpm ?: bpm

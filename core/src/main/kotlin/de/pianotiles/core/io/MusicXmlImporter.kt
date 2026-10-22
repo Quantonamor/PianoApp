@@ -55,6 +55,7 @@ object MusicXmlImporter {
         val notesByPart = ArrayList<List<Pair<Note, Int>>>() // note + staff number
         var maxStaves = 1
         var pickup = 0.0
+        var keyFifths: Int? = null
         val measures = ArrayList<MeasureInfo>() // from the first part
         val tempos = ArrayList<de.pianotiles.core.model.TempoChange>()
 
@@ -90,6 +91,7 @@ object MusicXmlImporter {
                                 }
                             }
                             el.child("staves")?.text()?.toIntOrNull()?.let { maxStaves = maxOf(maxStaves, it) }
+                            if (keyFifths == null) el.child("key")?.child("fifths")?.text()?.toIntOrNull()?.let { keyFifths = it }
                         }
                         "direction" -> {
                             val t = el.child("sound")?.getAttribute("tempo")?.toDoubleOrNull()
@@ -123,6 +125,8 @@ object MusicXmlImporter {
                             val midi = (octave + 1) * 12 + (stepIndex[step.uppercaseChar()] ?: 0) + alter
                             val staff = el.child("staff")?.text()?.toIntOrNull() ?: 1
                             val ties = el.children("tie").map { it.getAttribute("type") }
+                            val finger = el.child("notations")?.child("technical")?.child("fingering")?.text()
+                                ?.filter { it.isDigit() }?.take(1)?.toIntOrNull()?.takeIf { it in 1..5 } ?: 0
                             val absStart = measureStart + start
                             if ("stop" in ties && tieOpen.containsKey(midi)) {
                                 val idx = tieOpen.getValue(midi)
@@ -130,7 +134,7 @@ object MusicXmlImporter {
                                 partNotes[idx] = prev.copy(duration = absStart + dur - prev.start) to st
                                 if ("start" !in ties) tieOpen.remove(midi)
                             } else {
-                                partNotes.add(Note(midi, absStart, dur.coerceAtLeast(1.0 / 32)) to staff)
+                                partNotes.add(Note(midi, absStart, dur.coerceAtLeast(1.0 / 32), finger = finger) to staff)
                                 if ("start" in ties) tieOpen[midi] = partNotes.lastIndex
                             }
                         }
@@ -174,6 +178,8 @@ object MusicXmlImporter {
             source = SongSource.MUSICXML,
             createdAt = System.currentTimeMillis(),
             pickupBeats = pickup,
+            keyFifths = keyFifths,
+            fingeringSource = if (played.any { it.finger > 0 }) de.pianotiles.core.model.FingeringSource.FILE else de.pianotiles.core.model.FingeringSource.NONE,
         )
     }
 
