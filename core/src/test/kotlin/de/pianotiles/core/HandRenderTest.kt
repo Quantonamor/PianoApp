@@ -62,5 +62,16 @@ class HandRenderTest {
         // … and a close-up at full resolution to judge the details
         render("closeup", DemoSongs.odeToJoy(), 0.5, 57, 74, 1080, 420, 1f, out)
         render("closeup_left", DemoSongs.odeToJoy(), 0.5, 40, 57, 1080, 420, 1f, out)
+        // a film strip of the motion (right hand, Ode: E E F G G F E D C), for checking smoothness and key presses
+        if (out != null) {
+            val frames = (0 until 8).map { k -> 2.0 + k * 0.5 }
+            val tiles = frames.map { b -> render("tmp_strip", DemoSongs.odeToJoy(), b, 59, 69, 540, 220, 0.6f, out); javax.imageio.ImageIO.read(File(out, "tmp_strip.png")) }
+            val strip = BufferedImage(tiles[0].width * 4, tiles[0].height * 2, BufferedImage.TYPE_INT_ARGB)
+            val g = strip.createGraphics()
+            tiles.forEachIndexed { k, t -> g.drawImage(t, (k % 4) * t.width, (k / 4) * t.height, null); g.color = java.awt.Color.RED; g.drawString("beat ${frames[k]}", (k % 4) * t.width + 6, (k / 4) * t.height + 14) }
+            g.dispose()
+            javax.imageio.ImageIO.write(strip, "png", File(out, "strip.png"))
+            File(out, "tmp_strip.png").delete()
+        }
     }
 }

@@ -2,6 +2,11 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **Hände überarbeitet** (Nahaufnahmen in `HandRenderTest`): vollere Finger (16–20 mm wie echte), glatte
+  Oberfläche (Unterteilung), Fingernägel, Kontaktschatten zwischen den Fingern, matte Haut statt Plastikglanz,
+  weichere Kanten; natürliche Haltung (Mittelfinger am weitesten auf der Taste, Daumen vorne, keine Krallen-
+  Finger); der spielende Finger leuchtet in der Farbe seiner Hand. Gerendert in einem eigenen Thread, damit der Bildschirm flüssig bleibt. Fingersatz: weite Akkorde
+  mit Daumen und kleinem Finger (Ode links C+G jetzt 5–1), Umsetzen der Hand bei langen Noten erlaubt.
 * **Realistische 3D-Hände**: echtes Hand-Modell mit Skelett (WebXR „generic-hand“, MIT), Software-Rasterizer mit
   Skinning, Tiefenpuffer und Licht; jeder Finger wird per inverser Kinematik auf seine Taste gesetzt, die Hand
   rückt so weit an die Tasten, dass Daumen und kleiner Finger hinreichen; der Unterarm blendet weich aus.

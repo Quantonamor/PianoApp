@@ -17,8 +17,15 @@ jedem Frame lässt den Software-Renderer des Emulators abstürzen („Failed to 
   Unterarm-Ausblendung); IK je Finger (gedämpftes 2×2-Gauss-Newton über Spreizung/Beugung); die Hand rückt an die
   Tasten, bis Daumen/kleiner Finger reichen (max. 0,4 Mittelfinger-Längen). Fallback: alte SDF-Zeichnung in
   `HandRenderer.kt`. App rendert mit 40 % Auflösung (`HandsOverlay.kt`).
-- **Klang**: `app/.../audio/Synth.kt` mit Klavier-Samples (`app/src/main/assets/piano/`, `tools/samples/make_piano.py`),
-  Vorausplanung mit Verzögerung (`PracticeEngine.audioLookaheadSeconds`, `PlayNote.delaySeconds`).
+- **Klang**: Mischer im Core (`core/audio/PianoSound.kt`: `PianoTones` = Salamander-Flügel, 3 Anschlagstufen p/m/f,
+  Tonhöhe beim Mischen umgerechnet; `PianoMixer` = Zeitplan für vorausgeplante Töne, Stimmen, Hall, Kompressor).
+  `app/.../audio/Synth.kt` dekodiert nur die MP3s (`assets/piano/<p|m|f>_<midi>.mp3`, `tools/samples/make_piano.py`)
+  und füttert den AudioTrack. **`PianoSoundTest`** spielt alle Demos wie die App ab (jeder Ton genau einmal,
+  ≤ 4 ms Schwankung, keine Übersteuerung); `-Paudio.out=<dir>` schreibt WAVs zum Anhören.
+- **Hände (Stand 2)**: Finger verdickt (`thickenFingers`), PN-Unterteilung, Nägel (`markNails`), Rückseiten weg,
+  Kontaktschatten, 3×3-Kantenglättung; Fingerspitzen gestaffelt (`HandRenderer.layout`), Vorschub max. 0,18;
+  Rendern im Hintergrund-Thread (`HandsOverlay.kt`, 3 Bitmaps). CI: `HandsShotTest` läuft getrennt und darf
+  scheitern (Screenshots `08*` im Log). Nahaufnahmen: `HandRenderTest` → `closeup.png`, `closeup_left.png`.
 - **Hochformat**: `fullSensor`; **Ausblenden**: beim Spielen und nach 6 s ohne Berührung.
 - **MIDI**: `app/.../audio/MidiInput.kt`, verdrahtet in `PracticeViewModel` (`midiPitches`, `midiDevices`).
 - **Review**: `docs/USER_REVIEW.md`; umgesetzt: Demos (9), Begrüßungskarte, Statistik

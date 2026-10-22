@@ -32,6 +32,19 @@ class HandModel private constructor(
 
     fun joint(name: String) = names.indexOf(name)
 
+    /** Finger (0 = thumb … 4) each joint moves, −1 for palm and wrist. */
+    val jointFinger: IntArray = IntArray(names.size) { j ->
+        val n = names[j]
+        when {
+            n.startsWith("thumb-") && n != "thumb-metacarpal" -> 0
+            n.startsWith("index-finger-") && !n.endsWith("metacarpal") -> 1
+            n.startsWith("middle-finger-") && !n.endsWith("metacarpal") -> 2
+            n.startsWith("ring-finger-") && !n.endsWith("metacarpal") -> 3
+            n.startsWith("pinky-finger-") && !n.endsWith("metacarpal") -> 4
+            else -> -1
+        }
+    }
+
     companion object {
         private val cache = HashMap<Hand, HandModel?>()
 
@@ -356,6 +369,8 @@ object Hand3D {
     private var rowMax = -1
     private var fbuf = FloatArray(0) // forearm fade: 1 = opaque, 0 = gone
     private var kbuf = FloatArray(0) // fingernail: 0..1
+    private var pbuf = FloatArray(0) // finger pressing a key: 0..1 (tinted in the hand's colour)
+    private var hbuf = ByteArray(0)  // which hand drew the pixel (0 right, 1 left)
 
     /** Renders [hands] (tips in screen pixels) into [out]; see HandRenderer.render. */
     @Synchronized
@@ -364,7 +379,7 @@ object Hand3D {
         keysBottom: Float, alphaOverKeys: Float,
     ): Boolean {
         val n = width * height
-        if (n > zcap) { zcap = n; zbuf = FloatArray(n); nbuf = FloatArray(n * 3); cover = ByteArray(n); fbuf = FloatArray(n); kbuf = FloatArray(n) }
+        if (n > zcap) { zcap = n; zbuf = FloatArray(n); nbuf = FloatArray(n * 3); cover = ByteArray(n); fbuf = FloatArray(n); kbuf = FloatArray(n); pbuf = FloatArray(n); hbuf = ByteArray(n) }
         java.util.Arrays.fill(out, 0)
         java.util.Arrays.fill(zbuf, 0, n, -Float.MAX_VALUE)
         java.util.Arrays.fill(cover, 0, n, 0)
@@ -372,22 +387,29 @@ object Hand3D {
         for (g in hands) {
             val model = HandModel.get(g.hand) ?: return false
             val (xf, view) = pose(model, g.hand, g.tips, keyW, g.down)
-            rasterize(model, xf, view, width, height, scale)
+            rasterize(model, xf, view, width, height, scale, g.down, if (g.hand == Hand.RIGHT) 0 else 1)
         }
         shade(out, width, height, scale, keysBottom, alphaOverKeys, keyW)
         return true
     }
 
-    private fun rasterize(model: HandModel, xf: Array<Affine>, view: View, width: Int, height: Int, scale: Float) {
+    private fun rasterize(model: HandModel, xf: Array<Affine>, view: View, width: Int, height: Int, scale: Float, down: FloatArray, handId: Byte) {
         val vc = model.vertexCount
         val sp = FloatArray(vc * 3) // screen x, y (buffer pixels), depth
         val sn = FloatArray(vc * 3) // normals in screen space
         val fade = FloatArray(vc)
+        val press = FloatArray(vc)
         val t = FloatArray(3); val acc = FloatArray(3); val nacc = FloatArray(3)
         for (v in 0 until vc) {
             val x = model.positions[v * 3]; val y = model.positions[v * 3 + 1]; val z = model.positions[v * 3 + 2]
             // the model ends at the wrist (+y): fade the forearm out instead of showing the cut
             fade[v] = ((0.068f - y) / 0.036f).coerceIn(0f, 1f)
+            var pr = 0f
+            for (k in 0 until 4) {
+                val f = model.jointFinger[model.joints[v * 4 + k].toInt() and 0xFF]
+                if (f >= 0) pr += model.weights[v * 4 + k] * down[f]
+            }
+            press[v] = pr
             val nx = model.normals[v * 3]; val ny = model.normals[v * 3 + 1]; val nz = model.normals[v * 3 + 2]
             acc[0] = 0f; acc[1] = 0f; acc[2] = 0f; nacc[0] = 0f; nacc[1] = 0f; nacc[2] = 0f
             for (k in 0 until 4) {
@@ -436,6 +458,8 @@ object Hand3D {
                     cover[i] = 1
                     fbuf[i] = w0 * fade[a] + w1 * fade[b] + w2 * fade[c]
                     kbuf[i] = w0 * nail[a] + w1 * nail[b] + w2 * nail[c]
+                    pbuf[i] = w0 * press[a] + w1 * press[b] + w2 * press[c]
+                    hbuf[i] = handId
                     nbuf[i * 3] = w0 * sn[a * 3] + w1 * sn[b * 3] + w2 * sn[c * 3]
                     nbuf[i * 3 + 1] = w0 * sn[a * 3 + 1] + w1 * sn[b * 3 + 1] + w2 * sn[c * 3 + 1]
                     nbuf[i * 3 + 2] = w0 * sn[a * 3 + 2] + w1 * sn[b * 3 + 2] + w2 * sn[c * 3 + 2]
@@ -499,6 +523,14 @@ object Hand3D {
                     r += (238f - r) * 0.55f * nailW; g += (196f - g) * 0.55f * nailW * lit; b += (190f - b) * 0.55f * nailW * lit
                 }
                 r += 255f * sheen; g += 248f * sheen; b += 240f * sheen
+                // the finger that plays right now takes on the colour of its hand's notes
+                val p = pbuf[i]
+                if (p > 0.02f) {
+                    val k = 0.62f * p.coerceAtMost(1f)
+                    val t = 0.6f + 0.4f * lit
+                    if (hbuf[i].toInt() == 0) { r += (255f * t - r) * k; g += (138f * t - g) * k; b += (61f * t - b) * k }
+                    else { r += (110f * t - r) * k; g += (123f * t - g) * k; b += (255f * t - b) * k }
+                }
                 // anti-aliased silhouette: pixels at the border of the hand are partly transparent
                 // (coverage of the 3×3 neighbourhood, weighted towards the centre)
                 var cov = 1f
