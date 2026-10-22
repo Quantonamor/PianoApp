@@ -9,7 +9,12 @@ jedem Frame lässt den Software-Renderer des Emulators abstürzen („Failed to 
 'emulator-5554' not found“). Die Hände werden stattdessen mit den JVM-Vorschauen geprüft:
 `./gradlew :core:test --tests 'de.pianotiles.core.HandRenderTest' -Phands.out=<dir>` → `ode/scale/elise.png`.
 **Bilder ansehen:** `mcp__github__get_job_logs` (ui-test-Job, `tail_lines` 500) speichert das Log als Datei →
-`python3 tools/ci/extract_shots.py <datei> <zielordner>` → JPEGs mit Read ansehen.
+`python3 tools/ci/extract_shots.py <datei> <zielordner>` → JPEGs mit Read ansehen. **Zielordner vorher leeren**
+(sonst liegen alte Bilder daneben).
+**UI-Tests und die Test-Uhr:** Die Tests stellen `mainClock.autoAdvance = false`. Aktionen, die Frames brauchen
+(z. B. `performScrollToNode`), warten dann ewig auf „idle“ → vorher `autoAdvance = true`, danach wieder `false`.
+Jeder Test hat 5 Min. Timeout; bei Fehlern stehen alle Thread-Stacks im Log („==== THREADS ====“).
+**Stau vermeiden:** Commits bündeln, veraltete Läufe mit `actions_run_trigger` → `cancel_workflow_run` abbrechen.
 
 ## Stand der letzten Arbeitseinheit (Wünsche des Nutzers: Hände, Klang, Hochformat, Ausblenden, 50-Personen-Review)
 - **Hände**: `core/hands/HandModel.kt` – WebXR-„generic-hand“ (MIT, © Amazon; `core/src/main/resources/hands/`,
