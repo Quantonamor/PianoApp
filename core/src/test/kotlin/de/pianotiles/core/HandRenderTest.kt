@@ -65,6 +65,7 @@ class HandRenderTest {
         render("closeup_black", DemoSongs.furElise(), 0.3, 62, 79, 1080, 420, 1f, out)
         // proportions of the app in portrait (Ode: 15 white keys on a 1080 px phone, keys 5.2 key widths long)
         render("app_portrait", DemoSongs.odeToJoy(), 2.5, 48, 72, 1080, (1080 / 15 * 5.2).toInt(), 0.4f, out)
+        render("app_portrait_50", DemoSongs.odeToJoy(), 2.5, 48, 72, 1080, (1080 / 15 * 5.2).toInt(), 0.5f, out)
         // a film strip of the motion (right hand, Ode: E E F G G F E D C), for checking smoothness and key presses
         if (out != null) {
             strip(out, "strip", DemoSongs.odeToJoy(), (0 until 8).map { k -> 2.0 + k * 0.5 }, 59, 69)

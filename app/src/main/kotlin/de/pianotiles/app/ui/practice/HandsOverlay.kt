@@ -78,7 +78,7 @@ private class HandRenderLoop {
 /**
  * Two realistic, half-transparent 3D hands seen from the player's seat (rigged hand model, see core
  * `HandModel.kt`). The canvas covers the keyboard ([keysHeight]) and a strip below it where the palms rest, so only
- * the fingers reach onto the keys. The picture is rendered at 40 % resolution on a background thread and drawn
+ * the fingers reach onto the keys. The picture is rendered at 50 % resolution on a background thread and drawn
  * scaled; small numbers on the fingertips show the fingering.
  */
 @Composable
@@ -99,7 +99,7 @@ fun HandsOverlay(
             motion.pose(hand, beat)?.takeIf { it.active }?.let { HandRenderer.layout(it, keyX, layout.whiteWidth, keysHeight, size.height) }
         }
         if (geos.isEmpty()) return@Canvas
-        val scale = 0.4f
+        val scale = 0.5f
         val bw = (size.width * scale).toInt().coerceAtLeast(1)
         val bh = (size.height * scale).toInt().coerceAtLeast(1)
         loop.request(geos, bw, bh, scale, keysHeight)
