@@ -19,6 +19,8 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Taktnummern" to "Measure numbers",
     "Hände" to "Hands",
     "Ansicht" to "View",
+    "Loslassen: %s" to "Let go: %s",
+    "Halten: %s" to "Keep holding: %s",
     "Notennamen auf den Noten" to "Note names on the notes",
     "Notennamen auf den Tasten" to "Note names on the keys",
     "Das Buch-Symbol oben zeigt die Noten neben den fallenden Noten; der aktuelle Takt ist markiert, Antippen springt dorthin. Bei PDFs und Fotos siehst du das Original, bei allen anderen Stücken setzt die App das Notenblatt selbst aus den Noten (mit Fingersatz) und hält es nach Änderungen im Editor aktuell." to

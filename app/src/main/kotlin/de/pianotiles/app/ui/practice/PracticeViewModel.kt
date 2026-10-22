@@ -131,6 +131,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         val sounding = f.sounding.filterTo(HashSet()) { it !in synthRecent }
         val onsets = f.onsets.filterTo(HashSet()) { it !in synthRecent }
         heardPitches = sounding
+        syncHeld()
         if (onsets.isNotEmpty() || sounding.isNotEmpty()) handle(engine.onNotesPlayed(onsets, sounding))
         bump()
     }
@@ -138,11 +139,18 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
     fun keyDown(pitch: Int) {
         synth.noteOn(pitch, 90, 0.6)
         tappedPitches = tappedPitches + pitch
-        handle(engine.onNotesPlayed(setOf(pitch)))
+        syncHeld()
+        handle(engine.onNotesPlayed(setOf(pitch), tappedPitches))
         bump()
     }
 
-    fun keyUp(pitch: Int) { tappedPitches = tappedPitches - pitch }
+    fun keyUp(pitch: Int) { tappedPitches = tappedPitches - pitch; syncHeld() }
+
+    /** The engine needs to know which keys are held (chords played together, "let go" / "keep holding" hints). */
+    private fun syncHeld() {
+        engine.heldPitches = tappedPitches + heardPitches
+        engine.heldIsExact = !micActive
+    }
 
     // ---------------------------------------------------------------- controls
 
@@ -183,6 +191,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
             if (!micActive) message = tr("Mikrofon konnte nicht gestartet werden")
         } else {
             mic.stop(); micActive = false; heardPitches = emptySet(); micLevel = 0f
+            syncHeld()
             engine.playOwnHand = true
             engine.scoreInFlow = false
         }

@@ -208,13 +208,23 @@ private fun PlayArea(vm: PracticeViewModel, settings: de.pianotiles.app.data.App
                 val n = song.notes[i]
                 if (engine.noteStates[i] == NoteState.AUTO || engine.noteStates[i] == NoteState.HIT || vm.mode != PracticeMode.WAIT) sounding[n.pitch] = n.hand
             }
-            Box(Modifier.fillMaxWidth().height(keyboardHeight)) {
+            val hints = engine.holdHints()
+            val pulse = ((kotlin.math.sin(System.nanoTime() / 1e9 * 6.0) + 1) / 2).toFloat()
+            // with hands shown, a strip below the keys holds the palms, so only the fingers cover the keys
+            val handZone = if (settings.showHands) keyboardHeight * 0.45f else 0.dp
+            Box(Modifier.fillMaxWidth().height(keyboardHeight + handZone)) {
+                Box(Modifier.fillMaxWidth().height(keyboardHeight).background(Color.Black)) {
                 Keyboard(
                     range = range, expected = expected, sounding = sounding, heard = vm.heardPitches,
                     pressed = vm.tappedPitches, wrong = vm.wrongPitch, naming = settings.noteNaming,
-                    showNames = settings.showNamesOnKeys, onKeyDown = vm::keyDown, onKeyUp = vm::keyUp,
+                    showNames = settings.showNamesOnKeys, release = hints.release, keepHolding = hints.keepHolding, pulse = pulse,
+                    onKeyDown = vm::keyDown, onKeyUp = vm::keyUp,
                 )
-                if (settings.showHands) HandsOverlay(vm.handMotion, engine.position, vm.frame, range, showNumbers = settings.showFingers)
+                }
+                if (settings.showHands) {
+                    val kh = with(androidx.compose.ui.platform.LocalDensity.current) { keyboardHeight.toPx() }
+                    HandsOverlay(vm.handMotion, engine.position, vm.frame, range, showNumbers = settings.showFingers, keysHeight = kh)
+                }
             }
         }
     }
@@ -438,6 +448,23 @@ private fun Overlays(vm: PracticeViewModel) {
                 Modifier.align(Alignment.TopCenter).padding(top = 56.dp).clip(RoundedCornerShape(10.dp))
                     .background(Color(0xAA0E1220)).padding(horizontal = 8.dp, vertical = 2.dp),
                 color = PtColors.Hit, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+            )
+        }
+        // let go / keep holding
+        val hints = vm.engine.holdHints()
+        if (hints.release.isNotEmpty() || hints.keepHolding.isNotEmpty()) {
+            val text = buildString {
+                if (hints.release.isNotEmpty()) append(tr("Loslassen: %s", hints.release.sorted().joinToString(" ") { Pitch.fullName(it, vm.settings.noteNaming) }))
+                if (hints.keepHolding.isNotEmpty()) {
+                    if (isNotEmpty()) append("  ·  ")
+                    append(tr("Halten: %s", hints.keepHolding.sorted().joinToString(" ") { Pitch.fullName(it, vm.settings.noteNaming) }))
+                }
+            }
+            Text(
+                text,
+                Modifier.align(Alignment.TopCenter).padding(top = 92.dp).clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xAA0E1220)).padding(horizontal = 8.dp, vertical = 2.dp),
+                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp,
             )
         }
         // pass result toast

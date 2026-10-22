@@ -124,4 +124,55 @@ class EngineTest {
         assertEquals(1, elise.measureIndexAt(0.5))
         assertEquals(9, elise.measureCount)
     }
+
+    private val chordSong = Song(
+        id = "c", title = "c", bpm = 60.0,
+        notes = listOf(
+            // C+E together; E is held for 2 beats while C ends after 1 beat; then D
+            Note(60, 0.0, 1.0), Note(64, 0.0, 2.0), Note(62, 1.0, 1.0),
+        ),
+    )
+
+    @Test
+    fun chordKeysMustBePlayedTogether() {
+        val e = PracticeEngine(chordSong).apply { countIn = false; mode = PracticeMode.WAIT; seek(0.0); play() }
+        e.update(0.1)
+        e.onNotesPlayed(setOf(60))
+        e.update(1.0) // C released and a second later E: not together
+        e.onNotesPlayed(setOf(64))
+        assertTrue(e.isWaiting, "a chord collected key by key must not count")
+        assertEquals(setOf(60), e.expectedPitches)
+        // both together
+        e.onNotesPlayed(setOf(60))
+        assertFalse(e.isWaiting && e.expectedPitches.isNotEmpty())
+    }
+
+    @Test
+    fun heldChordKeyCountsWhileHeld() {
+        val e = PracticeEngine(chordSong).apply { countIn = false; mode = PracticeMode.WAIT; seek(0.0); play() }
+        e.update(0.1)
+        e.heldPitches = setOf(60)
+        e.onNotesPlayed(setOf(60), setOf(60))
+        e.update(1.5) // still holding C
+        e.heldPitches = setOf(60, 64)
+        val ev = e.onNotesPlayed(setOf(64), setOf(60, 64))
+        assertTrue(ev.any { it is EngineEvent.StepHit })
+    }
+
+    @Test
+    fun releaseAndHoldHints() {
+        val e = PracticeEngine(chordSong).apply { countIn = false; mode = PracticeMode.WAIT; seek(0.0); play() }
+        e.update(0.05)
+        e.heldPitches = setOf(60, 64)
+        e.onNotesPlayed(setOf(60, 64), setOf(60, 64))
+        e.update(1.0) // now at the D: C has ended, E goes on
+        assertEquals(1.0, e.position, 1e-9)
+        val h = e.holdHints()
+        assertEquals(setOf(60), h.release, "C must be let go")
+        assertTrue(h.keepHolding.isEmpty())
+        e.heldPitches = emptySet() // both let go
+        assertEquals(setOf(64), e.holdHints().keepHolding, "E should still be held")
+        e.heldIsExact = false // microphone: no "hold" hints
+        assertTrue(e.holdHints().keepHolding.isEmpty())
+    }
 }

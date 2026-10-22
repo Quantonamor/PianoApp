@@ -32,6 +32,10 @@ fun Keyboard(
     wrong: Int,
     naming: NoteNaming,
     showNames: Boolean,
+    /** Keys to let go now / keys to keep holding (see PracticeEngine.holdHints). */
+    release: Set<Int> = emptySet(),
+    keepHolding: Set<Int> = emptySet(),
+    pulse: Float = 0f,
     onKeyDown: (Int) -> Unit,
     onKeyUp: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -108,6 +112,23 @@ fun Keyboard(
             // side highlight
             drawLine(Color.White.copy(alpha = 0.12f), Offset(x + w * 0.18f, felt + 3f), Offset(x + w * 0.18f, felt + blackH * 0.82f), 1.2f)
             if (p in heard) drawCircle(PtColors.Hit, radius = w * 0.25f, center = Offset(x + w / 2, felt + blackH - 14f))
+        }
+        // hints: let go (white, arrow up) / keep holding (outline in the hit colour), gently pulsing
+        for (p in release + keepHolding) if (layout.contains(p)) {
+            val x = layout.left(p)
+            val w = layout.keyWidth(p)
+            val kh = if (layout.isBlack(p)) blackH else h - felt
+            val letGo = p in release
+            val c = if (letGo) Color.White else PtColors.Hit
+            drawRoundRect(c.copy(alpha = 0.25f + 0.25f * pulse), Offset(x, felt), Size(w, kh), CornerRadius(4f, 4f))
+            drawRoundRect(c, Offset(x + 1f, felt + 1f), Size(w - 2f, kh - 2f), CornerRadius(4f, 4f), style = androidx.compose.ui.graphics.drawscope.Stroke(3f))
+            if (letGo) {
+                // arrow up: "lift the finger"
+                val cx = x + w / 2; val top = felt + kh * 0.25f; val len = minOf(kh * 0.35f, w * 1.6f)
+                drawLine(Color(0xFF0E1220), Offset(cx, top + len), Offset(cx, top), 3f)
+                drawLine(Color(0xFF0E1220), Offset(cx, top), Offset(cx - w * 0.25f, top + w * 0.25f), 3f)
+                drawLine(Color(0xFF0E1220), Offset(cx, top), Offset(cx + w * 0.25f, top + w * 0.25f), 3f)
+            }
         }
         // red felt strip above the keys
         drawRect(Brush.verticalGradient(listOf(Color(0xFF8E1218), Color(0xFF4A070B))), Offset.Zero, Size(size.width, felt))

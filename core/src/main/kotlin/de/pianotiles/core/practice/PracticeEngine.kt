@@ -75,6 +75,15 @@ class PracticeEngine(val song: Song) {
     var flowToleranceSeconds: Double = 0.30
     /** How early (seconds) a note may be played before it reaches the line in WAIT mode. */
     var waitEarlySeconds: Double = 0.35
+    /**
+     * Keys of a chord must be played together: struck within this many seconds of each other, or held down
+     * together. A key struck earlier and released again no longer counts.
+     */
+    var chordWindowSeconds: Double = 0.6
+    /** Keys the player holds right now (on-screen keys pressed, or still sounding for the microphone). */
+    var heldPitches: Set<Int> = emptySet()
+    /** False with the microphone: a released piano key keeps ringing, so "let go too early" cannot be told. */
+    var heldIsExact: Boolean = true
 
     var loop: LoopSettings = LoopSettings()
         set(value) {
@@ -104,6 +113,8 @@ class PracticeEngine(val song: Song) {
 
     private class PlayStep(val start: Double, val noteIdx: IntArray, val pitches: Set<Int>) {
         val satisfied = HashSet<Int>()
+        /** When each satisfied pitch was struck (engine clock, seconds). */
+        val satisfiedAt = HashMap<Int, Double>()
         var done = false
         var wrongWhileActive = false
     }
@@ -211,7 +222,7 @@ class PracticeEngine(val song: Song) {
     fun seek(beat: Double) {
         position = beat.coerceIn(-song.measureLength, max(song.lengthBeats, 0.0))
         for (s in steps) if (s.start >= position - 1e-6) {
-            s.done = false; s.satisfied.clear(); s.wrongWhileActive = false
+            s.done = false; s.satisfied.clear(); s.satisfiedAt.clear(); s.wrongWhileActive = false
             for (i in s.noteIdx) if (noteStates[i] != NoteState.INACTIVE) noteStates[i] = NoteState.PENDING
         }
         syncCursors()
@@ -233,6 +244,7 @@ class PracticeEngine(val song: Song) {
         val events = ArrayList<EngineEvent>()
         if (!isPlaying || dtSeconds <= 0) return events
         practiceSeconds += dtSeconds
+        currentStep()?.let { expireChordKeys(it) }
         val beatsPerSecond = song.bpmAt(position) * speed / 60.0
         var delta = dtSeconds * beatsPerSecond
 
@@ -364,14 +376,16 @@ class PracticeEngine(val song: Song) {
         // Notes that are still sounding count as well (e.g. the key was pressed a moment before the
         // note reached the line) unless they were already part of the previous step (repeated notes
         // must be struck again).
+        val now = practiceSeconds
         for (p in sounding) {
             if (previousStepContains(p)) continue
-            s.pitches.firstOrNull { matches(p, it) }?.let { s.satisfied.add(it) }
+            s.pitches.firstOrNull { matches(p, it) }?.let { if (s.satisfied.add(it)) s.satisfiedAt[it] = now }
         }
         for (p in pitches) {
             val match = s.pitches.firstOrNull { matches(p, it) }
             if (match != null) {
                 s.satisfied.add(match)
+                s.satisfiedAt[match] = now
             } else if (!previousStepContains(p)) {
                 wrongNotes++
                 s.wrongWhileActive = true
@@ -379,6 +393,7 @@ class PracticeEngine(val song: Song) {
                 events.add(EngineEvent.WrongNote(p, song.measureIndexAt(s.start)))
             }
         }
+        expireChordKeys(s, sounding)
         if (s.satisfied.containsAll(s.pitches)) {
             s.done = true
             hitSteps++
@@ -387,6 +402,64 @@ class PracticeEngine(val song: Song) {
             events.add(EngineEvent.StepHit(s.pitches))
         }
         return events
+    }
+
+    /**
+     * Chord keys struck too long ago and no longer held do not count any more: a chord has to be played together,
+     * not collected one key after the other.
+     */
+    private fun expireChordKeys(s: PlayStep, alsoHeld: Set<Int> = emptySet()) {
+        if (s.pitches.size < 2 || s.satisfied.isEmpty()) return
+        val now = practiceSeconds
+        val held = heldPitches + alsoHeld
+        s.satisfied.removeAll { p ->
+            val old = now - (s.satisfiedAt[p] ?: now) > chordWindowSeconds
+            val stillHeld = held.any { matches(it, p) }
+            if (old && !stillHeld) { s.satisfiedAt.remove(p); true } else false
+        }
+    }
+
+    /** What the player should do with the keys right now, beyond striking the next notes. */
+    data class HoldHints(
+        /** Keys still held although their note has ended (e.g. one key of a held pair must be let go). */
+        val release: Set<Int>,
+        /** Keys of notes still sounding that were let go too early. */
+        val keepHolding: Set<Int>,
+    )
+
+    fun holdHints(): HoldHints {
+        if (!isPlaying || mode == PracticeMode.LISTEN) return HoldHints(emptySet(), emptySet())
+        val held = heldPitches
+        val early = secondsToBeats(if (mode == PracticeMode.WAIT) waitEarlySeconds else flowToleranceSeconds)
+        val release = HashSet<Int>()
+        val keep = HashSet<Int>()
+        // notes of the practised hands around now
+        var due = false
+        for (i in song.notes.indices) {
+            val n = song.notes[i]
+            if (!hands.includes(n.hand) || noteStates[i] == NoteState.INACTIVE) continue
+            if (n.start > position + early + 1e-9 || n.end < position - 4.0) continue
+            due = true
+        }
+        if (!due) return HoldHints(emptySet(), emptySet())
+        for (p in held) {
+            val needed = song.notes.indices.any { i ->
+                val n = song.notes[i]
+                hands.includes(n.hand) && noteStates[i] != NoteState.INACTIVE && matches(p, n.pitch) &&
+                    n.start <= position + early + 1e-9 && n.end > position + 0.05
+            }
+            // with the microphone a released key rings on a little: only complain a bit later
+            val grace = if (heldIsExact) 0.05 else -0.5
+            val endedRecently = song.notes.any { n -> hands.includes(n.hand) && matches(p, n.pitch) && n.end <= position + grace && n.end > position - 4.0 }
+            if (!needed && endedRecently) release.add(p)
+        }
+        if (heldIsExact) for (i in song.notes.indices) {
+            val n = song.notes[i]
+            if (!hands.includes(n.hand) || noteStates[i] != NoteState.HIT) continue
+            // a note that was played and should still be held for a while
+            if (n.start <= position && n.end - position > 0.3 && n.duration >= 0.75 && held.none { matches(it, n.pitch) }) keep.add(n.pitch)
+        }
+        return HoldHints(release, keep)
     }
 
     private fun previousStepContains(p: Int): Boolean {
