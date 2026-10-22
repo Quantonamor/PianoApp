@@ -224,6 +224,8 @@ object Hand3D {
     private var zbuf = FloatArray(0)
     private var nbuf = FloatArray(0)
     private var cover = ByteArray(0)
+    private var rowMin = 0 // rows that contain hand pixels (shading skips the rest)
+    private var rowMax = -1
     private var fbuf = FloatArray(0) // forearm fade: 1 = opaque, 0 = gone
 
     /** Renders [hands] (tips in screen pixels) into [out]; see HandRenderer.render. */
@@ -237,6 +239,7 @@ object Hand3D {
         java.util.Arrays.fill(out, 0)
         java.util.Arrays.fill(zbuf, 0, n, -Float.MAX_VALUE)
         java.util.Arrays.fill(cover, 0, n, 0)
+        rowMin = height; rowMax = -1
         for (g in hands) {
             val model = HandModel.get(g.hand) ?: return false
             val (xf, view) = pose(model, g.hand, g.tips, keyW, g.down)
@@ -283,6 +286,8 @@ object Hand3D {
             val x0 = max(0, kotlin.math.floor(min(ax, min(bx, cx))).toInt()); val x1 = min(width - 1, kotlin.math.ceil(max(ax, max(bx, cx))).toInt())
             val y0 = max(0, kotlin.math.floor(min(ay, min(by, cy))).toInt()); val y1 = min(height - 1, kotlin.math.ceil(max(ay, max(by, cy))).toInt())
             if (x0 > x1 || y0 > y1) continue
+            if (y0 < rowMin) rowMin = y0
+            if (y1 > rowMax) rowMax = y1
             val inv = 1f / area
             for (py in y0..y1) {
                 val fy = py + 0.5f
@@ -310,7 +315,7 @@ object Hand3D {
         val hxv = LX; val hyv = LY; val hzv = LZ + 1f
         val hl = sqrt(hxv * hxv + hyv * hyv + hzv * hzv)
         val shX = (keyW * 0.12f * scale).toInt().coerceAtLeast(1); val shY = (keyW * 0.22f * scale).toInt().coerceAtLeast(1)
-        for (y in 0 until height) {
+        for (y in rowMin..min(height - 1, rowMax + shY + 1)) {
             val sy = (y + 0.5f) / scale
             val aHand = if (sy < keysBottom - 4) alphaKeys else if (sy > keysBottom + 8) 0.95f else alphaKeys + (0.95f - alphaKeys) * ((sy - keysBottom + 4) / 12f)
             for (x in 0 until width) {
