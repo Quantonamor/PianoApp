@@ -104,6 +104,50 @@ und aus dem Übungsbildschirm erreichbar („Noten korrigieren“):
   EncryptedSharedPreferences. Der Editor zeigt Vorschläge als grün gestrichelte Vorschau im Piano-Roll.
   Noch offen: echter Test mit API-Schlüssel (nur durch den Nutzer möglich).
 
+### M6 – Stück-Pakete, Bibliothek 2.0, Fotos, weitere Formate, 3D-Hände (Wunsch des Nutzers, 2026-10-22)
+
+Reihenfolge der Umsetzung = Reihenfolge der Punkte. Danach geht es mit der Konvergenz-Schleife weiter.
+
+**A) Getrennte Datenhaltung („Stück-Paket“)** – jedes Stück ist ein Ordner `files/library/<id>/` bzw. als
+Austauschdatei ein ZIP mit Endung `.pianotiles`. Für jeden Teil das beste bestehende Standardformat; alle Teile sind
+austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
+
+| Teil | Datei | Format | Warum |
+|---|---|---|---|
+| Noten-Datei | `score.musicxml` | **MusicXML 4.0** (W3C) | *der* Austausch-Standard; MuseScore, Finale, Sibelius, Dorico lesen ihn. Fingersätze stehen zusätzlich als `<fingering>` darin |
+| Notenbild aus der Noten-Datei | `sheet.pdf` | PDF | wird aus der Noten-Datei gesetzt (eigener einfacher Notensatz), zeigt also immer den aktuellen Stand |
+| Original | `original.pdf` bzw. `original-01.jpg …` | PDF / JPEG | unverändertes Import-Original (PDF, Fotos, MIDI-/XML-Datei) |
+| Tile-Datei | `tiles.json` | eigenes JSON (bisheriges Song-Format) | alles für die Übungsansicht: Noten mit Hand, Tempo-Karte, Abschnitte, Takt-Positionen im PDF, Prüfliste, Statistik |
+| Hand-Datei | `hands.json` | eigenes JSON | Fingersatz je Note + Quelle (automatisch/KI/von Hand) – dafür gibt es keinen Standard; zusätzlich in MusicXML |
+
+- [x] Plan
+- [ ] Core: MusicXML-Export (inkl. Fingersatz), Paket lesen/schreiben (`core/library/SongPackage.kt`), Tests
+- [ ] App: Bibliothek auf Ordner je Stück umstellen (+ automatische Übernahme der alten Dateien), Backup = Pakete
+- [ ] Import/Export einzelner Stücke als `.pianotiles` (Teilen, Öffnen aus Dateien/Mail); Import nimmt alle Teile mit
+
+**B) Weitere Formate importieren** (außer PDF/MIDI/MusicXML)
+- [ ] ABC-Notation (`.abc`, viele Volkslieder im Netz), MuseScore (`.mscz`/`.mscx`), MEI (`.mei`), Karaoke-MIDI (`.kar`),
+      Bilder (`.png`/`.jpg` → Fotoerkennung), eigene Pakete (`.pianotiles`)
+
+**C) Noten abfotografieren (Alternative zu PDF)**
+- [ ] Core: Foto-Vorbereitung (Beleuchtung ausgleichen, Schräglage korrigieren, Rand abschneiden, auf Erkennungsgröße
+      skalieren) – getestet mit künstlich „verfotografierten“ Korpus-Seiten
+- [ ] App: mehrere Fotos nacheinander aufnehmen oder aus der Galerie wählen, Reihenfolge ändern, dann wie beim PDF
+      erkennen; Fotos werden als Original gespeichert
+
+**D) 3D-Hände** – ein-/ausblendbar über der Klaviatur, zeigen welcher Finger welche Taste spielt
+- [ ] Core: automatischer Fingersatz (dynamische Programmierung über Spannweite, Daumen-Unter-/Übersatz,
+      schwarze Tasten, Akkorde) + Handhaltung über die Zeit (`core/hands/`), Tests
+- [ ] App: 3D-Hände (perspektivisch gezeichnet, schattiert, Finger beugen sich beim Anschlag), Fingerzahlen auf den
+      fallenden Noten, Schalter „Hände“
+- [ ] Optional „Fingersatz per KI“ (gleicher Schlüssel wie KI-nachbessern) und Fingersatz im Editor ändern
+
+**E) Abspielen & Bibliothek 2.0**
+- [ ] Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)
+- [ ] Schönere Bibliothek: Titelbild (Original-Seite bzw. Mini-Piano-Roll), Fortschrittsring, Filter nach Quelle,
+      Schwierigkeit, „zuletzt geübt“-Leiste, Mehrfachauswahl zum Exportieren
+- [ ] Notenbild `sheet.pdf` aus der Noten-Datei setzen (auch für MIDI/MusicXML-Stücke ohne Original)
+
 ### Konvergenz-Schleife der PDF-Erkennung (Wunsch des Nutzers, **läuft**)
 
 Ziel: Zufallsrunden mit je 5 neuen Stücken (beide Notensatz-Programme), bis **5 Runden hintereinander alle
