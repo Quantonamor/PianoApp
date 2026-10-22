@@ -141,7 +141,12 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
 - [x] App: 3D-Hände (perspektivisch gezeichnet, schattiert, Finger beugen sich beim Anschlag), Fingerzahlen auf den
       fallenden Noten, Schalter „Hände“
 - [x] Fingersatz im Editor ändern (Chip „Finger n“ bei ausgewählter Note)
+- [x] Realistische Hände: Rig-Modell + Skinning + IK (`core/hands/HandModel.kt`, Vorschau `HandRenderTest`)
 - [ ] Optional „Fingersatz per KI“ (gleicher Schlüssel wie KI-nachbessern)
+
+**F) Nutzer-Review (50 Personas, `docs/USER_REVIEW.md`)**
+- [x] MIDI-Eingang, mehr Demos, Begrüßung, Modus-Beschriftung, Mikrofon-Test, Übungsstatistik
+- [ ] Später: Lernpfad mit Lektionen, Pedal/Dynamik-Anzeige, Lehrer-Modus
 
 **E) Abspielen & Bibliothek 2.0**
 - [x] Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)

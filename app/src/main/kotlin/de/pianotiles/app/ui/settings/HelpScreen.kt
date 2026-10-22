@@ -41,7 +41,9 @@ private val topics = listOf(
     "Steuerung" to
         "Tippen auf die Noten = Start/Pause. Senkrecht wischen = vor- und zurückspulen. ⏪/⏩ springen taktweise. Die Tasten unten kann man auch antippen – praktisch ohne Klavier.",
     "Mikrofon" to
-        "Lege das Gerät auf das Notenpult. In ruhiger Umgebung funktioniert die Erkennung am besten. Die Empfindlichkeit lässt sich in den Einstellungen anpassen.",
+        "Lege das Gerät auf das Notenpult. In ruhiger Umgebung funktioniert die Erkennung am besten. In den Einstellungen zeigt „Mikrofon testen“ live, welche Töne die App hört – dort stellst du auch die Empfindlichkeit ein.",
+    "MIDI-Keyboard" to
+        "Hat dein Digitalpiano oder Keyboard USB- oder Bluetooth-MIDI, verbinde es mit dem Gerät (USB-Kabel mit Adapter bzw. in den Bluetooth-Einstellungen koppeln). Die App erkennt es automatisch (Klavier-Symbol oben statt Mikrofon) – jede Taste wird exakt und ohne Verzögerung erkannt, auch Akkorde und das Loslassen.",
     "PDF importieren" to
         "Tippe in der Bibliothek auf „Noten importieren“ und wähle ein PDF. Die App erkennt Notenlinien, Noten, Vorzeichen, Pausen und Rhythmus und zeigt das Ergebnis farbig über dem Notenblatt an. Tonart, Taktart und Notensystem kannst du dort korrigieren und neu erkennen lassen. Kleine Fehler behebst du im Noten-Editor. Am zuverlässigsten: digital gesetzte Noten. Alternativ MusicXML (.musicxml/.mxl) oder MIDI importieren.",
     "Noten fotografieren" to

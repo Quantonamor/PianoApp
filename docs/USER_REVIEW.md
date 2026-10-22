@@ -58,10 +58,10 @@ was umgesetzt wurde (✅) und was bewusst offen bleibt (⏳).
 |---|---|---|
 | MIDI-Keyboard (USB/Bluetooth) als Eingang: exakte Tasten, Akkorde, Loslassen | A, D, E | ✅ |
 | Mehr eingebaute Anfänger-Stücke (gemeinfrei) | A, C, F, G, I | ✅ |
-| Begrüßung beim ersten Start mit 3 Schritten | A, C, F | ⏳ (in Arbeit) |
-| Text unter den Modus-Symbolen (auch auf Handys) | C, F, I | ⏳ (in Arbeit) |
-| Mikrofon-Test in den Einstellungen (zeigt erkannte Töne live) | B, F | ⏳ (in Arbeit) |
-| Übungsstatistik: heute / diese Woche / Tage in Folge | A, C, G | ⏳ (in Arbeit) |
+| Begrüßung beim ersten Start mit 3 Schritten | A, C, F | ✅ |
+| Text unter den Modus-Symbolen (auch auf Handys) | C, F, I | ✅ |
+| Mikrofon-Test in den Einstellungen (zeigt erkannte Töne live) | B, F | ✅ |
+| Übungsstatistik: heute / diese Woche / Tage in Folge | A, C, G | ✅ |
 | Realistischere Hände, besserer Klang, Hoch-/Querformat | alle | ✅ |
 | Lernpfad mit Levels und Lektionen | A, C | ⏳ (größeres Projekt) |
 | Pedal-Anzeige / Dynamik | D, E | ⏳ |

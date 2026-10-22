@@ -343,6 +343,11 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Heute %s Min. · Woche %s Min." to "Today %s min · week %s min",
     " · %s Tage in Folge" to " · %s days in a row",
     "Willkommen!" to "Welcome!",
+    "Lege das Gerät auf das Notenpult. In ruhiger Umgebung funktioniert die Erkennung am besten. In den Einstellungen zeigt „Mikrofon testen“ live, welche Töne die App hört – dort stellst du auch die Empfindlichkeit ein." to
+        "Put the device on the music stand. Detection works best in a quiet room. In the settings, “Test microphone” shows live which notes the app hears – that is also where you set the sensitivity.",
+    "MIDI-Keyboard" to "MIDI keyboard",
+    "Hat dein Digitalpiano oder Keyboard USB- oder Bluetooth-MIDI, verbinde es mit dem Gerät (USB-Kabel mit Adapter bzw. in den Bluetooth-Einstellungen koppeln). Die App erkennt es automatisch (Klavier-Symbol oben statt Mikrofon) – jede Taste wird exakt und ohne Verzögerung erkannt, auch Akkorde und das Loslassen." to
+        "If your digital piano or keyboard has USB or Bluetooth MIDI, connect it to the device (USB cable with adapter, or pair it in the Bluetooth settings). The app detects it automatically (piano symbol at the top instead of the microphone) – every key is recognised exactly and without delay, including chords and releasing keys.",
     "Stück antippen – zum Start eignet sich „Alle meine Entchen“." to "Tap a piece – “Twinkle Twinkle Little Star” is a good start.",
     "Warte-Modus (Sanduhr): Die Noten warten, bis du die richtige Taste spielst. Das Mikrofon hört zu – oder schließe ein MIDI-Keyboard an." to
         "Wait mode (hourglass): the notes wait until you play the right key. The microphone listens – or connect a MIDI keyboard.",

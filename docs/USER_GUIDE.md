@@ -2,8 +2,10 @@
 
 ## Erste Schritte
 
-1. App öffnen – in der **Bibliothek** liegen vier Demo-Stücke.
-2. Ein Stück antippen → der **Übungsbildschirm** öffnet sich (Querformat).
+1. App öffnen – in der **Bibliothek** liegen neun Demo-Stücke (Tonleiter, Alle meine Entchen, Twinkle Twinkle,
+   Hänschen klein, Ode an die Freude, Jingle Bells, Happy Birthday, Menuett in G, Für Elise). Beim ersten Start
+   erklärt eine Begrüßungskarte die drei wichtigsten Schritte; „Los geht's“ öffnet das erste Anfängerstück.
+2. Ein Stück antippen → der **Übungsbildschirm** öffnet sich (Hoch- oder Querformat, dreht mit dem Gerät).
 3. Gerät aufs Notenpult stellen, auf ▶ tippen. Beim ersten Mal fragt die App nach dem Mikrofon.
 
 ## Der Übungsbildschirm
@@ -101,7 +103,17 @@ Erreichbar über das Stift-Symbol beim Üben oder im Stück-Menü der Bibliothek
    Piano-Roll. **Übernehmen**, **Verwerfen** oder **Alle übernehmen** – alles lässt sich mit Rückgängig zurücknehmen.
 4. Danach „Speichern“.
 
+## Fortschritt
+Oben in der Bibliothek steht, wie viele Minuten du heute und in den letzten 7 Tagen geübt hast und wie viele Tage
+in Folge (ab einer Minute pro Tag).
+
+## MIDI-Keyboard
+Digitalpiano/Keyboard mit USB- oder Bluetooth-MIDI anschließen – die App erkennt es automatisch (Klavier-Symbol in
+der Kopfzeile statt Mikrofon). Jede Taste wird exakt erkannt, auch Akkorde, Halten und Loslassen.
+
 ## Tipps fürs Mikrofon
+
+* **Einstellungen → Mikrofon testen** zeigt live Pegel und erkannte Töne.
 
 * Ruhige Umgebung, Gerät nah am Klavier.
 * Digitalpiano: über Lautsprecher spielen (nicht Kopfhörer).

@@ -4,39 +4,28 @@ Stand: **2026-10-22**, Branch `claude/gifted-dijkstra-m4qa41` (enthält alles vo
 und davor `ccr-257ad710-x5upqq`). Allgemeine Regeln und Befehle stehen in `CLAUDE.md`.
 
 ## CI-Stand
-Letzter Lauf (`12bafc8`) **komplett grün**: Core-Tests, APK, Emulator-Bedientest mit eingeschalteten Händen.
-Lehre daraus: Die erste Hände-Zeichnung (freie Pfade mit schrägen Farbverläufen) hat den Software-Renderer des
-Emulators abstürzen lassen („device 'emulator-5554' not found“). Deshalb zeichnet `HandsOverlay.kt` nur noch mit
-einfachen Formen (runde Linien, abgerundete Rechtecke, Kreise). Nach einem Absturz begrenzt `timeout 60` im Workflow
-das Warten von adb (vorher 40 Min. Hänger).
-
-## Rückmeldung des Nutzers vom Gerät (2026-10-22) – in Arbeit
-„Sound nicht gut, beim Abspielen spielt er nichts zusammen, manchmal fehlen Noten; viele Überlappungen der GUI,
-vieles sollte ausblendbar / standardmäßig aus sein.“ Umgesetzt (`429e7c1`):
-- `app/.../audio/Synth.kt` neu: Töne je Tonhöhe vorberechnet (Teiltöne, zweistufiges Abklingen, Saitenpaar,
-  Hammer), Audio-Thread mischt nur noch → Akkorde gleichzeitig; 48 Stimmen, weiches Dämpfen statt Abschneiden;
-  `prepare()` beim Öffnen und vor jedem Akkord. „Fließend“ ohne Mikrofon spielt auch die geübte Hand
-  (`PracticeEngine.playOwnHand`).
-- Übungsbildschirm: Menü „Ansicht“ (Auge) für Hände, Fingersatz, Notennamen, Taktnummern, Metronom; kompakte
-  Kopfzeile auf Handys; Gesten-Hinweis nur vor dem ersten Start; Hände/Fingersatz/Tastennamen standardmäßig aus
-  (neue Pref-Schlüssel `hands2`, `fingers2`, `namesKeys2`).
-- CI: Emulator jetzt Handy (`pixel_6`), Screenshots stehen verkleinert als base64 im Job-Log
-  („==== SHOT name ====“) – damit Überlappungen prüfen (Artefakte lassen sich hier nicht herunterladen).
-Danach (Referenz-Screenshots des Nutzers: „Artie“/„fallingnoteapp“): neue Optik der fallenden Noten und der
-Klaviatur, Leisten blenden sich beim Spielen aus, Hoch- **und** Querformat (`fullUser`), Bibliothek/Editor schmal.
+Siehe letzter Lauf auf dem Branch. Im Emulator-Test sind die **Hände aus**: das Hochladen des Hand-Bitmaps in
+jedem Frame lässt den Software-Renderer des Emulators abstürzen („Failed to find ColorBuffer“, danach „device
+'emulator-5554' not found“). Die Hände werden stattdessen mit den JVM-Vorschauen geprüft:
+`./gradlew :core:test --tests 'de.pianotiles.core.HandRenderTest' -Phands.out=<dir>` → `ode/scale/elise.png`.
 **Bilder ansehen:** `mcp__github__get_job_logs` (ui-test-Job, `tail_lines` 500) speichert das Log als Datei →
-`python3 tools/ci/extract_shots.py <datei> <zielordner>`
-→ JPEGs mit Read ansehen. Der Test läuft im Hochformat mit 130 % Schrift und macht zusätzlich Querformat-Bilder.
-Danach (Wunsch: „Finger halbtransparent + 3D, mehr Abstand, ausblendbar; parallele Tasten und Loslassen
-erkennen“): `PracticeEngine` – Akkorde nur zusammen (0,6 s oder gehalten), `heldPitches`, `holdHints()`
-(Loslassen/Halten, Tests in `EngineTest`); Tastatur markiert Loslassen (weiß, Pfeil) / Halten (grün); Hände
-halbtransparent (Alpha in den Farben – **keine Offscreen-Ebene**, die ließ den Emulator abstürzen), Handflächen in
-einem Streifen unter der Klaviatur. Im Emulator-Test bleiben die Hände **aus** (die Software-Grafik des Emulators
-stürzt bei ihnen gelegentlich ab, „device not found“); ihr Aussehen wurde per Screenshot geprüft.
-Letzter Stand CI: komplett grün (`8fd0f24`). **Offen:** Nutzer um erneuten Gerätetest bitten (Klang, Akkorde,
-Loslassen/Halten, Hände, Hoch-/Querformat); danach Konvergenz-Schleife der PDF-Erkennung.
+`python3 tools/ci/extract_shots.py <datei> <zielordner>` → JPEGs mit Read ansehen.
+
+## Stand der letzten Arbeitseinheit (Wünsche des Nutzers: Hände, Klang, Hochformat, Ausblenden, 50-Personen-Review)
+- **Hände**: `core/hands/HandModel.kt` – WebXR-„generic-hand“ (MIT, © Amazon; `core/src/main/resources/hands/`,
+  Konverter `tools/hands/convert_hand.py`). Software-Rasterizer (Skinning, z-Buffer, Licht, Rand-AA, Schatten,
+  Unterarm-Ausblendung); IK je Finger (gedämpftes 2×2-Gauss-Newton über Spreizung/Beugung); die Hand rückt an die
+  Tasten, bis Daumen/kleiner Finger reichen (max. 0,4 Mittelfinger-Längen). Fallback: alte SDF-Zeichnung in
+  `HandRenderer.kt`. App rendert mit 40 % Auflösung (`HandsOverlay.kt`).
+- **Klang**: `app/.../audio/Synth.kt` mit Klavier-Samples (`app/src/main/assets/piano/`, `tools/samples/make_piano.py`),
+  Vorausplanung mit Verzögerung (`PracticeEngine.audioLookaheadSeconds`, `PlayNote.delaySeconds`).
+- **Hochformat**: `fullSensor`; **Ausblenden**: beim Spielen und nach 6 s ohne Berührung.
+- **MIDI**: `app/.../audio/MidiInput.kt`, verdrahtet in `PracticeViewModel` (`midiPitches`, `midiDevices`).
+- **Review**: `docs/USER_REVIEW.md`; umgesetzt: Demos (9), Begrüßungskarte, Statistik
+  (`core/practice/PracticeLog.kt` + `PracticeLogStore`), Mikrofon-Test (Einstellungen), Modus-Beschriftung.
 
 ## Danach (Reihenfolge, Details in `docs/PLAN.md` → M6)
+0. Rückmeldung des Nutzers vom Gerät abwarten/einarbeiten (Hände, Klang, MIDI, Hochformat).
 1. Optional „Fingersatz per KI“ (wie `core/ai/AiFixer.kt`, gleicher Schlüssel).
 2. Konvergenz-Schleife der PDF-Erkennung (`docs/PLAN.md`, `tools/omr-eval/README.md`), Zähler 0/5. Neue
    Hinweise aus dem Notensatz-Rundlauf (`EngraveTest`, `-Pengrave.out=<dir>`): Auftakte mit Sechzehntel-Balken

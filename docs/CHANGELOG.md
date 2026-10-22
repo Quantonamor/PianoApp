@@ -2,6 +2,18 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **Realistische 3D-Hände**: echtes Hand-Modell mit Skelett (WebXR „generic-hand“, MIT), Software-Rasterizer mit
+  Skinning, Tiefenpuffer und Licht; jeder Finger wird per inverser Kinematik auf seine Taste gesetzt, die Hand
+  rückt so weit an die Tasten, dass Daumen und kleiner Finger hinreichen; der Unterarm blendet weich aus.
+* **Klang mit echten Klavieraufnahmen** (npm `tonejs-instrument-piano-mp3`, MIT; jede dritte Taste, umgerechnet); Töne werden vorab
+  mit kleiner Verzögerung eingeplant → gleichmäßiger Rhythmus, Akkorde exakt gleichzeitig.
+* **MIDI-Keyboard** (USB/Bluetooth) als Eingang: exakt, mit Akkorden und Loslassen; Mikrofon wird dann nicht gebraucht.
+* **Fünf neue Demo-Stücke**: Twinkle Twinkle, Hänschen klein, Jingle Bells, Happy Birthday, Menuett in G.
+* **Begrüßungskarte** beim ersten Start, **Übungsstatistik** (heute / Woche / Tage in Folge) in der Bibliothek,
+  **Mikrofon-Test** in den Einstellungen, aktiver Modus auf Handys beschriftet.
+* Drehen mit dem Sensor (Hoch-/Querformat), Leisten blenden sich beim Spielen und nach 6 s ohne Berührung aus.
+* `docs/USER_REVIEW.md`: 50 simulierte Übende gehen die App durch – Fragen, Vorschläge, Umsetzungsstand.
+
 * **Stück-Pakete**: jedes Stück ist ein Ordner `files/library/<id>/` mit getrennten Teilen – `score.musicxml`
   (Noten, MusicXML 4.0), `tiles.json` (Übungsdaten), `hands.json` (Fingersatz), `original.*`/`scan-NN.jpg`,
   optional `sheet.pdf`, `manifest.json`. Austausch als `.pianotiles` (ZIP). Alte Bibliotheken werden automatisch
