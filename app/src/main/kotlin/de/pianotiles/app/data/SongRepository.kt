@@ -57,6 +57,44 @@ class SongRepository(private val context: Context) {
 
     suspend fun storePdf(id: String, bytes: ByteArray) = withContext(Dispatchers.IO) { pdfFile(id).writeBytes(bytes) }
 
+    /** Writes all songs (+ original PDFs) as a ZIP backup. Returns the number of songs. */
+    suspend fun backup(out: java.io.OutputStream): Int = withContext(Dispatchers.IO) {
+        java.util.zip.ZipOutputStream(out).use { zip ->
+            val files = songsDir.listFiles { f -> f.extension == "json" }.orEmpty() + pdfDir.listFiles().orEmpty()
+            for (f in files) {
+                zip.putNextEntry(java.util.zip.ZipEntry("${f.parentFile!!.name}/${f.name}"))
+                f.inputStream().use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+        }
+        _songs.value.size
+    }
+
+    /** Restores a backup made by [backup]; existing songs with the same id are replaced. Returns the count. */
+    suspend fun restore(input: java.io.InputStream): Int = withContext(Dispatchers.IO) {
+        var count = 0
+        java.util.zip.ZipInputStream(input).use { zip ->
+            while (true) {
+                val e = zip.nextEntry ?: break
+                val name = e.name.substringAfterLast('/')
+                if (e.isDirectory || name.contains("..") || name.isBlank()) continue
+                val target = when {
+                    e.name.startsWith("songs/") && name.endsWith(".json") -> File(songsDir, name)
+                    e.name.startsWith("pdfs/") && name.endsWith(".pdf") -> File(pdfDir, name)
+                    else -> null
+                } ?: continue
+                val bytes = zip.readBytes()
+                if (target.extension == "json") {
+                    runCatching { SongJson.decode(bytes.toString(Charsets.UTF_8)) }.getOrNull() ?: continue
+                    count++
+                }
+                target.writeBytes(bytes)
+            }
+        }
+        _songs.value = readAll()
+        count
+    }
+
     /** Re-installs the built-in demo pieces (e.g. after they were deleted). */
     suspend fun restoreDemos() = withContext(Dispatchers.IO) {
         DemoSongs.all().forEach { writeFile(it) }

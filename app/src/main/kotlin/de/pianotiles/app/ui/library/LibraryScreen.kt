@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -203,6 +204,7 @@ fun LibraryScreen(
 
 @Composable
 private fun SongCard(song: Song, onClick: () -> Unit, onFavorite: () -> Unit, onRename: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
     Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.clickable(onClick = onClick)) {
         Column {
@@ -217,6 +219,9 @@ private fun SongCard(song: Song, onClick: () -> Unit, onFavorite: () -> Unit, on
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(text = { Text("Umbenennen") }, leadingIcon = { Icon(Icons.Filled.TextFields, null) }, onClick = { menu = false; onRename() })
                             DropdownMenuItem(text = { Text("Noten bearbeiten") }, leadingIcon = { Icon(Icons.Filled.Edit, null) }, onClick = { menu = false; onEdit() })
+                            DropdownMenuItem(text = { Text("Als MIDI teilen") }, leadingIcon = { Icon(Icons.Filled.Share, null) }, onClick = {
+                                menu = false; de.pianotiles.app.data.Sharing.shareMidi(context, song)
+                            })
                             DropdownMenuItem(text = { Text("Löschen") }, leadingIcon = { Icon(Icons.Filled.Delete, null) }, onClick = { menu = false; onDelete() })
                         }
                     }

@@ -27,6 +27,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -76,7 +81,26 @@ fun SettingsScreen(onBack: () -> Unit) {
             Toggle("Oktavfehler tolerieren (empfohlen)", s.octaveTolerant) { v -> upd { it.copy(octaveTolerant = v) } }
 
             Header("Bibliothek")
-            OutlinedButton(onClick = { scope.launch { app.songs.restoreDemos() } }) { Text("Demo-Stücke wiederherstellen") }
+            val context = LocalContext.current
+            var info by remember { mutableStateOf<String?>(null) }
+            val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+                if (uri != null) scope.launch {
+                    info = runCatching { context.contentResolver.openOutputStream(uri)!!.use { app.songs.backup(it) } }
+                        .fold({ "$it Stücke gesichert." }, { "Sicherung fehlgeschlagen: ${it.message}" })
+                }
+            }
+            val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) scope.launch {
+                    info = runCatching { context.contentResolver.openInputStream(uri)!!.use { app.songs.restore(it) } }
+                        .fold({ "$it Stücke wiederhergestellt." }, { "Wiederherstellen fehlgeschlagen: ${it.message}" })
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { backupLauncher.launch("PianoTiles-Sicherung.zip") }) { Text("Bibliothek sichern (ZIP)") }
+                OutlinedButton(onClick = { restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }) { Text("Sicherung laden") }
+                OutlinedButton(onClick = { scope.launch { app.songs.restoreDemos() } }) { Text("Demo-Stücke wiederherstellen") }
+            }
+            info?.let { Text(it, color = PtColors.Hit, modifier = Modifier.padding(top = 6.dp)) }
             Spacer(Modifier.height(32.dp))
             Text("PianoTiles 0.1 · Alle Daten bleiben auf deinem Gerät.", style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
             Spacer(Modifier.height(32.dp))

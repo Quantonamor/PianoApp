@@ -29,4 +29,15 @@ class ModelTest {
         val steps = DemoSongs.odeToJoy().notes.toSteps()
         assertEquals(setOf(48, 55, 64), steps.first().pitches)
     }
+
+    @Test
+    fun midiExportRoundTrip() {
+        val song = DemoSongs.furElise()
+        val back = de.pianotiles.core.io.MidiImporter.import(de.pianotiles.core.io.MidiExporter.export(song), "x")
+        assertEquals(song.notes.size, back.notes.size)
+        assertEquals(song.bpm, back.bpm, 0.5)
+        for ((a, b) in song.notes.sortedWith(compareBy({ it.start }, { it.pitch })).zip(back.notes.sortedWith(compareBy({ it.start }, { it.pitch })))) {
+            assertEquals(a.pitch, b.pitch); assertEquals(a.start, b.start, 0.01); assertEquals(a.hand, b.hand)
+        }
+    }
 }
