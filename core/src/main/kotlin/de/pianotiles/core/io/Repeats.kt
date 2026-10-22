@@ -29,4 +29,20 @@ internal object Repeats {
         }
         return out to outTempos
     }
+
+    /** Timed events (e.g. pedal down/up) in playing order, repeats expanded like the notes. */
+    fun <T> expandEvents(events: List<Pair<Double, T>>, measures: List<WrittenMeasure>): List<Pair<Double, T>> {
+        if (measures.none { it.backwardTimes > 0 } || events.isEmpty()) return events
+        val order = MusicXmlImporter.playOrder(measures.map { it.forward }, measures.map { it.backwardTimes }, measures.map { it.endings })
+        fun measureOf(beat: Double) = measures.indexOfLast { it.start <= beat + 1e-6 }.coerceAtLeast(0)
+        val byMeasure = events.groupBy { measureOf(it.first) }
+        val out = ArrayList<Pair<Double, T>>()
+        var t = 0.0
+        for (m in order) {
+            val info = measures[m]
+            byMeasure[m]?.forEach { out.add(t + it.first - info.start to it.second) }
+            t += info.length
+        }
+        return out
+    }
 }

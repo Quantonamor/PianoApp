@@ -49,6 +49,8 @@ object MuseScoreImporter {
         var key: Int? = null
         var bpm = -1.0
         val tempos = ArrayList<TempoChange>()
+        val pedal = ArrayList<de.pianotiles.core.model.PedalSpan>()
+        var pedalDown = -1.0
         val measures = ArrayList<WrittenMeasure>()
         val staffNotes = LinkedHashMap<String, MutableList<Note>>()
 
@@ -60,6 +62,7 @@ object MuseScoreImporter {
             var curBeats = 4; var curType = 4
             var voltaEndings: Set<Int> = emptySet()
             val openTies = HashMap<Int, Int>()
+            var dynamic = 80 // velocity of the current dynamic marking
             for ((mi, m) in staff.children("Measure").withIndex()) {
                 val first = si == 0
                 val info = if (first) WrittenMeasure(measureStart).also { measures.add(it) } else measures.getOrNull(mi)
@@ -103,6 +106,17 @@ object MuseScoreImporter {
                                 val endings = el.child("Volta")?.child("endings")?.text()?.split(',', ' ')?.mapNotNull { it.trim().toIntOrNull() }?.toSet()
                                 if (endings != null && el.child("next") != null) voltaEndings = endings
                                 else if (el.child("prev") != null) voltaEndings = emptySet()
+                            } else if (el.getAttribute("type") == "Pedal") {
+                                // sustain pedal: the spanner starts where <next> is given and ends where <prev> is
+                                if (el.child("next") != null) pedalDown = measureStart + cursor
+                                else if (el.child("prev") != null && pedalDown >= 0) {
+                                    if (measureStart + cursor > pedalDown) pedal.add(de.pianotiles.core.model.PedalSpan(pedalDown, measureStart + cursor))
+                                    pedalDown = -1.0
+                                }
+                            }
+                            "Dynamic" -> {
+                                val sub = el.child("subtype")?.text().orEmpty()
+                                dynamic = el.child("velocity")?.text()?.toIntOrNull() ?: DYNAMICS[sub] ?: dynamic
                             }
                             "Rest", "Chord" -> {
                                 val type = el.child("durationType")?.text() ?: "quarter"
@@ -119,7 +133,8 @@ object MuseScoreImporter {
                                             notes[cont] = notes[cont].copy(duration = notes[cont].duration + dur); cont
                                         } else {
                                             val finger = n.children("Fingering").firstNotNullOfOrNull { it.child("text")?.text()?.toIntOrNull() }?.takeIf { it in 1..5 } ?: 0
-                                            notes.add(Note(pitch, start, dur, finger = finger)); notes.lastIndex
+                                            val vel = n.child("velocity")?.text()?.toIntOrNull()?.takeIf { it in 1..127 } ?: dynamic
+                                            notes.add(Note(pitch, start, dur, velocity = vel.coerceIn(16, 127), finger = finger)); notes.lastIndex
                                         }
                                         val tieStart = n.child("Tie") != null ||
                                             n.children("Spanner").any { it.getAttribute("type") == "Tie" && it.child("next") != null }
@@ -155,6 +170,11 @@ object MuseScoreImporter {
         val nominal = beats * 4.0 / beatType
         val pickup = measures.firstOrNull()?.length?.takeIf { it < nominal - 1e-6 } ?: 0.0
         val (played, playedTempos) = Repeats.expand(all, measures, tempos)
+        // pedal in playing order: down/up events through the repeats, then spans again
+        val pedalEvents = Repeats.expandEvents(pedal.flatMap { listOf(it.start to true, it.end to false) }.sortedBy { it.first }, measures)
+        val playedPedal = ArrayList<de.pianotiles.core.model.PedalSpan>()
+        var downAt = -1.0
+        for ((b, down) in pedalEvents) if (down) downAt = b else if (downAt >= 0) { if (b > downAt) playedPedal.add(de.pianotiles.core.model.PedalSpan(downAt, b)); downAt = -1.0 }
         return Song(
             id = SongUtils.newId(),
             title = title.ifBlank { fallbackTitle },
@@ -169,8 +189,12 @@ object MuseScoreImporter {
             pickupBeats = pickup,
             keyFifths = key,
             fingeringSource = if (played.any { it.finger > 0 }) de.pianotiles.core.model.FingeringSource.FILE else de.pianotiles.core.model.FingeringSource.NONE,
+            pedal = playedPedal,
         )
     }
+
+    /** Velocity of MuseScore's dynamic markings (when the file gives none). */
+    private val DYNAMICS = mapOf("pppp" to 16, "ppp" to 24, "pp" to 36, "p" to 50, "mp" to 64, "mf" to 80, "f" to 96, "ff" to 110, "fff" to 120, "ffff" to 127, "sfz" to 112, "sf" to 112, "fz" to 112)
 
     private fun isGrace(el: Element) = el.childElements().any {
         it.tagName in setOf("acciaccatura", "appoggiatura", "grace4", "grace16", "grace32", "grace8after", "grace16after", "grace32after")

@@ -2,10 +2,10 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
-* **Haltepedal**: aus MIDI (Controller 64) und MusicXML („Ped.“-Zeichen, auch Pedalwechsel) übernommen; beim
+* **Haltepedal**: aus MIDI (Controller 64), MusicXML („Ped.“-Zeichen, auch Pedalwechsel) und MuseScore übernommen; beim
   Abspielen klingen losgelassene Töne bis zum Lösen des Pedals weiter; grüner Streifen „Ped.“ am rechten Rand
   der fallenden Noten; MIDI-Export schreibt das Pedal mit (`PedalTest`).
-* **Dynamik aus MusicXML** (pp … ff, sf/sfz als Akzent, `sound dynamics`) wird zur Anschlagstärke – mit den drei
+* **Dynamik aus MusicXML und MuseScore** (pp … ff, sf/sfz als Akzent, `sound dynamics`, MuseScore-Velocity) wird zur Anschlagstärke – mit den drei
   Anschlagstufen des Flügels klingt das Vorspiel lebendig statt gleichförmig.
 * **Lernpfad**: 13 Lektionen vom ersten Ton (fünf Finger je Hand) über Kinderlieder und beide Hände bis „Für Elise“;
   jede Lektion stellt Hand, Modus und Tempo ein, 1–3 Sterne je nach Treffsicherheit, „Nächste Lektion“ im
