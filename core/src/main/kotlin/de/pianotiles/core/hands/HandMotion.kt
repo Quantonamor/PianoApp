@@ -40,7 +40,7 @@ class HandPose(
  */
 class HandMotion(song: Song) {
 
-    private class Frame(val start: Double, val end: Double, val x: FloatArray, val pitch: IntArray)
+    private class Frame(val start: Double, val end: Double, val x: FloatArray, val pitch: IntArray, val dir: Float = 0f)
 
     private val frames: Map<Hand, List<Frame>> = Hand.entries.associateWith { hand ->
         frameList(song.notes.filter { it.hand == hand && it.finger in 1..5 }, hand)
@@ -63,15 +63,27 @@ class HandMotion(song: Song) {
         } else {
             val cur = fs[i]
             val next = fs.getOrNull(i + 1)
+            val prev = fs.getOrNull(i - 1)
             if (next == null) {
                 x = cur.x.copyOf(); pitch = cur.pitch.copyOf()
             } else {
+                // the fingers that play the next chord get there in time; the free fingers (and with them the hand)
+                // follow only after it has been struck – so the thumb passes under the hand first, like a pianist's
                 val gap = next.start - cur.start
                 val moveFrom = maxOf(cur.start + gap * 0.5, next.start - 0.6, cur.end - 0.05).coerceAtMost(next.start)
                 val t = if (beat <= moveFrom) 0f else ((beat - moveFrom) / (next.start - moveFrom).coerceAtLeast(1e-6)).toFloat().coerceIn(0f, 1f)
                 val s = t * t * (3 - 2 * t)
-                x = FloatArray(5) { cur.x[it] + (next.x[it] - cur.x[it]) * s }
+                x = FloatArray(5) { f -> if (next.pitch[f] >= 0 || !crossing(cur, next)) cur.x[f] + (next.x[f] - cur.x[f]) * s else cur.x[f] }
                 pitch = if (s > 0.5f) next.pitch.copyOf() else cur.pitch.copyOf()
+            }
+            // just after a crossing chord: the free fingers catch up
+            if (prev != null && crossing(prev, cur)) {
+                val lag = minOf(0.5, (cur.end - cur.start) * 0.6)
+                val t = ((beat - cur.start) / lag).toFloat().coerceIn(0f, 1f)
+                if (t < 1f) {
+                    val s = t * t * (3 - 2 * t)
+                    for (f in 0 until 5) if (cur.pitch[f] < 0 && (next == null || beat < next.start)) x[f] = prev.x[f] + (cur.x[f] - prev.x[f]) * s
+                }
             }
         }
         val down = FloatArray(5)
@@ -99,7 +111,7 @@ class HandMotion(song: Song) {
             val pitch = IntArray(5) { -1 }
             for (n in step.notes) { fixedX[n.finger - 1] = KeyX.of(n.pitch); pitch[n.finger - 1] = n.pitch }
             val x = layout(fixedX, dir, last)
-            out += Frame(step.start, step.notes.maxOf { it.end }, x, pitch)
+            out += Frame(step.start, step.notes.maxOf { it.end }, x, pitch, dir)
             last = x
         }
         return out
@@ -129,6 +141,22 @@ class HandMotion(song: Song) {
             if (kotlin.math.abs(shift) < 0.01f) return previous.copyOf()
         }
         return x
+    }
+
+    /**
+     * A finger crossing between two positions: the thumb passes under (or a finger over the thumb), i.e. the thumb
+     * ends up on the other side of a finger that was just playing.
+     */
+    private fun crossing(a: Frame, b: Frame): Boolean {
+        if (a.dir == 0f) return false
+        val thumbBefore = a.x[0]; val thumbAfter = b.x[0]
+        for (f in 1 until 5) if (a.pitch[f] >= 0) {
+            val before = (a.x[f] - thumbBefore) * a.dir
+            val after = (a.x[f] - thumbAfter) * a.dir
+            if (before > 0 && after < 0 && b.pitch[0] >= 0) return true // thumb under to the outside
+            if (b.pitch[f] >= 0 && (b.x[f] - b.x[0]) * a.dir < 0) return true // finger over the thumb
+        }
+        return false
     }
 
     /** Thumb sits a bit further away from the index finger than the other fingers from each other. */
