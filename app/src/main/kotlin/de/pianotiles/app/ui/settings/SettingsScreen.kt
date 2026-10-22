@@ -109,6 +109,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             Toggle(tr("Andere Hand automatisch mitspielen"), s.accompaniment) { v -> upd { it.copy(accompaniment = v) } }
             Toggle(tr("Metronom standardmäßig an"), s.metronome) { v -> upd { it.copy(metronome = v) } }
             SliderRow(tr("Lautstärke: %s %%", (s.volume * 100).toInt()), s.volume, 0f..1f) { v -> upd { it.copy(volume = v) }; app.synth.volume = v }
+            Toggle(tr("Raumklang (leichter Hall)"), s.reverb) { v -> upd { it.copy(reverb = v) }; app.synth.reverb = v }
 
             Header(tr("Mikrofon"))
             SliderRow(tr("Empfindlichkeit: %s %%", (s.micSensitivity * 100).toInt()), s.micSensitivity, 0.1f..0.95f) { v -> upd { it.copy(micSensitivity = v) } }

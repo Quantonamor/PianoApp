@@ -32,6 +32,8 @@ class PianoTilesApp : Application() {
         applyLanguage()
         secrets = SecretStore(this)
         practiceLog = PracticeLogStore(this)
+        synth.volume = settings.settings.value.volume
+        synth.reverb = settings.settings.value.reverb
         // the piano recordings (MP3, ~5 MB) are decoded in the background; until then the synthesizer stands in
         Thread({ runCatching { synth.loadSamples(assets) } }, "PianoSamples").start()
     }

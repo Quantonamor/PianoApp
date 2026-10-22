@@ -21,6 +21,8 @@ data class AppSettings(
     val accompaniment: Boolean = true,
     val octaveTolerant: Boolean = true,
     val volume: Float = 0.8f,
+    /** Light room reverb on the piano sound. */
+    val reverb: Boolean = true,
     val showMeasureNumbers: Boolean = true,
     /** Shaded hands over the keyboard showing which finger plays which key. */
     val showHands: Boolean = false,
@@ -52,6 +54,7 @@ class SettingsStore(context: Context) {
             accompaniment = prefs.getBoolean("accompaniment", true),
             octaveTolerant = prefs.getBoolean("octaveTolerant", true),
             volume = prefs.getFloat("volume", 0.8f),
+            reverb = prefs.getBoolean("reverb", true),
             showMeasureNumbers = prefs.getBoolean("measureNumbers", true),
             showHands = prefs.getBoolean("hands2", false),
             showFingers = prefs.getBoolean("fingers2", false),
@@ -73,6 +76,7 @@ class SettingsStore(context: Context) {
             .putBoolean("accompaniment", s.accompaniment)
             .putBoolean("octaveTolerant", s.octaveTolerant)
             .putFloat("volume", s.volume)
+            .putBoolean("reverb", s.reverb)
             .putBoolean("measureNumbers", s.showMeasureNumbers)
             .putBoolean("hands2", s.showHands)
             .putBoolean("fingers2", s.showFingers)

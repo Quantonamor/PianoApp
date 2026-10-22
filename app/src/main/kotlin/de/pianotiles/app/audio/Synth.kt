@@ -29,6 +29,11 @@ class Synth(private val sampleRate: Int = 44100) {
         get() = mixer.volume
         set(value) { mixer.volume = value }
 
+    /** Room reverb on or off. */
+    var reverb: Boolean
+        get() = mixer.reverb > 0f
+        set(value) { mixer.reverb = if (value) 0.16f else 0f }
+
     fun start() {
         if (running) return
         running = true

@@ -365,6 +365,7 @@ internal val ENGLISH: Map<String, String> = mapOf(
     "Erkennt die App falsche Töne, die Empfindlichkeit senken; überhört sie leise Töne, erhöhen." to
         "If the app detects wrong notes, lower the sensitivity; if it misses quiet notes, raise it.",
     "Lernpfad" to "Learning path",
+    "Raumklang (leichter Hall)" to "Room sound (light reverb)",
     "Oben in der Bibliothek führt der Lernpfad in 13 Lektionen vom ersten Ton bis „Für Elise“: erst jede Hand einzeln mit fünf Fingern, dann einfache Lieder, beide Hände, die Tonleiter mit Daumenuntersatz. Jede Lektion stellt Hand, Modus und Tempo passend ein. Ab dem Ziel (meist 80 % richtig) gibt es einen Stern, ab 90 % zwei, ab 98 % drei. Alle Lektionen sind jederzeit offen; die nächste wird hervorgehoben." to
         "At the top of the library the learning path leads in 13 lessons from the first note to “Für Elise”: first each hand alone with five fingers, then simple songs, both hands, the scale with the thumb passing under. Every lesson sets hand, mode and tempo. Reaching the goal (usually 80 % correct) gives one star, 90 % two, 98 % three. All lessons are open at any time; the next one is highlighted.",
     "%s von %s Sternen" to "%s of %s stars",

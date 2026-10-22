@@ -97,6 +97,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         engine.speed = speed.toDouble()
         engine.seek(-engine.song.measureLength * 0.5)
         synth.volume = settings.volume
+        synth.reverb = settings.reverb
         mic.sensitivity = settings.micSensitivity.toDouble()
         synth.start()
         runCatching { midi.start() }
