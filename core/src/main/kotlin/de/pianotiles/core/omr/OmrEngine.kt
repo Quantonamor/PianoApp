@@ -588,12 +588,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val x0 = (st.xStart + ss * 0.2).roundToInt(); val x1 = (st.xStart + ss * 3.0).roundToInt()
         val y0 = (st.bottom + ss * 0.9).roundToInt(); val y1 = (st.bottom + ss * 3.6).roundToInt()
         val crop = img.crop(x0, y0, x1, y1)
-        if (System.getProperty("omr.trace") != null) Components.find(crop).forEach { b -> println("EIGHT? y=${b.minY + y0}-${b.maxY + y0} bottom=${st.bottom} w=${"%.2f".format(b.width / ss)} h=${"%.2f".format(b.height / ss)}") }
+        if (System.getProperty("omr.trace") != null) Components.find(crop).forEach { b -> println("EIGHT? y=${b.minY + y0}-${b.maxY + y0} bottom=${st.bottom} w=${"%.2f".format(b.width / ss)} h=${"%.2f".format(b.height / ss)} fill=${"%.2f".format(b.fill)}") }
         // a small, compact glyph clearly below the clef's tail (holes of tiny digits are often filled in)
         return Components.find(crop).any { b ->
             val w = b.width / ss; val h = b.height / ss
             h in 0.5..1.25 && w in 0.35..0.95 && b.minY > 0 && b.maxY < crop.height - 1 &&
-                b.minY + y0 > st.bottom + ss * 1.3 && b.fill in 0.3..0.85
+                b.minY + y0 > st.bottom + ss * 1.3 && b.fill in 0.25..0.85
+        } || Components.find(crop).any { b ->
+            // the 8 touches the clef's tail and merges with it: the tail alone ends about 1.5 spaces below the staff
+            val w = b.width / ss; val h = b.height / ss
+            h in 1.3..2.2 && w in 1.1..2.0 && b.maxY < crop.height - 1 && b.maxY + y0 > st.bottom + ss * 2.1
         }
     }
 

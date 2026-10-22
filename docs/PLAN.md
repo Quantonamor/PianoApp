@@ -162,13 +162,14 @@ Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `to
 Stand (2026-10-22):
 - Runde 1 (Choräle BWV 4, 253, 370; Volkslieder Lancashire Clog, Salem Hornpipe): 1 von 10 PDFs bei 100 %,
   Runde-1-Schnitt 93 % Noten / 93 % Rhythmus. **Noch keine Runde vollständig bestanden – Zähler: 0/5.**
-- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **87,6 % Noten, 91,1 % Präzision, 89,5 % Rhythmus**
-  (vorher 86/88/89).
+- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **89,3 % Noten, 93,1 % Präzision, 89,7 % Rhythmus**
+  (vorher 87,6/91,1/89,5, davor 86/88/89).
 - Bereits umgesetzt in dieser Schleife: Triolen (Ziffer „3“ + Taktsummen-Prüfung), verbundene
   Taktangaben-Ziffern, verschmolzene Kreuze in der Tonart, Hilfslinien-Ausnahme nur bei gedruckter Linie,
   Vorzeichen-Erkennung über ganze Zeichen, Fehlerarten-Statistik in der Auswertung.
 - **Nächste Schritte (in dieser Reihenfolge):**
-  1. ✅ Oktavierter Violinschlüssel (LilyPond erkannt, 57→73 %); bei Verovio wird die kleine 8 noch nicht gefunden.
+  1. ✅ Oktavierter Violinschlüssel – auch wenn die 8 mit dem Schlüssel-Schwanz verschmilzt (Verovio) bzw. sehr
+     dünn ist (LilyPond): lift_every_voice 73→94 % (LilyPond), 54→93 % (Verovio).
   2. ✅ Gesangszeilen ohne Verbindung zum Klavier werden ignoriert; Klaviersysteme werden auch über
      geschweifte Klammer und durchgezogene Taktstriche erkannt, großer Abstand durch Liedtext erlaubt.
   2b. ✅ Tonart: Schlüssel-Auswahl ignoriert dünnen Systemstrich; obere/untere Zeilen stimmen getrennt ab.

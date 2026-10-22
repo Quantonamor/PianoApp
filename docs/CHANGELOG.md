@@ -12,6 +12,7 @@
 * **Begrüßungskarte** beim ersten Start, **Übungsstatistik** (heute / Woche / Tage in Folge) in der Bibliothek,
   **Mikrofon-Test** in den Einstellungen, aktiver Modus auf Handys beschriftet.
 * Drehen mit dem Sensor (Hoch-/Querformat), Leisten blenden sich beim Spielen und nach 6 s ohne Berührung aus.
+* PDF-Erkennung: oktavierter Violinschlüssel (Tenor) auch bei verschmolzener bzw. dünner 8 (Regression 87,6 → 89,3 % Noten).
 * `docs/USER_REVIEW.md`: 50 simulierte Übende gehen die App durch – Fragen, Vorschläge, Umsetzungsstand.
 
 * **Stück-Pakete**: jedes Stück ist ein Ordner `files/library/<id>/` mit getrennten Teilen – `score.musicxml`
