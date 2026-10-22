@@ -489,7 +489,10 @@ object Hand3D {
         aoRange = keyW * 0.35f * scale
         for (y in rowMin..min(height - 1, rowMax + shY + 1)) {
             val sy = (y + 0.5f) / scale
-            val aHand = if (sy < keysBottom - 4) alphaKeys else if (sy > keysBottom + 8) 0.95f else alphaKeys + (0.95f - alphaKeys) * ((sy - keysBottom + 4) / 12f)
+            // from half transparent over the keys to nearly opaque below them, over about half a key width
+            val ramp = keyW * 0.55f
+            val tr = ((sy - keysBottom + ramp * 0.5f) / ramp).coerceIn(0f, 1f).let { it * it * (3 - 2 * it) }
+            val aHand = alphaKeys + (0.95f - alphaKeys) * tr
             for (x in 0 until width) {
                 val i = y * width + x
                 if (cover[i].toInt() == 0) {
