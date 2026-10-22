@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 data class PassInfo(val pass: Int, val accuracy: Int, val newSpeed: Double?, val at: Long = System.currentTimeMillis())
 data class FinishInfo(val accuracy: Int, val seconds: Int, val worstMeasure: Int?)
 
-class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app) {
+class PracticeViewModel(app: Application, songId: String, listen: Boolean = false) : AndroidViewModel(app) {
     private val pt = app as PianoTilesApp
     private val synth = pt.synth
     val settings get() = pt.settings.settings.value
@@ -39,7 +39,7 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
     var frame by mutableLongStateOf(0L)
         private set
     var isPlaying by mutableStateOf(false); private set
-    var mode by mutableStateOf(PracticeMode.WAIT); private set
+    var mode by mutableStateOf(if (listen) PracticeMode.LISTEN else PracticeMode.WAIT); private set
     var hands by mutableStateOf(HandSelection.BOTH); private set
     var speed by mutableFloatStateOf(1f); private set
     var loop by mutableStateOf(LoopSettings()); private set
@@ -69,6 +69,8 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
         synth.volume = settings.volume
         mic.sensitivity = settings.micSensitivity.toDouble()
         synth.start()
+        // "Abspielen" from the library: listen right away
+        if (listen) { engine.togglePlay(); isPlaying = engine.isPlaying }
     }
 
     private fun bump() { frame++ }

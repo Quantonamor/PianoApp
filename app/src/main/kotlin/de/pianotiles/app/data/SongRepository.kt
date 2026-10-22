@@ -110,6 +110,20 @@ class SongRepository(private val context: Context) {
 
     suspend fun storeSheet(id: String, bytes: ByteArray) = withContext(Dispatchers.IO) { writeAtomic(sheetFile(id).also { it.parentFile?.mkdirs() }, bytes) }
 
+    /**
+     * Small picture of the first original page for the library (`cover.jpg`, not part of the package).
+     * Rendered once on demand; null if the song has no original sheet.
+     */
+    suspend fun cover(id: String): android.graphics.Bitmap? = withContext(Dispatchers.IO) {
+        val f = File(dir(id), "cover.jpg")
+        if (f.exists()) return@withContext android.graphics.BitmapFactory.decodeFile(f.path)
+        val pages = sheetPages(id).ifEmpty { return@withContext null }
+        val doc = SheetDocument.open(pages) ?: return@withContext null
+        val bmp = doc.use { runCatching { it.render(0, 420) }.getOrNull() } ?: return@withContext null
+        runCatching { f.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, it) } }
+        bmp
+    }
+
     /** The complete package of a song (all parts). */
     suspend fun exportPackage(id: String): ByteArray = withContext(Dispatchers.IO) {
         val song = get(id) ?: readSong(dir(id)) ?: error("unknown song $id")
@@ -151,7 +165,7 @@ class SongRepository(private val context: Context) {
     }
 
     /**
-     * Restores a backup made by [backup] (packages) or by older versions (`songs/*.json` + `pdfs/*.pdf`);
+     * Restores a backup made by [backup] (packages) or by older versions (`songs/<id>.json` + `pdfs/<id>.pdf`);
      * existing songs with the same id are replaced. Returns the count.
      */
     suspend fun restore(input: java.io.InputStream): Int = withContext(Dispatchers.IO) {

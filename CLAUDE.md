@@ -6,7 +6,7 @@ machst du ohne Rückfrage mit dem nächsten offenen Punkt weiter. Alles wird dok
 ## Erste Schritte in jeder neuen Session
 1. `HANDOFF.md` lesen (aktueller Stand + was als Nächstes kommt), dann `docs/PLAN.md` (Fahrplan, Checklisten,
    Konvergenz-Schleife mit Zahlen).
-2. Branch: der Branch, den die Session vorgibt. Bisher wurde auf `ccr-257ad710-x5upqq` entwickelt
+2. Branch: der Branch, den die Session vorgibt. Bisher wurde auf `ccr-257ad710-x5upqq`, dann `claude/vibrant-faraday-id9x3t` entwickelt
    (`git log` zeigt den Verlauf). Falls die Session einen neuen Branch vorgibt: von diesem Stand aus weitermachen.
 3. Für Arbeit an der PDF-Erkennung: `bash tools/omr-eval/setup.sh` (≈1 Min., legt `/tmp/omr-work` an).
 4. CI-Stand prüfen (GitHub-MCP `actions_list` / `get_job_logs`, Repo `quantonamor/pianoapp`) – rote CI zuerst reparieren.

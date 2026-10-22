@@ -27,12 +27,20 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
                 <data android:mimeType="audio/midi" />
                 <data android:mimeType="audio/x-midi" />
                 <data android:mimeType="application/vnd.recordare.musicxml+xml" />
                 <data android:mimeType="application/vnd.recordare.musicxml" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="text/vnd.abc" />
+                <data android:mimeType="application/x-musescore" />
+                <data android:mimeType="application/mei+xml" />
+                <data android:mimeType="image/jpeg" />
+                <data android:mimeType="image/png" />
             </intent-filter>
         </activity>
         <provider

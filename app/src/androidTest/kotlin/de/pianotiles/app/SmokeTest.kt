@@ -170,4 +170,94 @@ class SmokeTest {
         }
         @Suppress("UNUSED_VARIABLE") val unused = hasText("") to hasContentDescription("")
     }
+
+    /** "Abspielen" on a library card starts the piece in listening mode. */
+    @Test
+    fun playFromLibrary() {
+        compose.mainClock.autoAdvance = false
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitText("Meine Bibliothek")
+            waitText("Alle meine Entchen")
+            compose.onAllNodesWithContentDescription("Abspielen")[0].performClick()
+            waitText("Takt")
+            play(1500)
+            shot("12_play_from_library")
+            compose.onNodeWithContentDescription("Zurück").performClick()
+            waitText("Meine Bibliothek")
+        }
+    }
+
+    /** ABC notation opened from another app lands directly in the practice screen. */
+    @Test
+    fun importAbc() {
+        val abc = File(context.cacheDir, "tune.abc")
+        abc.writeText("X:1\nT:Smoke Tune\nM:3/4\nL:1/4\nK:G\nG A B | c2 d | B3 |]\n")
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            setDataAndType(Uri.fromFile(abc), "text/plain")
+        }
+        compose.mainClock.autoAdvance = false
+        ActivityScenario.launch<MainActivity>(intent).use {
+            waitText("Takt", timeout = 20_000)
+            compose.onNodeWithContentDescription("Zurück").performClick()
+            waitText("Smoke Tune")
+            shot("13_library_after_abc")
+        }
+    }
+
+    /** A rotated, shaded photo of the Mozart page is prepared and recognised. */
+    @Test
+    fun importPhoto() {
+        val pdf = File(context.cacheDir, "mozart.pdf")
+        InstrumentationRegistry.getInstrumentation().context.assets.open("mozart.pdf").use { input ->
+            pdf.outputStream().use { input.copyTo(it) }
+        }
+        val page = android.graphics.pdf.PdfRenderer(android.os.ParcelFileDescriptor.open(pdf, android.os.ParcelFileDescriptor.MODE_READ_ONLY)).use { r ->
+            r.openPage(0).use { p ->
+                Bitmap.createBitmap(2000, 2000 * p.height / p.width, Bitmap.Config.ARGB_8888).also {
+                    it.eraseColor(android.graphics.Color.WHITE)
+                    p.render(it, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                }
+            }
+        }
+        val photo = Bitmap.createBitmap(2400, 3200, Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(photo).apply {
+            drawColor(android.graphics.Color.rgb(70, 60, 50)) // table
+            rotate(3f, 1200f, 1600f)
+            drawBitmap(page, 200f, 200f, null)
+            drawRect(0f, 0f, 1200f, 3200f, android.graphics.Paint().apply { color = android.graphics.Color.argb(70, 0, 0, 0) }) // shadow
+        }
+        val jpg = File(context.cacheDir, "photo.jpg")
+        jpg.outputStream().use { photo.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            setDataAndType(Uri.fromFile(jpg), "image/jpeg")
+        }
+        compose.mainClock.autoAdvance = false
+        ActivityScenario.launch<MainActivity>(intent).use {
+            waitText("Noten in", timeout = 180_000)
+            shot("14_photo_review")
+            compose.onNodeWithText("Speichern & üben").performClick()
+            waitText("Takt", timeout = 20_000)
+            compose.onNodeWithContentDescription("Zurück").performClick()
+            waitText("Meine Bibliothek")
+        }
+    }
+
+    /** Song packages keep all parts when exported and imported again. */
+    @Test
+    fun packageRoundTrip() {
+        val app = context.applicationContext as PianoTilesApp
+        kotlinx.coroutines.runBlocking {
+            app.songs.load()
+            val song = app.songs.songs.value.first()
+            val bytes = app.songs.exportPackage(song.id)
+            val copy = app.songs.importPackage(bytes)
+            org.junit.Assert.assertNotEquals(song.id, copy.id)
+            org.junit.Assert.assertEquals(song.notes.size, copy.notes.size)
+            org.junit.Assert.assertTrue(File(app.songs.dir(copy.id), "score.musicxml").exists())
+            org.junit.Assert.assertTrue(File(app.songs.dir(copy.id), "hands.json").exists())
+            app.songs.delete(copy.id)
+        }
+    }
 }
