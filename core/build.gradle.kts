@@ -32,6 +32,7 @@ tasks.test {
     (project.findProperty("photo.angle") as String?)?.let { systemProperty("photo.angle", it) }
     (project.findProperty("engrave.out") as String?)?.let { systemProperty("engrave.out", it); outputs.upToDateWhen { false } }
     (project.findProperty("hands.out") as String?)?.let { systemProperty("hands.out", it); outputs.upToDateWhen { false } }
+    (project.findProperty("audio.out") as String?)?.let { systemProperty("audio.out", it); outputs.upToDateWhen { false } }
     (project.findProperty("omr.only") as String?)?.let { systemProperty("omr.only", it) }
     maxHeapSize = "3g"
     (project.findProperty("omr.trace") as String?)?.let { systemProperty("omr.trace", it) }

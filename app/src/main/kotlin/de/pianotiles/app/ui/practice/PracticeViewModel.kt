@@ -97,7 +97,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         val pitches = song.notes.map { it.pitch }.toSet().let { ps -> ps + ((ps.minOrNull() ?: 60) - 12..(ps.maxOrNull() ?: 72) + 12) }
         Thread({ runCatching { synth.prepare(pitches) } }, "SynthPrepare").apply { priority = Thread.MIN_PRIORITY; start() }
         // "Abspielen" from the library: listen right away
-        if (listen) { engine.togglePlay(); isPlaying = engine.isPlaying }
+        if (listen) { engine.togglePlay(); isPlaying = engine.isPlaying; handle(engine.update(0.0)) }
     }
 
     private fun bump() { frame++ }
@@ -186,7 +186,7 @@ class PracticeViewModel(app: Application, songId: String, listen: Boolean = fals
         finished = null
         engine.togglePlay()
         isPlaying = engine.isPlaying
-        if (isPlaying) hasStarted = true
+        if (isPlaying) { hasStarted = true; handle(engine.update(0.0)) } // first notes scheduled right away
         if (!isPlaying) synth.allNotesOff()
         bump()
     }

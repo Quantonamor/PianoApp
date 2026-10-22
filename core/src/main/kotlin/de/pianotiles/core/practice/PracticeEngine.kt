@@ -241,11 +241,12 @@ class PracticeEngine(val song: Song) {
 
     /**
      * Advances time. [dtSeconds] is the real time since the last call.
-     * Returns events the app should react to (sounds, toasts, ...).
+     * Returns events the app should react to (sounds, toasts, ...). `update(0.0)` right after [play] schedules the
+     * first notes at once instead of one screen frame late.
      */
     fun update(dtSeconds: Double): List<EngineEvent> {
         val events = ArrayList<EngineEvent>()
-        if (!isPlaying || dtSeconds <= 0) return events
+        if (!isPlaying || dtSeconds < 0) return events
         practiceSeconds += dtSeconds
         currentStep()?.let { expireChordKeys(it) }
         val beatsPerSecond = song.bpmAt(position) * speed / 60.0
