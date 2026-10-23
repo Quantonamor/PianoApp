@@ -37,10 +37,13 @@ def truth_lines(s):
     lines = []
     for i, p in enumerate(sel):
         hand = 'L' if (len(sel) == 2 and i == 1) else 'R'
-        for nn in p.stripTies().flatten().notes:
-            if nn.duration.isGrace: continue
-            for pitch in nn.pitches:
-                lines.append(f"{pitch.midi} {remap(float(nn.offset)):.4f} {float(nn.quarterLength):.4f} {hand}")
+        # ties are joined per voice: stripTies on a part with two voices links a tie to a note of the other voice
+        voices = list(p.voicesToParts().parts) if p.hasMeasures() and any(m.hasVoices() for m in p.getElementsByClass(stream.Measure)) else [p]
+        for vp in voices:
+            for nn in vp.stripTies().flatten().notes:
+                if nn.duration.isGrace: continue
+                for pitch in nn.pitches:
+                    lines.append(f"{pitch.midi} {remap(float(nn.offset)):.4f} {float(nn.quarterLength):.4f} {hand}")
     return lines
 
 
