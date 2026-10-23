@@ -941,7 +941,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     }
                     i++
                 }
-                if (run >= ss * 0.25 && run <= ss * 1.0) count++
+                // a run cut off by the end of the window: only a beam if it ends soon after (not the long
+                // stroke of an accidental next to the stem)
+                if (run >= ss * 0.25 && run <= ss * 1.0) {
+                    val y = if (hd.stemUp) hd.stemEnd + scan.toInt() else hd.stemEnd - scan.toInt()
+                    if ((img.verticalRun(x, y)?.let { it.last - it.first + 1 } ?: 0) <= ss * 1.0) count++
+                }
                 sideCount = max(sideCount, count)
             }
             best = max(best, sideCount)
