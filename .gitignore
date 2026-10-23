@@ -9,3 +9,4 @@ captures/
 *.apk
 *.aab
 .claude/worktrees/
+__pycache__/
