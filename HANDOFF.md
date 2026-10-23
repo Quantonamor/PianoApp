@@ -17,8 +17,11 @@ Jeder Test hat 5 Min. Timeout; bei Fehlern stehen alle Thread-Stacks im Log („
 **Emulator verschwand (Okt. 23):** Ursache war sehr wahrscheinlich der Audio-Thread: mit `-noaudio` blockiert
 `AudioTrack.write` nicht, der Thread lief ungebremst – seit `Synth` höchstens 0,2 s vorausläuft, läuft der große
 Bedientest durch. Bei Fehlern druckt die CI jetzt „==== HOST ====“ (Speicher, Kernel-Meldungen) und „LOGCAT TAIL“.
-**Seit Okt. 23 rendert der Emulator im Gast (`-gpu guest`)**: der SwiftShader-Renderer des Runners stürzte immer
-wieder ab („bad color buffer handle“); seitdem laufen alle Tests inkl. `HandsShotTest` durch und schneller.
+**Emulator-Abstürze:** Der Emulator verschwindet in etwa jedem zweiten Lauf mitten in `libraryPracticeEditorSettings`
+(beim Abspielen von Ode im Fließend-Modus, ~12 s nach Testbeginn) – ohne App-Fehler, auch mit `-gpu guest`.
+Deshalb steckt der Ablauf in `tools/ci/ui_tests.sh`; verschwindet der Emulator, schreibt das Skript
+`emulator_vanished` und die CI wiederholt den UI-Test einmal auf frischem Emulator (echte Testfehler bleiben rot).
+Im Log: „==== EMULATOR VANISHED ====“, Minidumps unter `/tmp/android-runner`.
 **Stau vermeiden:** Commits bündeln, veraltete Läufe mit `actions_run_trigger` → `cancel_workflow_run` abbrechen.
 
 ## Stand der letzten Arbeitseinheit (Wünsche des Nutzers: Hände, Klang, Hochformat, Ausblenden, 50-Personen-Review)

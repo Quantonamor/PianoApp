@@ -67,6 +67,8 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Run UI tests on emulator (phone, landscape)
+        id: ui1
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -75,14 +77,25 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu guest -no-snapshot -noaudio -no-boot-anim
-          script: |
-            adb shell settings put system font_scale 1.3
-            (adb logcat -v time > logcat.txt 2>/dev/null &)
-            ./gradlew :app:connectedDebugAndroidTest --console=plain -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.notClass=de.pianotiles.app.HandsShotTest || (timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots; timeout 60 adb logcat -d | grep -E "AndroidRuntime|FATAL|ANR|Fatal signal" | tail -60; echo "==== LOGCAT TAIL ===="; grep -iE "pianotiles|AndroidRuntime|FATAL|lowmemorykiller|lmkd|Kill|EGL|gralloc|vulkan|OpenGL|ANR|watchdog" logcat.txt | tail -120; echo "==== HOST ===="; free -m; uptime; sudo dmesg 2>/dev/null | grep -iE "oom|killed process|segfault|qemu|emulator|general protection" | tail -20; ls -la /tmp/android-runner 2>/dev/null; echo "==== FAILED TESTS ===="; find app/build/outputs/androidTest-results -name "*.xml" -exec grep -h -A14 "<failure" {} + | head -80; exit 1)
-            timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots || true
-            # the 3D hands separately: the emulator's software renderer has crashed on them before, which must not hide the results above
-            timeout 600 ./gradlew :app:connectedDebugAndroidTest --console=plain -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=de.pianotiles.app.HandsShotTest || echo "==== HANDS TEST FAILED (not blocking) ===="
-            (mkdir -p screenshots && cd screenshots && timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots/. .) || true # into the folder itself, not a nested one
+          script: bash tools/ci/ui_tests.sh
+      # the emulator itself crashes now and then (it vanishes mid-test, no app error): once more on a fresh one
+      - name: Run UI tests again on a fresh emulator (only after an emulator crash)
+        id: ui2
+        if: steps.ui1.outcome == 'failure' && hashFiles('emulator_vanished') != ''
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu guest -no-snapshot -noaudio -no-boot-anim
+          script: rm -rf screenshots && bash tools/ci/ui_tests.sh
+      - name: UI test result
+        if: always()
+        run: |
+          echo "first run: ${{ steps.ui1.outcome }}, retry after an emulator crash: ${{ steps.ui2.outcome }}"
+          [ "${{ steps.ui1.outcome }}" = "success" ] || [ "${{ steps.ui2.outcome }}" = "success" ]
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
