@@ -1339,9 +1339,21 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
      * Triplets: if a staff's measure is too long, try to scale groups of three equal notes next to a small
      * digit ("3") by 2/3. Only accepted when the measure then adds up exactly.
      */
-    private fun applyTuplets(cols: List<Column>, marks: List<Double>, measureLen: Double, ss: Double) {
+    private fun applyTuplets(cols: List<Column>, marks: List<Double>, measureLen: Double, ss: Double, pickup: Boolean = false) {
         if (cols.size < 3) return
         fun sum() = cols.sumOf { it.advance }
+        // A pick-up with a numbered triplet: the marked groups are triplets.
+        if (pickup && sum() < measureLen - 0.05 && marks.isNotEmpty()) {
+            for (mx in marks.sorted()) {
+                val centre = cols.indices.minByOrNull { abs(cols[it].x + ss * 0.6 - mx) } ?: continue
+                val start = (centre - 1).coerceIn(0, cols.size - 3)
+                val group = cols.subList(start, start + 3)
+                if (group.any { it.factor != 1.0 || it.heads.isEmpty() }) continue
+                if (group.map { it.advance }.let { a -> a.max() - a.min() > 1e-6 }) continue
+                group.forEach { it.factor = 2.0 / 3.0 }
+            }
+            return
+        }
         if (sum() <= measureLen + 0.05) return
         val changed = ArrayList<Column>()
         for (mx in marks.sorted()) {
@@ -1513,7 +1525,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         for ((mi, slot) in slots.withIndex()) {
             val ss = slot.staves.first().staff.space
             slot.perStaff.forEachIndexed { si, cols ->
-                applyTuplets(cols, slot.staves[si].tupletMarks.filter { it > slot.left && it < slot.right }, measureLen, ss)
+                applyTuplets(cols, slot.staves[si].tupletMarks.filter { it > slot.left && it < slot.right }, measureLen, ss, pickup = mi == 0)
             }
             // Two voices in one staff with different rhythms: the columns do not add up, but the stems-up and the
             // stems-down voice each fill the measure. Such staves get their onsets per voice.
