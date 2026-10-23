@@ -8,8 +8,8 @@
 * PDF-Erkennung, Konvergenz-Schleife (Session 2): Runden 1 und 2 vollständig erkannt; Regressions-Satz
   94,9 % Noten / 97,4 % Rhythmus (Zweistimmigkeit, Haltebögen über Taktstriche, Vorzeichen an Sekunden,
   Fermaten, gebrochene Taktziffern).
-* PDF-Erkennung, Konvergenz-Schleife (Session 3): Runden 4–9 vollständig erkannt (frisch 5–7 von 10 → nach
-  Korrekturen je 10/10); Regressions-Satz 116 PDFs bei 98,6 % Noten / 99,3 % Rhythmus. Neu: Triolen im Auftakt
+* PDF-Erkennung, Konvergenz-Schleife (Session 3): Runden 4–9 vollständig erkannt, Runde 10 zu 9/10 (frisch
+  3–7 von 10); Regressions-Satz 126 PDFs bei 98,7 % Noten / 99,4 % Rhythmus. Auch 32tel, Staccato-Punkte. Neu: Triolen im Auftakt
   (auch ohne gefundene „3“), Prima Volta ergänzt den Auftakt, Systeme mit mehreren Strophen Liedtext, dünne ♭ und
   ♭ am Balken, Fähnchen über Systemgrenzen, Liedtext unter Hälsen, sehr kurze und lange Haltebögen, ganze und
   halbe Noten mit dünnem/gebrochenem Ring, zwei Stimmen auf einem Kopf, Fermaten am Hals.

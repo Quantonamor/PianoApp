@@ -114,9 +114,14 @@ Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `to
 
 Stand (2026-10-23, Session 3):
 - Runde 4 durch Korrekturen der Parallel-Session 10/10. **Frische Runden:** 5 (Seed 5055) 5/10, 6 (Seed 6066)
-  6/10, 7 (Seed 7077) 3/10, 8 (Seed 8088) 7/10, 9 (Seed 9099) 6/10 – jeweils danach 10/10.
+  6/10, 7 (Seed 7077) 3/10, 8 (Seed 8088) 7/10, 9 (Seed 9099) 6/10 – jeweils danach 10/10; 10 (Seed 10101)
+  7/10 → 9/10 (offen: Jersey Lightning Jig LilyPond 97 %: ein fast senkrechter 32tel-Balken verschluckt den Hals
+  einer Note, die Zelle zwischen Kopf, Balken und Linie wird als Loch gefüllt).
   **Zähler „5 Runden hintereinander 100 %“: 0/5.**
-- Regressions-Satz (fester Korpus + Runden 1–9, 116 PDFs): **98,6 % Noten, 98,6 % Präzision, 99,3 % Rhythmus**.
+- Regressions-Satz (fester Korpus + Runden 1–10, 126 PDFs): **98,7 % Noten, 98,7 % Präzision, 99,4 % Rhythmus**.
+- Runde 10 umgesetzt: Taktstriche bei gebrochenen Linienpositionen (fehlende Taktstriche machten ganze Zeilen zu
+  einem Takt), dritter Balken (32tel) bei gleichmäßigem Abstand, Fähnchen auch ohne gefundenen Balken (ab 2),
+  Staccato-Punkt unter/über einem Kopf ≠ Verlängerungspunkt, Viertelpause ≠ ♯.
 - Runden 8–9 umgesetzt: hohle Köpfe (dünner schräger Ring, übereinanderliegende ganze Noten, gebrochener Ring
   per 1-px-Verdickung), Haltebögen (unter einer Stimme bis 1,8 Abstände, auf Linien bis 3,2, über Hälse einer
   anderen Stimme, kurzes Stück vor dem ersten Kopf = Bogen von der vorigen Zeile, keine Note derselben Stimme
