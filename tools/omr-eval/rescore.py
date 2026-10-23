@@ -12,6 +12,9 @@ exec(src, mc)
 W = os.environ.get('OMR_WORK', '/tmp/omr-work')
 paths = [str(p).replace(os.sep, '/') for p in corpus.getPaths()]
 cases = {c[0]: c for c in mc['CASES']}
+used = set()
+for f in (os.path.join(HERE, 'used_pieces.txt'), os.path.join(W, 'rounds', 'used.txt')):
+    if os.path.exists(f): used |= set(open(f).read().split())
 
 
 def score_for(name):
@@ -26,7 +29,10 @@ def score_for(name):
         return s.measures(1, nmeas) if nmeas else s
     if name.startswith('chorale_'):
         bwv = name[len('chorale_'):]
-        p = next(p for p in paths if '/bach/' in p and os.path.basename(p).split('.')[0] == bwv and p.endswith(('.mxl', '.xml')))
+        # the folder name drops the chorale number (bwv244.15 -> chorale_bwv244); the list of used pieces has it
+        files = [u[3:] for u in used if u.startswith('ch:') and u[3:].split('.')[0] == bwv]
+        p = next(p for p in paths if '/bach/' in p and (os.path.basename(p) in files if files else
+                 os.path.basename(p).split('.')[0] == bwv) and p.endswith(('.mxl', '.xml')))
         return mc['piano_reduction_chorale'](p)
     if name.startswith('folk_'):
         base, idx = name[len('folk_'):].rsplit('_', 1)

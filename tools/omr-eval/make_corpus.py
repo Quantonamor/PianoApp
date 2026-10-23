@@ -1,5 +1,5 @@
 import os, sys, subprocess, copy, traceback
-from music21 import corpus, stream, converter, layout, clef, meter, key
+from music21 import corpus, stream, converter, layout, clef, meter, key, pitch
 import verovio, cairosvg
 
 W = os.environ.get('OMR_WORK', '/tmp/omr-work')  # working dir (see setup.sh)
@@ -47,11 +47,34 @@ def piano_reduction_chorale(name):
                     v.insert(e.offset, e2)
             m.insert(0, v1); m.insert(0, v2)
             dst.append(m)
-        # print every accidental the key does not imply (Verovio only draws accidentals written in the MusicXML)
+        # print every accidental the key does not imply (Verovio only draws accidentals written in the MusicXML).
+        # Done by hand across both voices of a staff: music21's makeAccidentals keeps one memory per voice and
+        # then leaves out a needed natural.
         cur = None
         for m in dst.getElementsByClass(stream.Measure):
             cur = m.keySignature or cur
-            m.makeAccidentals(useKeySignature=cur or True, inPlace=True, cautionaryNotImmediateRepeat=False)
+            key_alter = {}
+            if cur is not None:
+                for pk in cur.alteredPitches: key_alter[pk.step] = pk.alter
+            state = {}
+            items = []
+            for v in m.voices:
+                for e in v.notes:
+                    for pt in (e.pitches if e.isChord else [e.pitch]):
+                        items.append((e.offset, pt, e))
+            for off, pt, e in sorted(items, key=lambda t: t[0]):
+                k = (pt.step, pt.octave)
+                alter = pt.alter if pt.accidental is not None else 0.0
+                prev = state.get(k, key_alter.get(pt.step, 0.0))
+                tied = e.tie is not None and e.tie.type in ('stop', 'continue')
+                if tied:
+                    if pt.accidental is not None: pt.accidental.displayStatus = False
+                elif alter != prev:
+                    if pt.accidental is None: pt.accidental = pitch.Accidental('natural')
+                    pt.accidental.displayStatus = True
+                elif pt.accidental is not None:
+                    pt.accidental.displayStatus = False
+                state[k] = alter
         dst.insert(0, c)
     ns.insert(0, sa); ns.insert(0, tb)
     ns.insert(0, layout.StaffGroup([sa, tb], symbol='brace'))

@@ -529,7 +529,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         if (n > 0 && (y1 - y0 + 1) / ss >= 0.5) {
                             val x0 = if (half == 0) b.minX else mid + 1
                             val x1 = if (half == 0) mid else b.maxX
-                            cands.add(doubleArrayOf(x0.toDouble(), y0.toDouble(), x1.toDouble(), y1.toDouble(), sx / n, sy / n))
+                            val hh = (y1 - y0 + 1) / ss
+                            if (hh >= 1.6) {
+                                // a stacked chord in this half (e.g. next to an accidental that joined the blob)
+                                val k = ((hh - 1.0) / 1.0).roundToInt().coerceIn(1, 6) + 1
+                                val first = y0 + ((y1 - y0 + 1) - (k - 1) * ss) / 2
+                                for (i in 0 until k) {
+                                    val cy = first + i * ss
+                                    cands.add(doubleArrayOf(x0.toDouble(), cy - ss / 2, x1.toDouble(), cy + ss / 2, sx / n, cy))
+                                }
+                            } else cands.add(doubleArrayOf(x0.toDouble(), y0.toDouble(), x1.toDouble(), y1.toDouble(), sx / n, sy / n))
                         }
                     }
                 }
