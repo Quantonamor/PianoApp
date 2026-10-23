@@ -136,14 +136,15 @@ fun PracticeScreen(
     var showLoop by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        // any touch shows the controls again for a while
+        // any touch shows the controls again for a while – counted when the finger lifts: on touch-down the small
+        // round buttons would vanish under the finger and their click would be lost
         var lastTouch by remember { mutableStateOf(System.currentTimeMillis()) }
         BoxWithConstraints(
             Modifier.fillMaxSize().pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
-                        awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
-                        lastTouch = System.currentTimeMillis()
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Release) lastTouch = System.currentTimeMillis()
                     }
                 }
             },

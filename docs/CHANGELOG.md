@@ -2,6 +2,8 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **Fehler behoben**: Bei ausgeblendeter Leiste ging das Antippen des kleinen runden Zurück-Knopfs verloren (die Leiste
+  kam schon beim Aufsetzen des Fingers zurück und der Knopf verschwand unter dem Finger).
 * **PDF-Erkennung**: eine Note mit Hals wird nicht mehr für eine Taktangabe gehalten (fehlende Köpfe in Chorälen,
   Auftakte); ein zerfallenes „C“ (4/4) wird erkannt, Fähnchen gelten nicht mehr als Ganze Noten;
   Regressions-Satz 90,0 % Noten / 93,6 % Präzision / 92,1 % Rhythmus (vorher 89,2 / 93,0 / 91,1).
