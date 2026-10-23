@@ -903,7 +903,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (cx < headerEnd) continue
             if (sd.heads.any { cx >= it.x0 - ss * 0.2 && cx <= it.x1 + ss * 0.2 && abs(cy - it.cy) < ss * 2 }) continue
             val vRun = maxVerticalRun(img, b) / ss
+            val flags = restFlags(b, img.width, ss)
             val duration = when {
+                flags > 0 && h in 1.3..4.2 && w in 0.6..1.6 && vRun < 1.3 && cy > st.top && cy < st.bottom -> 0.5 / (1 shl (flags - 1))
                 h in 2.1..3.4 && w in 0.55..1.4 && b.fill in 0.2..0.65 && vRun < 1.5 && abs(cy - st.middle) < ss * 0.9 -> 1.0
                 h in 1.3..2.1 && w in 0.6..1.4 && b.fill in 0.15..0.6 && vRun < 1.3 && cy > st.top && cy < st.bottom -> 0.5
                 h in 0.3..0.7 && w in 0.8..1.6 && b.fill > 0.8 && abs((b.maxY + top) - st.middle) < ss * 0.35 -> 2.0
@@ -913,9 +915,33 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             }
             val rcx = b.cx + left; val rcy = b.cy + top
             if (sd.timeSigs.any { rcx >= it[0] - ss * 0.3 && rcx <= it[2] + ss * 0.3 && rcy >= it[1] - ss && rcy <= it[3] + ss }) continue
-            if (System.getProperty("omr.trace") != null) println("REST $duration x=${b.minX + left} y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} fill=${"%.2f".format(b.fill)} vrun=${"%.2f".format(vRun)} ts=${sd.timeSigs.map { it.toList() }}")
+            if (System.getProperty("omr.trace") != null) println("REST $duration flags=$flags x=${b.minX + left} y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} fill=${"%.2f".format(b.fill)} vrun=${"%.2f".format(vRun)} ts=${sd.timeSigs.map { it.toList() }}")
             sd.rests.add(Rest(b.minX + left, b.minY + top, b.maxX + left, b.maxY + top, duration))
         }
+    }
+
+    /**
+     * Number of flags of an eighth/16th/32nd rest: a straight slanted stroke from top right to bottom left with
+     * round knobs on its left (one per flag). A quarter rest zigzags. 0 = no such rest.
+     */
+    private fun restFlags(b: Blob, imgWidth: Int, ss: Double): Int {
+        if (b.pixels.isEmpty()) return 0
+        val l = IntArray(b.height) { Int.MAX_VALUE }; val r = IntArray(b.height) { -1 }
+        for (q in b.pixels) { val i = q / imgWidth - b.minY; val x = q % imgWidth; l[i] = min(l[i], x); r[i] = max(r[i], x) }
+        val rows = (0 until b.height).filter { r[it] >= 0 }
+        if (rows.size < b.height * 0.7) return 0
+        // the stroke: the right edge only moves left going down (the top knob joins it at the top)
+        val lower = rows.filter { it >= b.height * 0.3 }
+        if (lower.size < 3) return 0
+        val steps = lower.zipWithNext().count { (a, c) -> r[c] <= r[a] + 1 }
+        if (steps < (lower.size - 1) * 0.9 || r[lower.first()] - r[lower.last()] < ss * 0.3) return 0
+        // knobs: groups of wide rows, the first one at the top
+        if ((0 until (ss * 0.4).roundToInt().coerceAtMost(b.height - 1)).none { r[it] >= 0 && r[it] - l[it] + 1 >= ss * 0.55 }) return 0
+        var flags = 0; var run = 0
+        for (i in 0..b.height) {
+            if (i < b.height && r[i] >= 0 && r[i] - l[i] + 1 >= ss * 0.55) run++ else { if (run >= ss * 0.2) flags++; run = 0 }
+        }
+        return flags.coerceAtMost(3)
     }
 
     private fun hasLedgerLines(img: BitImage, hd: Head, st: Staff): Boolean {
