@@ -62,6 +62,9 @@ class HandsShotTest {
         val app = context.applicationContext as PianoTilesApp
         app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN, showHands = true, showFingers = true) }
         app.applyLanguage()
+        // no audio output on the emulator (it has no audio device; the emulator vanished now and then while playing)
+        app.synth.outputEnabled = false
+        app.synth.stop()
         app.practiceLog.dismissWelcome()
     }
 

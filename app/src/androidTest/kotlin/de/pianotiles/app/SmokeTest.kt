@@ -80,6 +80,9 @@ class SmokeTest {
         // "Failed to find ColorBuffer"); the hands are checked with the JVM previews of HandRenderTest instead
         app.settings.update { it.copy(language = "de", noteNaming = NoteNaming.GERMAN, showHands = false) }
         app.applyLanguage()
+        // no audio output on the emulator (it has no audio device; the emulator vanished now and then while playing)
+        app.synth.outputEnabled = false
+        app.synth.stop()
         // the welcome card is checked in libraryPracticeEditorSettings only (test order is not fixed)
         app.practiceLog.dismissWelcome()
     }

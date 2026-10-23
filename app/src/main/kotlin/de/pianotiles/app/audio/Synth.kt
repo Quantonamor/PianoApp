@@ -34,8 +34,14 @@ class Synth(private val sampleRate: Int = 44100) {
         get() = mixer.reverb > 0f
         set(value) { mixer.reverb = if (value) 0.16f else 0f }
 
+    /**
+     * False: nothing goes to the audio output (notes are still scheduled). The emulator tests run with it off: on an
+     * emulator without audio device the whole emulator vanished now and then while music was playing.
+     */
+    @Volatile var outputEnabled = true
+
     fun start() {
-        if (running) return
+        if (running || !outputEnabled) return
         running = true
         thread = Thread({
             // Never crash the app because of audio output problems (e.g. no audio device).
