@@ -117,6 +117,20 @@ class OmrCorpusEval {
                             if (++shown >= 6) break
                         }
                     }
+                    // where the unmatched notes are on the page (EXTRA = recognised but wrong, MISS = not found)
+                    val matchedG = pairs.map { it.second }.toHashSet()
+                    val matchedT = pairs.map { it.first }.toHashSet()
+                    val heads = result.pages.flatMap { pg -> pg.heads.map { pg.page to it } }
+                    gl.indices.filter { it !in matchedG }.take(12).forEach { k ->
+                        val (pitch, start) = gl[k]
+                        val at = heads.firstOrNull { (_, h) -> h.pitch == pitch && abs(h.onset - start) < 0.01 }
+                        println("EXTRA $eng $pitch@$start" + (at?.let { (pg, h) -> " page=${pg + 1} x=${h.x0} y=${h.y0}" } ?: ""))
+                    }
+                    tl.indices.filter { it !in matchedT }.take(12).forEach { k ->
+                        val (pitch, start) = tl[k]
+                        val near = heads.filter { (_, h) -> abs(h.onset - start) < 0.01 }.map { (pg, h) -> "${h.pitch}@p${pg + 1}:${h.x0},${h.y0}" }
+                        println("MISS  $eng $pitch@$start  heads at that time: $near")
+                    }
                 }
                 // error categories (by absolute time)
                 val local = java.util.TreeMap<String, Int>()

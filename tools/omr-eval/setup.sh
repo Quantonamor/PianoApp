@@ -7,10 +7,10 @@ set -e
 source "$(dirname "$0")/env.sh"
 mkdir -p "$W/rounds" "$W/omr"
 
-if ! "$VPY" -c "import lilypond, music21, verovio" >/dev/null 2>&1; then
+if ! "$VPY" -c "import lilypond, music21, verovio, pypdf" >/dev/null 2>&1; then
   $PY -m venv "$W/lyenv"
   source "$(dirname "$0")/env.sh"
-  "$VPY" -m pip install -q lilypond music21 verovio cairosvg
+  "$VPY" -m pip install -q lilypond music21 verovio cairosvg pypdf
 fi
 
 # Earlier rounds (PDFs + solutions are versioned in the repo) and the list of pieces already used.

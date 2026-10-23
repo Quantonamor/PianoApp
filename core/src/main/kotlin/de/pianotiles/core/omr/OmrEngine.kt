@@ -571,14 +571,6 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 (b.cx + left) > headerEnd && sd.heads.none { abs(it.cx - (b.cx + left)) < ss * 0.7 && abs(it.cy - (b.cy + top)) < ss * 0.8 }
             ) sd.tupletMarks.add(b.cx + left)
         }
-        for (b in symbols) {
-            val w = b.width / ss; val h = b.height / ss
-            if (w < 1.0 || w > 12 || h > 1.6 || w / h < 2.2 || b.fill > 0.45) continue
-            if (maxVerticalRun(noCrop, b) > ss * 0.32) continue
-            // beams cross stems, ties and slurs do not
-            if (sd.stemXs.any { it > b.minX + left + ss * 0.3 && it < b.maxX + left - ss * 0.3 }) continue
-            sd.arcs.add(doubleArrayOf((b.minX + left).toDouble(), (b.maxX + left).toDouble(), b.cy + top))
-        }
         val dots = symbols.filter {
             val w = it.width / ss; val h = it.height / ss
             w in 0.2..0.7 && h in 0.2..0.7 && it.fill > 0.5
@@ -589,6 +581,34 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
 
         // 5) Thin vertical strokes (for accidentals and the key signature) and bar lines.
         findStrokesAndBarlines(noStaff, sd, left, right)
+
+        // Ties and slurs, searched with the bar lines erased (a tie across a bar line touches it).
+        val noBars = noCrop.copy()
+        for (bl in sd.barlines) for (x in (bl.first - 1 - left)..(bl.last + 1 - left)) for (y in 0 until noBars.height) noBars[x, y] = false
+        for (b in Components.find(noBars)) {
+            val w = b.width / ss; val h = b.height / ss
+            if (System.getProperty("omr.trace") != null && w in 1.0..12.0 && h < 2.5)
+                println("ARCCAND staff=$staffNo x=${b.minX + left}-${b.maxX + left} y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} fill=${"%.2f".format(b.fill)} vrun=${"%.2f".format(maxVerticalRun(noBars, b) / ss)} stem=${sd.stemXs.filter { it > b.minX + left + ss * 0.3 && it < b.maxX + left - ss * 0.3 }}")
+            if (w < 1.0 || w > 12 || h > 1.6 || w / h < 2.2 || b.fill > 0.45) continue
+            if (maxVerticalRun(noBars, b) > ss * 0.32) continue
+            // beams cross stems (at their height), ties and slurs do not
+            val acy = b.cy + top
+            if (sd.heads.any {
+                    it.hasStem && it.stemX > b.minX + left + ss * 0.3 && it.stemX < b.maxX + left - ss * 0.3 &&
+                        acy >= min(it.cy, it.stemEnd.toDouble()) - ss * 0.5 && acy <= max(it.cy, it.stemEnd.toDouble()) + ss * 0.5
+                }) continue
+            sd.arcs.add(doubleArrayOf((b.minX + left).toDouble(), (b.maxX + left).toDouble(), b.cy + top))
+        }
+        // join the pieces of an arc that were cut by an erased bar line
+        sd.arcs.sortBy { it[0] }
+        var ai = 0
+        while (ai + 1 < sd.arcs.size) {
+            val a = sd.arcs[ai]; val c = sd.arcs[ai + 1]
+            val bar = sd.barlines.any { it.first >= a[1] - 2 && it.last <= c[0] + 2 }
+            if (bar && c[0] - a[1] <= ss * 0.8 && abs(c[2] - a[2]) < ss * 0.6) {
+                sd.arcs[ai] = doubleArrayOf(a[0], c[1], (a[2] + c[2]) / 2); sd.arcs.removeAt(ai + 1)
+            } else ai++
+        }
 
         // 6) Staff position of each head.
         for (hd in sd.heads) hd.step = ((st.bottom - hd.cy) / (ss / 2)).roundToInt()
@@ -1217,6 +1237,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         var pickup = 0.0
         // Ties: an arc from just right of one head to just left of the next head on the same staff position.
         val tieSource = HashMap<Head, Head>()
+        val tiedFromPrevLine = HashSet<Head>()
         val noteIndex = HashMap<Head, Int>()
         for (sys in systems) for (sd in sys.staves) {
             val ss = sd.staff.space
@@ -1228,8 +1249,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         .minByOrNull { it.x0 } ?: continue
                     if (h2 !in tieSource) tieSource[h2] = h1
                 }
+                // An arc before the first note of the line that ends at a head: a tie from the previous line.
+                if (a.isEmpty() && arc[0] < (sd.heads.minOfOrNull { it.x0 } ?: 0)) {
+                    near.filter { it.x0 >= arc[1] - ss * 0.8 && it.x0 <= arc[1] + ss * 1.2 }.forEach { tiedFromPrevLine.add(it) }
+                }
             }
         }
+        /** Exact end (start + duration) of every note, for continuing ties. */
+        val noteEnd = ArrayList<Double>()
         for ((mi, slot) in slots.withIndex()) {
             val ss = slot.staves.first().staff.space
             slot.perStaff.forEachIndexed { si, cols ->
@@ -1304,15 +1331,20 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         h.measure = mi
                         val src = tieSource[h]
                         val srcIdx = src?.let { noteIndex[it] }
+                            ?: if (h in tiedFromPrevLine) notes.indices.lastOrNull {
+                                notes[it].hand == hand && notes[it].pitch == h.pitch && abs(noteEnd[it] - (measureStart + onset)) < 0.05
+                            } else null
                         if (srcIdx != null) {
                             // Tied note: extend the first note instead of striking the key again.
                             val first = notes[srcIdx]
                             h.pitch = first.pitch
                             notes[srcIdx] = first.copy(duration = measureStart + onset + dur * 0.95 - first.start)
+                            noteEnd[srcIdx] = measureStart + onset + dur
                             noteIndex[h] = srcIdx
                         } else {
                             noteIndex[h] = notes.size
                             notes.add(Note(h.pitch, measureStart + onset, dur * 0.95, hand))
+                            noteEnd.add(measureStart + onset + dur)
                         }
                     }
                 }
