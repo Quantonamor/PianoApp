@@ -605,6 +605,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         sd.heads.removeAll(beamGaps)
         // Second pass with the cleaned list: a stem must not end inside another head of the same chord.
         for (hd in sd.heads) { hd.stemX = -1; hd.beams = 0; findStem(noStaff, hd, ss, sd.heads, allowEndInHead = false) }
+        // Flags of a single note: thin and slanted, the line removal cuts them; where they leave the stem (just right
+        // of it) they are still separate. Only raises the count (a 16th read as an 8th).
+        for (hd in sd.heads) if (hd.hasStem && hd.beams >= 1) {
+            val f = countFlags(noStaff, hd, ss, st, sd.heads)
+            if (f > hd.beams) hd.beams = f
+        }
         sd.heads.removeAll { !it.hollow && !it.hasStem && (it.x1 - it.x0) / ss < 1.0 } // isolated blobs, likely noise
         // Stacked heads without a stem (whole-note chords) need a hole in every head; otherwise the blob is
         // something else (time signature digits, clef parts, ...).
@@ -1035,6 +1041,33 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         probe(hd.x0 - ss * 0.25, hd.x0 + ss * 0.35, up = false)
         hd.twoStems = hd.hollow && found[0] && found[1]
         if (hd.hasStem) hd.beams = countBeams(img, hd, ss, heads)
+    }
+
+    private fun countFlags(img: BitImage, hd: Head, ss: Double, st: Staff, heads: List<Head>): Int {
+        val stemLen = abs(hd.stemEnd - hd.cy)
+        val window = min(ss * 2.2, stemLen - ss * 1.0)
+        if (window <= ss * 0.5) return 0
+        val lt = st.lineThickness + 1
+        val lineRows = (st.lines.toList() + (1..4).flatMap { k -> listOf(st.top - k * ss, st.bottom + k * ss) }).map { it.roundToInt() }
+        fun ink(x: Int, y: Int): Boolean {
+            if (img[x, y]) return true
+            // a removed staff line inside a flag: ink right above and below it
+            val ly = lineRows.firstOrNull { abs(it - y) <= lt } ?: return false
+            return img[x, ly - lt - 1] && img[x, ly + lt + 1]
+        }
+        var best = 0
+        for (dx in 2..3) {
+            val x = hd.stemX + dx
+            var count = 0; var run = 0
+            for (i in 0..window.roundToInt()) {
+                val y = if (hd.stemUp) hd.stemEnd + i else hd.stemEnd - i
+                val onHead = heads.any { it !== hd && x >= it.x0 - 1 && x <= it.x1 + 1 && y >= it.y0 - 1 && y <= it.y1 + 1 }
+                if (ink(x, y) && !onHead) run++ else { if (run >= ss * 0.2 && run <= ss * 1.3) count++; run = 0 }
+            }
+            if (run >= ss * 0.2 && run <= ss * 1.3) count++
+            best = max(best, count)
+        }
+        return best.coerceAtMost(3)
     }
 
     private fun isThin(img: BitImage, x: Int, y: Double, ss: Double): Boolean {
