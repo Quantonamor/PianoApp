@@ -537,6 +537,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             !it.hasStem && (if (it.hollow) w < 1.3 else (h < 0.8 || w < 1.0))
         }.toSet()
         sd.heads.removeAll(ghosts)
+        // A "hollow head" in which another note's stem ends is the gap between two beams at the stem end.
+        val beamGaps = sd.heads.filter { h ->
+            h.hollow && sd.heads.any { o ->
+                o !== h && o.hasStem && !o.hollow && o.stemX >= h.x0 - ss * 0.3 && o.stemX <= h.x1 + ss * 0.3 &&
+                    o.stemEnd >= h.y0 - ss * 0.3 && o.stemEnd <= h.y1 + ss * 0.3 && abs(o.cy - h.cy) > ss * 0.8
+            }
+        }.toSet()
+        sd.heads.removeAll(beamGaps)
         // Second pass with the cleaned list: a stem must not end inside another head of the same chord.
         for (hd in sd.heads) { hd.stemX = -1; hd.beams = 0; findStem(noStaff, hd, ss, sd.heads, allowEndInHead = false) }
         sd.heads.removeAll { !it.hollow && !it.hasStem && (it.x1 - it.x0) / ss < 1.0 } // isolated blobs, likely noise
