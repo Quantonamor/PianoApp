@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -157,6 +158,12 @@ class SmokeTest {
         throw AssertionError("'$desc' not shown within $timeout ms")
     }
 
+    /**
+     * Back to the previous screen. While the practice controls slide away (6 s without touching), the top bar's back
+     * button and the small round one exist at the same time; the round one is composed last.
+     */
+    private fun back() = compose.onAllNodesWithContentDescription("Zurück").onLast().performClick()
+
     private fun play(ms: Long) {
         var t = 0L
         while (t < ms) { compose.mainClock.advanceTimeBy(50); Thread.sleep(25); t += 50 }
@@ -258,20 +265,20 @@ class SmokeTest {
             compose.onNodeWithContentDescription("Noten bearbeiten").performClick()
             waitDesc("Rückgängig") // editor (its title is shortened on phones)
             shot("07_editor")
-            compose.onNodeWithContentDescription("Zurück").performClick()
+            back()
             waitText("Takt")
-            compose.onNodeWithContentDescription("Zurück").performClick()
+            back()
 
             // Settings & help
             waitText("Meine Bibliothek")
             compose.onNodeWithContentDescription("Einstellungen").performClick()
             waitText("Notennamen")
             shot("08_settings")
-            compose.onNodeWithContentDescription("Zurück").performClick()
+            back()
             waitText("Meine Bibliothek")
             compose.onNodeWithContentDescription("Hilfe").performClick()
             waitText("Die drei Modi")
-            compose.onNodeWithContentDescription("Zurück").performClick()
+            back()
             waitText("Meine Bibliothek")
         }
     }
@@ -293,7 +300,7 @@ class SmokeTest {
             compose.onNodeWithText("Speichern & üben").performClick()
             waitText("Takt", timeout = 20_000)
             shot("10_imported_practice")
-            compose.onNodeWithContentDescription("Zurück").performClick()
+            back()
             waitText("Meine Bibliothek")
             shot("11_library_after_import")
         }
@@ -311,7 +318,7 @@ class SmokeTest {
             waitDesc("Pause") // playing: only notes, keys and the small back/pause buttons
             play(1500)
             shot("12_play_from_library")
-            compose.onNodeWithContentDescription("Zurück").performClick()
+            back()
             waitText("Meine Bibliothek")
         }
     }
@@ -329,7 +336,7 @@ class SmokeTest {
             waitDesc("Noten bearbeiten") // the practice screen (the lesson's piece is added to the library first)
             play(1500)
             shot("15_lesson")
-            compose.onNodeWithContentDescription("Zurück").performClick()
+            back()
             waitText("Lernpfad")
         }
     }
@@ -346,7 +353,7 @@ class SmokeTest {
         compose.mainClock.autoAdvance = false
         ActivityScenario.launch<MainActivity>(intent).use {
             waitText("Takt", timeout = 20_000)
-            compose.onNodeWithContentDescription("Zurück").performClick()
+            back()
             waitText("Smoke Tune")
             shot("13_library_after_abc")
         }
@@ -386,7 +393,7 @@ class SmokeTest {
             shot("14_photo_review")
             compose.onNodeWithText("Speichern & üben").performClick()
             waitText("Takt", timeout = 20_000)
-            compose.onNodeWithContentDescription("Zurück").performClick()
+            back()
             waitText("Meine Bibliothek")
         }
     }
