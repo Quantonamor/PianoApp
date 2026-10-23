@@ -404,6 +404,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         if (System.getProperty("omr.trace") != null) Components.find(noStaffCrop).filter { it.cx + left < st.xStart + ss * 14 && it.height / ss > 1.0 }.forEach {
             println("TSCAND x=${it.minX + left}-${it.maxX + left} y=${it.minY + top}-${it.maxY + top} top=${st.top} mid=${st.middle} bot=${st.bottom} h=${"%.2f".format(it.height / ss)} w=${"%.2f".format(it.width / ss)}")
         }
+        /** A note with its stem: most rows are just the thin stem (digits are wide in nearly every row). */
+        fun mostlyStem(b: Blob): Boolean {
+            var thin = 0
+            for (y in b.minY..b.maxY) {
+                var x0 = -1; var x1 = -1
+                for (x in b.minX..b.maxX) if (noStaffCrop[x, y]) { if (x0 < 0) x0 = x; x1 = x }
+                if (x0 >= 0 && x1 - x0 + 1 < ss * 0.35) thin++
+            }
+            return thin > b.height * 0.4
+        }
         val timeSigBoxes = ArrayList<IntArray>()
         for (a in glyphs) if (upperDigit(a)) for (c in glyphs) if (lowerDigit(c) && abs(a.cx - c.cx) < ss * 0.8) {
             timeSigBoxes.add(intArrayOf(min(a.minX, c.minX), a.minY, max(a.maxX, c.maxX), c.maxY))
@@ -420,6 +430,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             Components.find(noStaffCrop).filter {
                 val h = it.height / ss; val w = it.width / ss
                 h in 2.6..4.7 && w in 1.1..2.4 && abs(it.cy + top - st.middle) < ss * 0.6 &&
+                    // spanning the staff (a note with its stem is as tall, but sits off-centre)
+                    abs(it.minY + top - st.top) < ss * 0.8 && abs(it.maxY + top - st.bottom) < ss * 0.8 && !mostlyStem(it) &&
                     it.maxX + left < firstNoteX && it.cx + left < st.xStart + ss * 14 && it.minX + left > st.xStart + ss * 2.5
             }.minByOrNull { it.minX }?.let { b ->
                 timeSigBoxes.add(intArrayOf(b.minX, b.minY, b.maxX, b.maxY))
@@ -427,14 +439,18 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 sd.upperDigitHoles = digitHoles(noStaffCrop, b.minX, b.minY, b.maxX, b.maxY, b.height / 2.0, st.lineThickness).filter { it < 1.0 }
             }
         }
+        // the "C" of common time: open to the right and about two staff spaces tall (a note head on the middle line
+        // can look open where its stem was removed)
         if (timeSigBoxes.isEmpty()) glyphs.firstOrNull {
-            abs(it.cy + top - st.middle) < ss * 0.5 && it.cx + left < st.xStart + ss * 12 && openRight(it)
+            abs(it.cy + top - st.middle) < ss * 0.5 && it.cx + left < st.xStart + ss * 12 && it.height / ss >= 1.5 && openRight(it)
         }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)); sd.commonTime = true }
         // alla breve: a "C" with a vertical stroke through it, so taller than the staff
         if (timeSigBoxes.isEmpty()) Components.find(noStaffCrop).firstOrNull {
             it.height / ss in 2.6..3.8 && it.width / ss in 0.8..2.2 && abs(it.cy + top - st.middle) < ss * 0.5 &&
+                abs((it.minY + it.maxY) / 2.0 + top - st.middle) < ss * 0.5 && !mostlyStem(it) &&
                 it.cx + left < st.xStart + ss * 12 && it.cx + left > st.xStart + ss * 2.5 && openRight(it)
         }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)); sd.commonTime = true; sd.cutTime = true }
+        if (System.getProperty("omr.trace") != null) timeSigBoxes.forEach { println("TSBOX x=${it[0] + left}-${it[2] + left} y=${it[1] + top}-${it[3] + top} common=${sd.commonTime} cut=${sd.cutTime}") }
         timeSigBoxes.forEach { sd.timeSigs.add(intArrayOf(it[0] + left, it[1] + top, it[2] + left, it[3] + top)) }
         fun inTimeSig(b: Blob) = timeSigBoxes.any { bx -> b.cx >= bx[0] - 2 && b.cx <= bx[2] + 2 && b.cy >= bx[1] - 2 && b.cy <= bx[3] + 2 }
         for ((blobId, b) in blobs.withIndex()) {

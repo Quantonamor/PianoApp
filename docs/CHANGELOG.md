@@ -2,6 +2,9 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **PDF-Erkennung**: eine Note mit Hals wird nicht mehr für eine Taktangabe gehalten (fehlende Köpfe in Chorälen,
+  Auftakte); Regressions-Satz 89,9 % Noten / 91,9 % Rhythmus (vorher 89,2 / 91,1).
+* **Hautfalten** an den Fingergelenken.
 * **Natürlichere Hände**: der Unterarm kommt aus der Körpermitte (Mitte der Klaviatur, nicht Bildschirmmitte –
   beim Zoomen drehte sich die Hand sonst zu stark); rückt die Hand für eine schwarze Taste vor, liegen die freien
   Finger weiter innen auf den Tasten, statt sich zu Stummeln einzurollen.

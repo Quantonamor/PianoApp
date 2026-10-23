@@ -166,8 +166,10 @@ Stand (2026-10-22):
   Runde-1-Schnitt 93 % Noten / 93 % Rhythmus. **Noch keine Runde vollständig bestanden – Zähler: 0/5.**
 - Runde 2 (Choräle BWV 286, 318, 348; Reels Around the World, McDonald's): 4 von 10 PDFs bei 100 % (beide Reels), Schnitt
   94,0 % Noten / 95,3 % Präzision / 94,2 % Rhythmus. Choräle: Stimmentrennung nach Halsrichtung (erste Stufe). Zähler 0/5.
-- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **89,2 % Noten, 93,0 % Präzision, 91,1 % Rhythmus**
-  (vorher 87,6/91,1/89,5, davor 86/88/89).
+- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **89,9 % Noten, 92,9 % Präzision, 91,9 % Rhythmus**
+  (vorher 89,2/93,0/91,1, 87,6/91,1/89,5, davor 86/88/89). Zuletzt: Noten mit Hals wurden als verbundene
+  Taktangabe („4/4“ in einem Stück) gelesen und übersprungen – jetzt muss die Angabe das System überspannen und darf
+  nicht überwiegend aus einem dünnen Hals bestehen.
 - Bereits umgesetzt in dieser Schleife: Triolen (Ziffer „3“ + Taktsummen-Prüfung), verbundene
   Taktangaben-Ziffern, verschmolzene Kreuze in der Tonart, Hilfslinien-Ausnahme nur bei gedruckter Linie,
   Vorzeichen-Erkennung über ganze Zeichen, Fehlerarten-Statistik in der Auswertung.
