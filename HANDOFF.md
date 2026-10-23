@@ -14,6 +14,9 @@ jedem Frame lässt den Software-Renderer des Emulators abstürzen („Failed to 
 **UI-Tests und die Test-Uhr:** Die Tests stellen `mainClock.autoAdvance = false`. Aktionen, die Frames brauchen
 (z. B. `performScrollToNode`), warten dann ewig auf „idle“ → vorher `autoAdvance = true`, danach wieder `false`.
 Jeder Test hat 5 Min. Timeout; bei Fehlern stehen alle Thread-Stacks im Log („==== THREADS ====“).
+**Emulator verschwand (Okt. 23):** Ursache war sehr wahrscheinlich der Audio-Thread: mit `-noaudio` blockiert
+`AudioTrack.write` nicht, der Thread lief ungebremst – seit `Synth` höchstens 0,2 s vorausläuft, läuft der große
+Bedientest durch. Bei Fehlern druckt die CI jetzt „==== HOST ====“ (Speicher, Kernel-Meldungen) und „LOGCAT TAIL“.
 **Stau vermeiden:** Commits bündeln, veraltete Läufe mit `actions_run_trigger` → `cancel_workflow_run` abbrechen.
 
 ## Stand der letzten Arbeitseinheit (Wünsche des Nutzers: Hände, Klang, Hochformat, Ausblenden, 50-Personen-Review)
