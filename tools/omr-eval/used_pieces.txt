@@ -5,10 +5,13 @@ ch:bwv244.15.mxl
 ch:bwv245.11.mxl
 ch:bwv245.5.mxl
 ch:bwv253.mxl
+ch:bwv261.mxl
 ch:bwv268.mxl
 ch:bwv28.6.mxl
+ch:bwv32.6.mxl
 ch:bwv336.mxl
 ch:bwv370.mxl
+ch:bwv373.mxl
 ch:bwv388.mxl
 ch:bwv392.mxl
 ch:bwv4.8.mxl
@@ -36,5 +39,7 @@ folk:PandeenORaffertyJig.abc:0
 folk:SalemHornpipe.abc:0
 folk:StClairsHornpipe.abc:0
 folk:SteepleChaseReel.abc:0
+folk:WelcomeHereAgainReel.abc:0
 folk:WithinAMileOfClonburReel.abc:0
 folk:ballad20.abc:111
+folk:ballad20.abc:45
