@@ -74,7 +74,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu guest -no-snapshot -noaudio -no-boot-anim
           script: |
             adb shell settings put system font_scale 1.3
             (adb logcat -v time > logcat.txt 2>/dev/null &)
