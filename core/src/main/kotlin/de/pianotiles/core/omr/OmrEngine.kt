@@ -361,6 +361,23 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             // (A stem leaves the head in one direction only; these strokes reach above and below the cell.)
             fun through(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let { it.first <= b.minY - ss * 0.5 && it.last >= b.maxY + ss * 0.5 } == true
             if (through(b.minX - 1) || through(b.maxX + 1)) return false
+            // The cell between a sharp or natural and the head right of it: the accidental's two strokes stand
+            // just left of it, both spanning the cell and of an accidental's length.
+            fun accStroke(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let {
+                it.first < b.minY && it.last > b.maxY && (it.last - it.first + 1) / ss in 1.8..3.4
+            } == true
+            // (the stroke is the cell's straight left edge; a head's hole is oval and ringed)
+            val rowMin = IntArray(b.height) { Int.MAX_VALUE }
+            for (q in b.pixels) { val i = q / img.width - b.minY; rowMin[i] = min(rowMin[i], q % img.width) }
+            val straight = rowMin.count { it <= b.minX + 1 } >= b.height * 0.5
+            val near = (b.minX - 1 downTo b.minX - 2).firstOrNull { straight && accStroke(it) }
+            val far = near?.let { n -> (n - (ss * 0.3).roundToInt() downTo n - (ss * 0.8).roundToInt()).firstOrNull { accStroke(it) } }
+            // ... and joined by the accidental's bars (not a staff line: that would run on into the cell)
+            if (near != null && far != null) {
+                val ys = max(img.verticalRun(near, b.cy.roundToInt())!!.first, img.verticalRun(far, b.cy.roundToInt())!!.first)..
+                    min(img.verticalRun(near, b.cy.roundToInt())!!.last, img.verticalRun(far, b.cy.roundToInt())!!.last)
+                if (ys.any { y -> (far..near).all { x -> img[x, y] } && !img[near + 2, y] }) return false
+            }
             if (h <= 0.78) return true
             // Taller holes (a head in a space, bounded by the staff lines) must be oval, not a
             // rectangular cell between stems and lines: top and bottom rows are clearly narrower.
@@ -1286,10 +1303,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             measureLen = num * 4.0 / den
         } else {
             val sums = slots.drop(1).dropLast(1).ifEmpty { slots }
-                .mapNotNull { s -> s.perStaff.filter { it.isNotEmpty() }.maxOfOrNull { cols -> cols.sumOf { it.advance } } }
-                .map { (it * 2).roundToInt() / 2.0 }
-            // Choose among the usual meters the one most measures add up to (4/4 wins ties; 4/2 must clearly win).
-            val counts = sums.groupingBy { it }.eachCount()
+                .map { s -> s.perStaff.filter { it.isNotEmpty() }.map { cols -> (cols.sumOf { it.advance } * 2).roundToInt() / 2.0 }.distinct() }
+            // Choose among the usual meters the one most measures add up to in some staff (4/4 wins ties; 4/2 must
+            // clearly win). (One staff may be off, e.g. by unrecognised triplets.)
+            val counts = sums.flatten().groupingBy { it }.eachCount()
             val candidates = listOf(4.0, 3.0, 2.0, 1.5, 6.0, 4.5, 8.0)
             fun score(c: Double) = (counts[c] ?: 0) * when (c) { 4.0 -> 1.15; 8.0, 4.5 -> 0.7; else -> 1.0 }
             val common = systems.firstOrNull()?.staves?.any { it.commonTime } == true

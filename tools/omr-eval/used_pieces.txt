@@ -1,5 +1,10 @@
+ch:bwv16.6.mxl
+ch:bwv245.11.mxl
 ch:bwv253.mxl
+ch:bwv268.mxl
 ch:bwv370.mxl
 ch:bwv4.8.mxl
 folk:GreatWesternLancashireClog.abc:0
+folk:HuntingTheHareJig.abc:0
 folk:SalemHornpipe.abc:0
+folk:WithinAMileOfClonburReel.abc:0
