@@ -7,6 +7,8 @@ Werkzeuge, mit denen die PDF-Notenerkennung gegen bekannte Lösungen gemessen un
 ```bash
 bash tools/omr-eval/setup.sh          # legt $OMR_WORK an (Standard: /tmp/omr-work)
 ```
+Läuft unter Linux und unter Windows in Git Bash (`/tmp` = `%LOCALAPPDATA%\Temp`). Python im venv:
+`source tools/omr-eval/env.sh; "$VPY" …` (Linux: `lyenv/bin/python`, Windows: `lyenv/Scripts/python.exe`).
 Danach gibt es in `/tmp/omr-work`: `lyenv/` (LilyPond, music21, Verovio), `rounds/` (alle bisherigen Runden aus
 `tools/omr-eval/rounds/` + `used.txt`), `regress/` (fester Korpus + alle Runden als Links), `omr/` (Overlay-Bilder),
 `kcp.txt` (Classpath für `kcheck.sh`). Alle Skripte lesen `OMR_WORK`, Pfade zum Repo ermitteln sie selbst.
@@ -16,7 +18,10 @@ Danach gibt es in `/tmp/omr-work`: `lyenv/` (LilyPond, music21, Verovio), `round
 | Datei | Zweck |
 |---|---|
 | `make_corpus.py` | erzeugt den festen 14-Stücke-Korpus (liegt fertig in `core/src/test/resources/corpus`) |
-| `truth.py` | schreibt `truth.txt` (Lösung: `midi start dauer hand`) aus `score.musicxml` |
+| `truthlib.py` | erzeugt `truth.txt` (Lösung: `midi start dauer hand`) aus einer Partitur; Startzeiten folgen dem Druckbild (Auftakte/unvollständige Takte, die music21 mit unsichtbaren Pausen auffüllt) |
+| `truth.py [DIR]` | schreibt `truth.txt` aus `score.musicxml` in jedem Unterordner |
+| `rescore.py DIR…` | erzeugt die Lösungen vorhandener Stücke (Korpus, Runden) neu aus dem music21-Korpus, ohne PDFs neu zu setzen |
+| `env.sh` | gemeinsame Pfade/Python-Aufrufe für alle Skripte (Linux und Git Bash unter Windows) |
 | `setup.sh` | Einrichtung (siehe oben) |
 | `round.py N SEED [ANZAHL]` | neue Zufallsrunde: zufällige Bach-Choräle (als Klaviersatz) und Volkslieder aus dem music21-Korpus, je als LilyPond- und Verovio-PDF → `$OMR_WORK/rounds/rN/` – aufrufen mit `/tmp/omr-work/lyenv/bin/python tools/omr-eval/round.py N SEED` |
 | `evalr.sh DIR [-Pomr.only=NAME] [-Pomr.trace=1]` | wertet einen Ordner aus (OK/FAIL je PDF, Noten/Präzision/Rhythmus, Fehlerarten). Mit `DIFF=1` werden die ersten Abweichungen gezeigt; Overlays landen in `$OMR_WORK/omr/`. Aufruf: `bash tools/omr-eval/evalr.sh /tmp/omr-work/regress` |

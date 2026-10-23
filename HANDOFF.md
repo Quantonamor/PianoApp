@@ -1,6 +1,6 @@
 # Übergabe für die nächste Session („weiter“)
 
-Stand: **2026-10-23**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI komplett grün**
+Stand: **2026-10-23 (abends)**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI komplett grün**
 (Core-Tests, APK-Build, Emulator-Bedientest). Allgemeine Regeln und Befehle stehen in `CLAUDE.md`.
 
 ## Was als Nächstes zu tun ist (Reihenfolge)
@@ -14,14 +14,17 @@ Stand: **2026-10-23**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI kom
    Anleitung `tools/omr-eval/README.md`). Konkret:
    ```bash
    bash tools/omr-eval/setup.sh                                   # einmal pro Session
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Ausgangswert: 87,6 / 91,1 / 89,5 %
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r1           # Runde 1: nur 1–2 von 10 PDFs bei 100 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 92,5 / 93,3 / 95,4 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r1           # Runde 1: 3 von 10 PDFs bei 100 %
    ```
-   Offene Punkte dort (in dieser Reihenfolge): Choräle mit zwei Stimmen pro Notenzeile (Sekunden, gemeinsame
-   Köpfe, Vorzeichen in Akkorden) → Tremolo-Schrägstrich (Salem Hornpipe) → Auftakt in `truth.py` →
-   kleine „8“ am Violinschlüssel bei Verovio. Erst wenn Runde 1 sauber ist: neue Runde
-   (`/tmp/omr-work/lyenv/bin/python tools/omr-eval/round.py 2 <seed>`), **Runde danach ins Repo sichern**
+   Läuft auch lokal unter Windows (Git Bash). Offene Punkte (Reihenfolge): fehlende Akkordtöne bei zwei
+   Stimmen pro Zeile (Sekunden/gemeinsame Köpfe, v. a. Verovio-Choräle) → gefüllte Köpfe fälschlich „hohl“ in
+   gestapelten Akkorden → Vorzeichen in Akkorden → kleine „8“ am Violinschlüssel bei Verovio. Erst wenn Runde 1
+   sauber ist: neue Runde (`source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 2 <seed>` – unter
+   Windows fehlen dafür noch `pdfunite`/Cairo, siehe PLAN Punkt 6), **Runde danach ins Repo sichern**
    (Befehl im README). Zähler „5 Runden hintereinander 100 %“: **0/5**.
+   Werkzeuge zur Fehlersuche: `-Pomr.trace=1` gibt u. a. `BLOB`, `HEAD`, `TIMESIG`, `ACCCAND`, `SLOT` aus;
+   Overlays in `/tmp/omr-work/omr/` (unter Windows `%LOCALAPPDATA%\Temp\omr-work\omr`).
 3. Kleinere Ideen, falls Zeit bleibt: Verovio-PDFs mit sehr kleinen Notenköpfen, Hilfe-Text um Editor/KI ergänzen,
    Deprecation-Warnungen (`Icons.Filled.MenuBook` → AutoMirrored) aufräumen.
 
