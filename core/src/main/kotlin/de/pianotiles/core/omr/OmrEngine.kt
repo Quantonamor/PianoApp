@@ -417,18 +417,33 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val bulge = leftmost(mid - band, mid + band) <= b.minX + 1 && leftmost(b.minY, b.minY + band) >= b.minX + 3
             return bulge && ink(mid - band, mid + band) < 0.3 && ink(b.minY, b.minY + edge) > 0.1 && ink(b.maxY - edge, b.maxY) > 0.03
         }
-        /** A note with its stem: most rows are just the thin stem (digits are wide in nearly every row). */
+        /** A note with its stem: most rows are just the thin stem (digits are wide in nearly every row), or a solid head at one end. */
         fun mostlyStem(b: Blob): Boolean {
-            var thin = 0
+            var thin = 0; var thinMid = 0; var mid = 0
             for (y in b.minY..b.maxY) {
                 var x0 = -1; var x1 = -1
                 for (x in b.minX..b.maxX) if (noStaffCrop[x, y]) { if (x0 < 0) x0 = x; x1 = x }
-                if (x0 >= 0 && x1 - x0 + 1 < ss * 0.35) thin++
+                val isThin = x0 >= 0 && x1 - x0 + 1 < ss * 0.35
+                if (isThin) thin++
+                // the middle third: a note with a flag is head – stem – flag, joined digits are wide there too
+                if (y >= b.minY + b.height / 3 && y <= b.maxY - b.height / 3) { mid++; if (isThin) thinMid++ }
             }
-            return thin > b.height * 0.4
+            if (thin > b.height * 0.4 || (mid > 0 && thinMid > mid * 0.6)) return true
+            // a solid note head at the top or bottom end (a flag makes the rows below it look wide): half a staff
+            // space of rows that are nearly full – no digit has that
+            var run = 0; var best = 0
+            val reach = (ss * 1.3).roundToInt()
+            for (y in (b.minY..min(b.maxY, b.minY + reach)) + (max(b.minY, b.maxY - reach)..b.maxY)) {
+                var n = 0
+                for (x in b.minX..b.maxX) if (noStaffCrop[x, y]) n++
+                if (n >= b.width * 0.75) { run++; best = max(best, run) } else run = 0
+            }
+            return best >= ss * 0.5
         }
         val timeSigBoxes = ArrayList<IntArray>()
-        for (a in glyphs) if (upperDigit(a)) for (c in glyphs) if (lowerDigit(c) && abs(a.cx - c.cx) < ss * 0.8) {
+        // (a note whose stem was cut by a staff line falls into an upper and a lower part of the same size: half
+        // of each is a thin stem)
+        for (a in glyphs) if (upperDigit(a) && !mostlyStem(a)) for (c in glyphs) if (lowerDigit(c) && abs(a.cx - c.cx) < ss * 0.8 && !mostlyStem(c)) {
             timeSigBoxes.add(intArrayOf(min(a.minX, c.minX), a.minY, max(a.maxX, c.maxX), c.maxY))
             // the upper digit tells 2/2 from 4/4 and 6/8 from 3/4 (same measure length): count its holes
             if (sd.upperDigitHoles == null) {
