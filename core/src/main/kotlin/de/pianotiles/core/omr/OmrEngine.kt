@@ -363,6 +363,15 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             // (A stem leaves the head in one direction only; these strokes reach above and below the cell.)
             fun through(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let { it.first <= b.minY - ss * 0.5 && it.last >= b.maxY + ss * 0.5 } == true
             if (through(b.minX - 1) || through(b.maxX + 1)) return false
+            // The cell between a head and a bar line right next to it: a straight edge along the bar line (a ring
+            // is round), the bar line across the whole staff.
+            if (h >= 0.75) run {
+                val rowMin = IntArray(b.height) { Int.MAX_VALUE }; val rowMax = IntArray(b.height) { -1 }
+                for (q in b.pixels) { val i = q / img.width - b.minY; val x = q % img.width; rowMin[i] = min(rowMin[i], x); rowMax[i] = max(rowMax[i], x) }
+                fun barAt(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let { it.first + top <= st.top + 1 && it.last + top >= st.bottom - 1 } == true
+                if (rowMax.count { it >= b.maxX - 1 } >= b.height * 0.8 && (1..3).any { barAt(b.maxX + it) }) return false
+                if (rowMin.count { it in 0..b.minX + 1 } >= b.height * 0.8 && (1..3).any { barAt(b.minX - it) }) return false
+            }
             // A tiny cell between a filled head, its stem and a staff line: a hole's ring separates it from the stem.
             fun stemAt(x: Int) = (img.verticalRun(x, b.cy.roundToInt())?.let { it.last - it.first + 1 } ?: 0) >= ss * 2.0
             if (a < 0.15 && (stemAt(b.minX - 1) || stemAt(b.maxX + 1))) return false
