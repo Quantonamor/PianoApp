@@ -129,6 +129,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val rests: MutableList<Rest> = ArrayList(),
         /** Key signature read at the start of this staff (null = could not tell). */
         var keyGuess: Int? = null,
+        /** Right end of the key signature (page x), -1 if none. */
+        var keyEnd: Int = -1,
         /** A "C" / cut-time symbol was found: 4 quarter notes per measure. */
         var commonTime: Boolean = false,
         /** Accidental glyphs: x0, x1, reference y (height of the note they belong to), type (+1/0/-1). */
@@ -824,7 +826,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // an accidental right in front of the first note belongs to that note
         val to = minOf(firstNote - (ss * 0.7).toInt(), firstBar, timeSig, (st.xStart + ss * 14).toInt())
         var sharps = 0; var flats = 0; var other = 0
-        var keyEnd = -1
+        var keyEnd = -1; var flatEnd = -1
         for (b in inStaff.sortedBy { it.minX }) {
             val x0 = b.minX + left; val x1 = b.maxX + left
             if (x0 < from || x1 > to) continue
@@ -847,13 +849,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     o.width / ss in 0.25..0.8 && o.maxY >= b.maxY - ss * 0.5 && o.maxY <= b.maxY + ss * 0.3
             }
             when {
-                bowlNext -> { flats++; keyEnd = maxOf(keyEnd, x1) }
+                bowlNext -> { flats++; flatEnd = maxOf(flatEnd, x1) }
                 strokes.size >= 2 && w in 0.5..1.4 -> { sharps++; keyEnd = maxOf(keyEnd, x1) }
-                strokes.size == 1 && (strokes[0] - b.minX) < b.width * 0.4 && w in 0.45..1.2 && flatShape(img, b, ss) -> { flats++; keyEnd = maxOf(keyEnd, x1) }
+                strokes.size == 1 && (strokes[0] - b.minX) < b.width * 0.4 && w in 0.45..1.2 && flatShape(img, b, ss) -> { flats++; flatEnd = maxOf(flatEnd, x1) }
                 else -> other++
             }
         }
         // Nothing playable sits inside the key signature or before the time signature.
+        // (keyEnd so far: sharps) a key signature has one kind; the other one is an accidental of the first note
+        if (flats > sharps) keyEnd = flatEnd
+        sd.keyEnd = keyEnd
         val noHeadsBefore = maxOf(keyEnd, sd.timeSigs.maxOfOrNull { it[2] } ?: -1)
         if (noHeadsBefore > 0) sd.heads.removeAll { it.cx < noHeadsBefore + ss * 0.2 && it.cx > st.xStart && !it.hasStem }
         if (System.getProperty("omr.trace") != null) println("KEYRESULT sharps=$sharps flats=$flats other=$other from=$from to=$to")
@@ -1132,7 +1137,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val w = b.width / ss; val h = b.height / ss
             if (h < 1.5 || h > 3.7 || w < 0.2 || w > 1.5) continue
             val x0 = b.minX + left; val x1 = b.maxX + left
-            if (x0 < headerEnd) continue
+            if (x0 < headerEnd || x1 <= sd.keyEnd) continue
             // must not contain a note head (stems belong to heads)
             if (sd.heads.any { it.cx >= x0 - 1 && it.cx <= x1 + 1 && it.cy >= b.minY + top - 1 && it.cy <= b.maxY + top + 1 }) continue
             if (sd.barlines.any { (it.first + it.last) / 2 in x0..x1 }) continue
