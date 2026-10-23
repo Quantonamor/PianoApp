@@ -628,10 +628,18 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 (b.cx + left) > headerEnd && sd.heads.none { abs(it.cx - (b.cx + left)) < ss * 0.7 && abs(it.cy - (b.cy + top)) < ss * 0.8 }
             ) sd.tupletMarks.add(b.cx + left)
         }
-        val dots = symbols.filter {
+        val dotsAll = symbols.filter {
             val w = it.width / ss; val h = it.height / ss
             w in 0.2..0.7 && h in 0.2..0.7 && it.fill > 0.5
         }.map { (it.cx + left) to (it.cy + top) }
+        // the two dots of a repeat sign: above and below the middle line, next to the thick bar line
+        fun barNear(x: Double) = ((x - ss * 1.5).roundToInt()..(x + ss * 1.5).roundToInt()).count { bx ->
+            noStaff.verticalRun(bx, st.middle.roundToInt())?.let { it.first <= st.top + 1 && it.last >= st.bottom - 1 } == true
+        } >= ss * 0.3
+        val repeatDots = dotsAll.filter { (dx, dy) ->
+            abs(abs(dy - st.middle) - ss * 0.5) < ss * 0.25 && dotsAll.any { (ox, oy) -> abs(ox - dx) <= 2 && abs(oy - dy) in ss * 0.8..ss * 1.2 } && barNear(dx)
+        }.toSet()
+        val dots = dotsAll.filter { it !in repeatDots }
         for (hd in sd.heads) {
             hd.dotted = dots.any { (dx, dy) -> dx in (hd.x1 + ss * 0.1)..(hd.x1 + ss * 1.4) && abs(dy - hd.cy) <= ss * 0.85 && !(hd.stemUp && abs(dx - hd.stemX) < ss * 0.3) }
         }
