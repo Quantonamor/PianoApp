@@ -265,16 +265,17 @@ object Hand3D {
     private val METACARPALS = listOf("thumb-metacarpal", "index-finger-metacarpal", "middle-finger-metacarpal", "ring-finger-metacarpal", "pinky-finger-metacarpal")
 
     /** Screen placement of a model: screen = (side * z, y) * scale + offset; depth (towards the viewer) = side * x. */
-    private class View(val side: Float, val scale: Float, val ox: Float, val oy: Float)
+    /** [ys]: vertical squash of a foreshortened keyboard (keys drawn shorter than real ones). */
+    private class View(val side: Float, val scale: Float, val ox: Float, val oy: Float, val ys: Float = 1f)
 
     private fun sx(v: View, x: Float, z: Float) = v.side * z * v.scale + v.ox
-    private fun sy(v: View, y: Float) = y * v.scale + v.oy
+    private fun sy(v: View, y: Float) = y * v.scale * v.ys + v.oy
 
     /**
      * Joint transforms so that the fingertips land on [tips] (screen pixels, index 0 = thumb).
      * Returns the per-joint affine transforms (model space) and the view.
      */
-    private fun pose(model: HandModel, hand: Hand, tips: Array<FloatArray>, keyW: Float, down: FloatArray, restMinY: FloatArray, centerX: Float): Pair<Array<Affine>, View> {
+    private fun pose(model: HandModel, hand: Hand, tips: Array<FloatArray>, keyW: Float, down: FloatArray, restMinY: FloatArray, centerX: Float, ys: Float): Pair<Array<Affine>, View> {
         val side = if (hand == Hand.RIGHT) 1f else -1f // right: thumb at -z is on the left; left hand is mirrored
         val jp = model.jointPos
         fun p(i: Int, k: Int) = jp[i * 3 + k]
@@ -300,9 +301,9 @@ object Hand3D {
         var lift = 0f
         var result: Pair<Array<Affine>, View>? = null
         for (attempt in 0 until 5) {
-            val knuckleY = targetTipY + midLen * scale * 0.78f - lift
-            val oy = knuckleY - prox.map { p(it, 1) }.average().toFloat() * scale
-            val view = View(side, scale, ox, oy)
+            val knuckleY = targetTipY + midLen * scale * ys * 0.78f - lift
+            val oy = knuckleY - prox.map { p(it, 1) }.average().toFloat() * scale * ys
+            val view = View(side, scale, ox, oy, ys)
             var worst = 0f
             var worstMiddle = 0f
             // fingers that do not press rest further in when the hand has moved forward (instead of curling up
@@ -314,12 +315,12 @@ object Hand3D {
             val xf = solve(model, view, aim, side, base) { f, err, curl ->
                 if (f == 0 || f == 4) worst = maxOf(worst, err)
                 // a finger that reaches only (nearly) stretched out: the hand should come closer so it stays curved
-                else worstMiddle = maxOf(worstMiddle, err, (0.9f - curl) * midLen * scale * 0.5f)
+                else worstMiddle = maxOf(worstMiddle, err, (0.9f - curl) * midLen * scale * ys * 0.5f)
             }
             result = xf to view
             // thumb or little finger short: move in a little (the fingers curl more); a middle finger short (black key
             // far in): the whole hand moves forward, as a pianist's does
-            val step = maxOf(if (lift < midLen * scale * 0.18f) worst else 0f, if (lift < midLen * scale * 0.7f) worstMiddle else 0f)
+            val step = maxOf(if (lift < midLen * scale * ys * 0.18f) worst else 0f, if (lift < midLen * scale * ys * 0.7f) worstMiddle else 0f)
             if (step < keyW * 0.12f) break
             lift += step * 0.9f
         }
@@ -424,9 +425,12 @@ object Hand3D {
         java.util.Arrays.fill(zbuf, 0, n, -Float.MAX_VALUE)
         java.util.Arrays.fill(cover, 0, n, 0)
         rowMin = height; rowMax = -1
+        // real keys are about 6.4 key widths long; a keyboard drawn with shorter keys looks like one seen at an angle,
+        // so the hands are foreshortened a little as well (otherwise thumb and little finger lie nearly flat)
+        val squash = (0.45f + 0.55f * keysBottom / keyW / 5.5f).coerceIn(0.65f, 1f)
         for (g in hands) {
             val model = HandModel.get(g.hand) ?: return false
-            val (xf, view) = pose(model, g.hand, g.tips, keyW, g.down, g.restMinY, if (g.bodyX.isFinite()) g.bodyX else width / scale / 2f)
+            val (xf, view) = pose(model, g.hand, g.tips, keyW, g.down, g.restMinY, if (g.bodyX.isFinite()) g.bodyX else width / scale / 2f, squash)
             rasterize(model, xf, view, width, height, scale, g.down, if (g.hand == Hand.RIGHT) 0 else 1)
         }
         shade(out, width, height, scale, keysBottom, alphaOverKeys, keyW)
@@ -464,7 +468,7 @@ object Hand3D {
             sp[v * 3 + 1] = sy(view, acc[1]) * scale
             sp[v * 3 + 2] = view.side * acc[0] * view.scale * scale
             // screen-space normal: x = side*z, y = y, towards viewer = side*x
-            var qx = view.side * nacc[2]; var qy = nacc[1]; var qz = view.side * nacc[0]
+            var qx = view.side * nacc[2]; var qy = nacc[1] / view.ys; var qz = view.side * nacc[0]
             val l = sqrt(qx * qx + qy * qy + qz * qz).coerceAtLeast(1e-6f); qx /= l; qy /= l; qz /= l
             sn[v * 3] = qx; sn[v * 3 + 1] = qy; sn[v * 3 + 2] = qz
         }

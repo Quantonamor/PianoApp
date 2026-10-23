@@ -2,6 +2,9 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **Hände in richtiger Größe**: die Handgröße wurde aus der (auf 40 px begrenzten) Fingerbreite zurückgerechnet – bei
+  breiten Tasten (Querformat, große Bildschirme) waren die Hände zu klein und die Finger gespreizt. Bei kurz
+  gezeichneten Tasten (Querformat) wird die Hand außerdem leicht perspektivisch gestaucht.
 * **Fehler behoben**: Bei pausiertem Stück waren die 3D-Hände unsichtbar (das fertige Bild aus dem Hintergrund-Thread
   wurde nie gezeichnet, weil ohne Abspielen kein neuer Frame kam); jetzt zeichnet ein fertiges Bild neu, gerendert
   wird nur bei geänderter Haltung.

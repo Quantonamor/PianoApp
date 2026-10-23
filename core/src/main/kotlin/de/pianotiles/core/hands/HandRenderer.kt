@@ -33,6 +33,8 @@ object HandRenderer {
         val bodyX: Float = Float.NaN,
         /** How far in (smallest y) each finger may rest when it does not press: white keys only below the black ones. */
         val restMinY: FloatArray = FloatArray(5),
+        /** Width of a white key (the hand's size follows it). */
+        val keyW: Float = fingerWidth / 0.66f,
     )
 
     /**
@@ -65,7 +67,7 @@ object HandRenderer {
         knuckles[0] = floatArrayOf(sideX, palmTop + (palmBottom - palmTop) * 0.36f)
         return Geometry(pose.hand, tips, knuckles, fw, palmTop, palmBottom, palmLeft, palmRight, pose.down.copyOf(),
             (keyX(KeyX.of(64)) + keyX(KeyX.of(65))) / 2f,
-            FloatArray(5) { f -> if (pose.pitch[f] >= 0 && Pitch.isBlackKey(pose.pitch[f])) 0f else keysH * 0.5f })
+            FloatArray(5) { f -> if (pose.pitch[f] >= 0 && Pitch.isBlackKey(pose.pitch[f])) 0f else keysH * 0.5f }, keyW)
     }
 
     private class Cone(
@@ -138,7 +140,7 @@ object HandRenderer {
     @Synchronized
     fun render(hands: List<Geometry>, out: IntArray, width: Int, height: Int, scale: Float, keysBottom: Float, alphaOverKeys: Float = 0.55f) {
         // the rigged 3D hand model when it is available, the drawn shapes as fallback
-        if (hands.isNotEmpty() && Hand3D.render(hands, hands[0].fingerWidth / 0.66f, out, width, height, scale, keysBottom, alphaOverKeys)) return
+        if (hands.isNotEmpty() && Hand3D.render(hands, hands[0].keyW, out, width, height, scale, keysBottom, alphaOverKeys)) return
         java.util.Arrays.fill(out, 0)
         for (g in hands) renderHand(g, out, width, height, scale, keysBottom, alphaOverKeys)
     }
