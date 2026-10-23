@@ -1398,6 +1398,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 val per = sys.staves.map { sd -> columnsOf(sd.heads.filter { it.cx > l && it.cx < r }, sd.rests.filter { it.cx > l && it.cx < r }, ss) }
                 // header-only area at the start / empty staff after the final bar line
                 if (per.all { cols -> cols.all { it.heads.isEmpty() } } && (m == 0 || m == edges.size - 2)) continue
+                // nothing at all between two bar lines (no note, no rest): not a measure (e.g. between repeat bars)
+                if (per.all { it.isEmpty() }) continue
                 slots.add(MeasureSlot(si, l, r, per, sys.staves))
             }
         }
