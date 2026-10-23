@@ -268,7 +268,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
     /** Two staves belong to one system when a vertical line (system bar line) joins them at the left. */
     private fun connected(img: BitImage, a: Staff, b: Staff): Boolean {
         val y0 = a.bottom.roundToInt(); val y1 = b.top.roundToInt()
-        if (y1 - y0 > a.space * 22) return false // lyrics can make the gap large
+        if (y1 - y0 > a.space * 28) return false // lyrics (several verses) can make the gap large
         val xs = min(a.xStart, b.xStart) - (a.space * 2.5).toInt()
         val xe = max(a.xStart, b.xStart) + (a.space * 1.0).toInt()
         fun joined(x: Int): Boolean {
@@ -361,7 +361,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             // A head's hole is enclosed by its own ring; a long stroke right at the border means a cell between
             // an accidental (or stem, bar line) and its neighbours.
             // (A stem leaves the head in one direction only; these strokes reach above and below the cell.)
-            fun through(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let { it.first <= b.minY - ss * 0.5 && it.last >= b.maxY + ss * 0.5 } == true
+            // (one end may be short: a stem starting at the head right above or below a larger cell)
+            fun through(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let {
+                val up = b.minY - it.first; val down = it.last - b.maxY
+                min(up, down) >= ss * (if (a < 0.15) 0.5 else 0.25) && max(up, down) >= ss * 0.5
+            } == true
             if (through(b.minX - 1) || through(b.maxX + 1)) return false
             // The cell between a head and a bar line right next to it: a straight edge along the bar line (a ring
             // is round), the bar line across the whole staff.
@@ -384,20 +388,22 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (a < 0.15 && (stemAt(b.minX - 1) || stemAt(b.maxX + 1)) && !(touchesLine && thinRing())) return false
             // The cell between a sharp or natural and the head right of it: the accidental's two strokes stand
             // just left of it, both spanning the cell and of an accidental's length.
-            fun accStroke(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let {
-                it.first < b.minY && it.last > b.maxY && (it.last - it.first + 1) / ss in 1.8..3.4
+            // (the strokes of a sharp are offset: the far one may start a little below the cell)
+            fun accStroke(x: Int, slack: Double = 0.0) = img.verticalRun(x, b.cy.roundToInt())?.let {
+                it.first < b.minY + slack && it.last > b.maxY && (it.last - it.first + 1) / ss in 1.8..3.4
             } == true
             // (the stroke is the cell's straight left edge; a head's hole is oval and ringed)
             val rowMin = IntArray(b.height) { Int.MAX_VALUE }
             for (q in b.pixels) { val i = q / img.width - b.minY; rowMin[i] = min(rowMin[i], q % img.width) }
             val straight = rowMin.count { it <= b.minX + 1 } >= b.height * 0.5
             val near = (b.minX - 1 downTo b.minX - 2).firstOrNull { straight && accStroke(it) }
-            val far = near?.let { n -> (n - (ss * 0.3).roundToInt() downTo n - (ss * 0.8).roundToInt()).firstOrNull { accStroke(it) } }
+            val far = near?.let { n -> (n - (ss * 0.3).roundToInt() downTo n - (ss * 0.8).roundToInt()).firstOrNull { accStroke(it, ss * 0.4) } }
             // ... and joined by the accidental's bars (not a staff line: that would run on into the cell)
             if (near != null && far != null) {
                 val ys = max(img.verticalRun(near, b.cy.roundToInt())!!.first, img.verticalRun(far, b.cy.roundToInt())!!.first)..
                     min(img.verticalRun(near, b.cy.roundToInt())!!.last, img.verticalRun(far, b.cy.roundToInt())!!.last)
-                if (ys.any { y -> (far..near).all { x -> img[x, y] } && !img[near + 2, y] }) return false
+                // (the bars may stick out a little beyond the stroke)
+                if (ys.any { y -> (far..near).all { x -> img[x, y] } && (near + 2..near + (ss * 0.4).roundToInt()).any { x -> !img[x, y] } }) return false
             }
             if (h <= 0.78) return true
             // Taller holes (a head in a space, bounded by the staff lines) must be oval, not a
@@ -1364,16 +1370,18 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
     private fun applyTuplets(cols: List<Column>, marks: List<Double>, measureLen: Double, ss: Double) {
         if (cols.size < 3) return
         fun sum() = cols.sumOf { it.advance }
+        // where a tuplet number over (or under) this column would stand: at its stem
+        fun midX(c: Column) = c.heads.firstOrNull { it.hasStem }?.stemX?.toDouble() ?: (c.x + ss * 0.6)
         if (sum() < measureLen - 0.05) {
             // A short measure (pick-up) gives no length to check against: a "3" counts only when it stands in the
             // middle of exactly three equal, beamed single notes and the measure then falls on the eighth grid.
             for (mx in marks) {
-                val centre = cols.indices.minByOrNull { abs(cols[it].x + ss * 0.5 - mx) } ?: continue
+                val centre = cols.indices.minByOrNull { abs(midX(cols[it]) - mx) } ?: continue
                 if (centre == 0 || centre == cols.size - 1) continue
                 val group = cols.subList(centre - 1, centre + 2)
                 if (group.any { it.factor != 1.0 || it.heads.size != 1 || it.heads[0].beams < 1 }) continue
                 if (group.map { it.advance }.distinct().size != 1 || group.map { it.heads[0].stemUp }.distinct().size != 1) continue
-                if (abs(mx - (group.first().x + group.last().x) / 2 - ss * 0.5) > ss * 1.0) continue
+                if (abs(mx - (midX(group.first()) + midX(group.last())) / 2) > ss * 1.0) continue
                 group.forEach { it.factor = 2.0 / 3.0 }
                 if (abs(sum() * 2 - (sum() * 2).roundToInt()) > 1e-6) group.forEach { it.factor = 1.0 }
             }
@@ -1384,7 +1392,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         for (mx in marks.sorted()) {
             if (sum() <= measureLen + 0.05) break
             // three neighbouring columns centred on the digit
-            val centre = cols.indices.minByOrNull { abs(cols[it].x + ss * 0.6 - mx) } ?: continue
+            val centre = cols.indices.minByOrNull { abs(midX(cols[it]) - mx) } ?: continue
             val start = (centre - 1).coerceIn(0, cols.size - 3)
             val group = cols.subList(start, start + 3)
             if (group.any { it.factor != 1.0 }) continue
@@ -1551,6 +1559,20 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val ss = slot.staves.first().staff.space
             slot.perStaff.forEachIndexed { si, cols ->
                 applyTuplets(cols, slot.staves[si].tupletMarks.filter { it > slot.left && it < slot.right }, measureLen, ss)
+            }
+            // A pick-up of three equal beamed notes whose number was not found: the measure it completes tells its
+            // length (the last one for the first pick-up, else the end of the previous section).
+            if (slots.size > 2) {
+                val partner = if (mi == 0) slots.last() else slots[mi - 1]
+                val lastSums = partner.perStaff.filter { it.isNotEmpty() }.map { c -> c.sumOf { it.advance } }
+                val last = lastSums.firstOrNull()?.takeIf { l -> lastSums.all { abs(it - l) < 0.05 } && l < measureLen - 0.05 }
+                if (last != null) for (cols in slot.perStaff) {
+                    val sum = cols.sumOf { it.advance }
+                    if (cols.size == 3 && sum < measureLen - 0.05 && abs(sum + last - measureLen) > 0.05 &&
+                        abs(sum * 2 / 3 + last - measureLen) < 0.05 && cols.all { it.factor == 1.0 && it.heads.size == 1 && it.heads[0].beams >= 1 } &&
+                        cols.map { it.advance }.distinct().size == 1
+                    ) cols.forEach { it.factor = 2.0 / 3.0 }
+                }
             }
             // Two voices in one staff with different rhythms: the columns do not add up, but the stems-up and the
             // stems-down voice each fill the measure. Such staves get their onsets per voice.
