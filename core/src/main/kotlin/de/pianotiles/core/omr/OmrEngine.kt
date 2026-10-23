@@ -374,7 +374,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             }
             // A tiny cell between a filled head, its stem and a staff line: a hole's ring separates it from the stem.
             fun stemAt(x: Int) = (img.verticalRun(x, b.cy.roundToInt())?.let { it.last - it.first + 1 } ?: 0) >= ss * 2.0
-            if (a < 0.15 && (stemAt(b.minX - 1) || stemAt(b.maxX + 1))) return false
+            // (Half of a hollow head's hole cut by a ledger line: away from the line only the thin ring bounds it.)
+            fun thinRing(): Boolean {
+                val cx = b.cx.roundToInt()
+                val lineBelow = lineYs.any { ly -> abs(b.maxY + top + 1 - ly) <= st.lineThickness + 1 }
+                val run = img.verticalRun(cx, if (lineBelow) b.minY - 1 else b.maxY + 1) ?: return false
+                return run.last - run.first + 1 < ss * 0.35
+            }
+            if (a < 0.15 && (stemAt(b.minX - 1) || stemAt(b.maxX + 1)) && !(touchesLine && thinRing())) return false
             // The cell between a sharp or natural and the head right of it: the accidental's two strokes stand
             // just left of it, both spanning the cell and of an accidental's length.
             fun accStroke(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let {
@@ -612,6 +619,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             }
         }.toSet()
         sd.heads.removeAll(beamGaps)
+        // Likewise a filled "head" starting at the end of a beamed stem: a piece of the beam between two stems,
+        // cut out by the staff lines.
+        sd.heads.removeAll { h ->
+            !h.hollow && sd.heads.any { o ->
+                o !== h && o.hasStem && o.beams > 0 && !o.stemUp && abs(o.stemX - h.x0) < ss * 0.6 &&
+                    o.stemEnd in h.y0 - 2..h.y1 + 2 && abs(o.cy - h.cy) > ss * 2
+            }
+        }
         // Second pass with the cleaned list: a stem must not end inside another head of the same chord.
         for (hd in sd.heads) { hd.stemX = -1; hd.beams = 0; findStem(noStaff, hd, ss, sd.heads, allowEndInHead = false) }
         // Flags of a single note: thin and slanted, the line removal cuts them; where they leave the stem (just right
@@ -673,6 +688,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val ya = (min(hd.cy, hd.stemEnd.toDouble()) - top).roundToInt(); val yb = (max(hd.cy, hd.stemEnd.toDouble()) - top).roundToInt()
             for (x in hd.stemX - 1 - left..hd.stemX + 1 - left) for (y in ya..yb) if (x in 0 until noBars.width && y in 0 until noBars.height) noBars[x, y] = false
         }
+        val tinyTies = ArrayList<DoubleArray>()
         for (b in Components.find(noBars)) {
             val w = b.width / ss; val h = b.height / ss
             if (System.getProperty("omr.trace") != null && w in 1.0..12.0 && h < 2.5)
@@ -682,6 +698,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val x0 = b.minX + left; val x1 = b.maxX + left
             val atBar = sd.barlines.any { abs(it.first - 1 - x1) <= 2 || abs(it.last + 1 - x0) <= 2 }
             val piece = atBar && w >= 0.35 && h <= 0.8
+            // A very short, flat tie squeezed between two heads of the same pitch right next to it.
+            if (w in 0.7..1.0 && h <= 0.4 && w / h >= 2.2 && maxVerticalRun(noBars, b) <= ss * 0.25 &&
+                sd.heads.any { l -> abs(l.x1 - x0) <= ss * 0.6 && abs(l.cy - (b.cy + top)) <= ss &&
+                    sd.heads.any { r -> r.step == l.step && abs(r.x0 - x1) <= ss * 0.6 && abs(r.cy - (b.cy + top)) <= ss } }
+            ) { tinyTies.add(doubleArrayOf(x0.toDouble(), x1.toDouble(), b.cy + top, 0.0, b.height.toDouble())); continue }
             // (very short ties are stubby crescents, mostly empty in their box)
             if (!piece && (w < 1.0 || w / h < (if (w < 1.6 && b.fill < 0.45) 1.7 else 2.2))) continue
             if (w > 12 || h > 1.6 || b.fill > 0.7) continue
@@ -708,6 +729,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         // short pieces that found no partner, and joined arcs that are still too short
         sd.arcs.removeAll { it[3] > 0 || it[1] - it[0] + 1 < ss || (it[1] - it[0] + 1) / it[4] < 1.7 }
+        sd.arcs.addAll(tinyTies)
 
         // 6) Staff position of each head.
         for (hd in sd.heads) hd.step = ((st.bottom - hd.cy) / (ss / 2)).roundToInt()
@@ -1342,6 +1364,21 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
     private fun applyTuplets(cols: List<Column>, marks: List<Double>, measureLen: Double, ss: Double) {
         if (cols.size < 3) return
         fun sum() = cols.sumOf { it.advance }
+        if (sum() < measureLen - 0.05) {
+            // A short measure (pick-up) gives no length to check against: a "3" counts only when it stands in the
+            // middle of exactly three equal, beamed single notes and the measure then falls on the eighth grid.
+            for (mx in marks) {
+                val centre = cols.indices.minByOrNull { abs(cols[it].x + ss * 0.5 - mx) } ?: continue
+                if (centre == 0 || centre == cols.size - 1) continue
+                val group = cols.subList(centre - 1, centre + 2)
+                if (group.any { it.factor != 1.0 || it.heads.size != 1 || it.heads[0].beams < 1 }) continue
+                if (group.map { it.advance }.distinct().size != 1 || group.map { it.heads[0].stemUp }.distinct().size != 1) continue
+                if (abs(mx - (group.first().x + group.last().x) / 2 - ss * 0.5) > ss * 1.0) continue
+                group.forEach { it.factor = 2.0 / 3.0 }
+                if (abs(sum() * 2 - (sum() * 2).roundToInt()) > 1e-6) group.forEach { it.factor = 1.0 }
+            }
+            return
+        }
         if (sum() <= measureLen + 0.05) return
         val changed = ArrayList<Column>()
         for (mx in marks.sorted()) {
@@ -1577,7 +1614,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 // (the last measure completes the pick-up)
                 fun split() = listOf(slots.getOrNull(mi - 1), slots.getOrNull(mi + 1)).any { n ->
                     slotSum(n)?.let { abs(it + sums[nonEmpty[0]] - measureLen) < 0.05 || it < measureLen - 0.05 } == true
-                } || (mi == slots.size - 1 && slotSum(slots.first())?.let { abs(it + sums[nonEmpty[0]] - measureLen) < 0.05 } == true)
+                } || (mi == slots.size - 1 && slotSum(slots.first())?.let { abs(it + sums[nonEmpty[0]] - measureLen) < 0.05 } == true) ||
+                    // (a section ending at a thick repeat/double bar completes the pick-up, e.g. a first ending)
+                    (pickup > 0 && abs(pickup + sums[nonEmpty[0]] - measureLen) < 0.05 &&
+                        slot.staves.first().barlines.any { it.last - it.first > ss * 0.5 && slot.right >= it.first - ss && slot.right <= it.last + ss })
                 short = consistent && sums[nonEmpty[0]] < measureLen - 0.05 && (mi == 0 || nonEmpty.size >= 2 || split())
                 if (short) {
                     if (mi == 0) pickup = sums[nonEmpty[0]]
