@@ -705,10 +705,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // Second pass with the cleaned list: a stem must not end inside another head of the same chord.
         for (hd in sd.heads) { hd.stemX = -1; hd.beams = 0; findStem(noStaff, hd, ss, sd.heads, allowEndInHead = false) }
         // Flags of a single note: thin and slanted, the line removal cuts them; where they leave the stem (just right
-        // of it) they are still separate. Only raises the count (a 16th read as an 8th).
-        for (hd in sd.heads) if (hd.hasStem && hd.beams >= 1) {
+        // of it) they are still separate. Only raises the count (a 16th read as an 8th); where the beam search found
+        // nothing, two flags are needed (a single stroke beside a stem is too common).
+        for (hd in sd.heads) if (hd.hasStem && !hd.hollow) {
             val f = countFlags(noStaff, hd, ss, st, sd.heads)
-            if (f > hd.beams) hd.beams = f
+            if (f > hd.beams && (hd.beams >= 1 || f >= 2)) hd.beams = f
         }
         sd.heads.removeAll { !it.hollow && !it.hasStem && (it.x1 - it.x0) / ss < 1.0 } // isolated blobs, likely noise
         // Stacked heads without a stem (whole-note chords) need a hole in every head; otherwise the blob is
@@ -748,7 +749,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }.toSet()
         val dots = dotsAll.filter { it !in repeatDots }
         for (hd in sd.heads) {
-            hd.dotted = dots.any { (dx, dy) -> dx in (hd.x1 + ss * 0.1)..(hd.x1 + ss * 1.4) && abs(dy - hd.cy) <= ss * 0.85 && !(hd.stemUp && abs(dx - hd.stemX) < ss * 0.3) }
+            // (a dot right under or over another head is a staccato dot)
+            hd.dotted = dots.any { (dx, dy) -> dx in (hd.x1 + ss * 0.1)..(hd.x1 + ss * 1.4) && abs(dy - hd.cy) <= ss * 0.85 && !(hd.stemUp && abs(dx - hd.stemX) < ss * 0.3) &&
+                sd.heads.none { o -> o !== hd && dx >= o.x0 + ss * 0.15 && dx <= o.x1 - ss * 0.15 && abs(dy - o.cy) in ss * 0.5..ss * 1.5 } }
         }
 
         // 5) Thin vertical strokes (for accidentals and the key signature) and bar lines.
@@ -864,6 +867,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val usedAcc = HashSet<DoubleArray>()
         // left to right: a glyph belongs to the nearest head on its right at the same height
         for (hd in sd.heads.sortedBy { it.x0 }) hd.accidental = accidentalFor(hd, sd, ss, usedAcc)
+        if (System.getProperty("omr.trace") != null) for (h in sd.heads) if (h.accidental != null) println("ACC staff=$staffNo x=${h.x0} y=${h.y0} step=${h.step} acc=${h.accidental}")
     }
 
     /**
@@ -1272,6 +1276,22 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             }
             best = max(best, sideCount)
         }
+        // A third beam (32nd notes) lies beyond the window: counted when three runs follow at an even spacing
+        // (the curl of a flag does not).
+        if (best == 2 && stemLen - ss * 1.0 > ss * 1.8) for (side in intArrayOf(-1, 1)) for (off in doubleArrayOf(0.45, 0.7)) {
+            val x = (hd.stemX + side * ss * off).roundToInt()
+            val starts = ArrayList<Int>()
+            var run = 0
+            for (i in 0..min(ss * 2.8, stemLen - ss * 1.0).roundToInt()) {
+                val y = if (hd.stemUp) hd.stemEnd + i else hd.stemEnd - i
+                val onHead = heads.any { it !== hd && x >= it.x0 - m && x <= it.x1 + m && y >= it.y0 - m && y <= it.y1 + m }
+                if (img[x, y] && !onHead) run++ else { if (run >= ss * 0.25 && run <= ss * 0.8) starts.add(i - run); run = 0 }
+            }
+            if (starts.size >= 3) {
+                val d1 = starts[1] - starts[0]; val d2 = starts[2] - starts[1]
+                if (d1 / ss in 0.55..1.0 && d2 / ss in 0.55..1.0 && abs(d1 - d2) <= ss * 0.25) return 3
+            }
+        }
         return best.coerceAtMost(3)
     }
 
@@ -1297,7 +1317,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val len = bestBot - bestTop + 1
             if (len >= ss * 1.3) cols.add(Col(x, bestTop, bestBot))
             // bar line: covers the whole staff
-            if (bestTop <= st.top + st.lineThickness && bestBot >= st.bottom - st.lineThickness && len >= ss * 3.8) barCols.add(x)
+            // (one pixel of slack: line positions are fractional)
+            if (bestTop <= st.top + st.lineThickness + 1 && bestBot >= st.bottom - st.lineThickness - 1 && len >= ss * 3.8) barCols.add(x)
         }
         // group stroke columns
         var i = 0
@@ -1407,7 +1428,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (System.getProperty("omr.trace") != null) println("ACCCAND x=$x0-$x1 y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} strokes=${strokes.map { it - b.minX }} flat=${flatShape(img, b, ss)}")
             var type: Int? = null
             var refY = b.cy + top
-            if (strokes.size == 2 && w >= 0.45) {
+            // (not a rest: its zigzag gives strokes close together)
+            if (sd.rests.any { r -> b.cx + left in r.x0.toDouble()..r.x1.toDouble() && b.cy + top in r.y0.toDouble()..r.y1.toDouble() }) continue
+            if (strokes.size == 2 && w >= 0.45 && strokes[1] - strokes[0] >= ss * 0.25) {
                 val l = strokeExtent(img, b, strokes[0]); val r = strokeExtent(img, b, strokes[1])
                 type = if (l.first < r.first - ss * 0.35 && l.last < r.last - ss * 0.35) 0 else 1
                 refY = (b.minY + b.maxY) / 2.0 + top
