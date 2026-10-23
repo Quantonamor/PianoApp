@@ -112,6 +112,22 @@ und aus dem Übungsbildschirm erreichbar („Noten korrigieren“):
 Ziel: Zufallsrunden mit je 5 neuen Stücken (beide Notensatz-Programme), bis **5 Runden hintereinander alle
 Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `tools/omr-eval/README.md`.
 
+Stand (2026-10-23, Session 3):
+- Runde 4 durch Korrekturen der Parallel-Session 10/10. **Frische Runden:** 5 (Seed 5055) 5/10, 6 (Seed 6066)
+  6/10, 7 (Seed 7077) 3/10 – jeweils danach 10/10. **Zähler „5 Runden hintereinander 100 %“: 0/5.**
+- Regressions-Satz (fester Korpus + Runden 1–7, 96 PDFs): **98,2 % Noten, 98,2 % Präzision, 99,1 % Rhythmus**.
+- Umgesetzt: Triole im Auftakt (bezifferte „3“ mittig über drei gleichen Balkennoten; unbeziffert, wenn der
+  Partnertakt – Schlusstakt bzw. Ende des vorigen Abschnitts – die Länge verlangt), unvollständiger Takt vor
+  Wiederholungs-/Doppelstrich ergänzt den Auftakt (Prima Volta), Triolen-Ziffer über die Halsposition zuordnen,
+  unbezifferte Triolen auch bei einer Stimme mit gewendeten Hälsen (an der Mittellinie), Balkenstück am Halsende
+  ist kein Kopf, Lochhälfte eines hohlen Kopfes auf Hilfslinie (zwei Hälse), sehr kurze Haltebögen zwischen
+  gleichen Köpfen, Haltebogen ab Notenlinie bis 2,3 Abstände nach dem Kopf, Klaviersysteme bis 28 Abstände
+  (vier Strophen), Zelle zwischen ♯ und Kopf (versetzte Striche, überstehende Balken), Zelle unter einem Kopf
+  am Hals (Vorschlagsbogen) kein Loch, ♭ mit 2-px-Hals, ♭ am Balken (Formsuche vor Köpfen ohne Vorzeichen),
+  Fähnchen über Systemgrenzen gehört dem linken Hals, Liedtext unter dem Halsende ist kein Balken.
+- Generator: Vorzeichen für alle Stücke von Hand gesetzt (Verovio ließ ♯ nach ♮ im selben Takt weg);
+  `setup.sh` hält gleichnamige Choräle verschiedener Runden auseinander (`chorale_bwv245_r7`).
+
 Stand (2026-10-23, spät, Session 2):
 - **Runden 1–3 je 10/10 PDFs bei 100 %** (nach Korrekturen; zählen nicht für den Zähler). Runde 4 (Seed 4044)
   frisch: 3/10 bei 100 %, nach Korrekturen 5/10 (offen: BWV 336/388 Verovio Präzision 98,7/99,5 %, BWV 392

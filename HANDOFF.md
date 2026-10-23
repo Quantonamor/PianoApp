@@ -1,7 +1,7 @@
 # Übergabe für die nächste Session („weiter“)
 
-Stand: **2026-10-23 (Session 2)**, letzter Commit auf Branch `ccr-bbbc1057-0ev5g2` (setzt
-`ccr-257ad710-x5upqq` fort). Core-Tests lokal grün; CI nach jedem Push prüfen. Allgemeine Regeln in `CLAUDE.md`.
+Stand: **2026-10-23 (Session 3)**, letzter Commit auf Branch `ccr-564d5418-uo5d3u` (setzt
+`ccr-bbbc1057-0ev5g2` fort). Core-Tests lokal grün; CI nach jedem Push prüfen. Allgemeine Regeln in `CLAUDE.md`.
 
 ## Was als Nächstes zu tun ist (Reihenfolge)
 
@@ -14,15 +14,14 @@ Stand: **2026-10-23 (Session 2)**, letzter Commit auf Branch `ccr-bbbc1057-0ev5g
    Anleitung `tools/omr-eval/README.md`). Konkret:
    ```bash
    bash tools/omr-eval/setup.sh                                   # einmal pro Session
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 94,9 / 94,9 / 97,6 %
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r4           # Runde 4: 5 von 10 PDFs bei 100 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 98,2 / 98,2 / 99,1 % (96 PDFs)
    ```
-   Runden 1–3 sind vollständig (10/10). **Offen in Runde 4** (Seed 4044, gesichert unter `tools/omr-eval/rounds/r4`):
-   Molly McGuire's Reel LilyPond (16tel-Fähnchen im Auftakt → als Achtel gelesen; `countBeams`), BWV 392 (ein
-   Vorzeichen in beiden Renderern; Verovio: Kopf berührt Taktstrich, die Zelle dazwischen wird als Loch gefüllt →
-   Taktstrich fehlt; zwei Versuche verworfen, siehe Commit-Verlauf), BWV 336/388 Verovio (je eine Extra-Note).
-   Danach Runde 5: `source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 5 <seed>` und **ins Repo sichern**
-   (Befehl im README). Zähler „5 Runden hintereinander 100 %“: **0/5** (nur frische Runden zählen).
+   Runden 1–7 sind vollständig (je 10/10 nach Korrekturen; frisch zuletzt 5, 6, 3 von 10). Nächste Runde:
+   `source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 8 <seed>` (Seeds bisher 4044, 5055, 6066,
+   7077), **sofort ins Repo sichern** (Befehl im README) und neue Stücke in `/tmp/omr-work/regress` verlinken.
+   Zähler „5 Runden hintereinander 100 %“: **0/5** (nur frische Runden zählen).
+   Schnell einzelne Stücke prüfen: `mkdir -p /tmp/omr-work/one; ln -s <stückordner> /tmp/omr-work/one/;
+   DIFF=1 bash tools/omr-eval/evalr.sh /tmp/omr-work/one -Pomr.trace=1`.
    Werkzeuge zur Fehlersuche: `-Pomr.trace=1` gibt u. a. `BLOB`, `HEAD`, `HOLE1`, `TIMESIG`, `ACCCAND`, `ARCCAND`,
    `BARS`, `SLOT` aus (Zeilen vor der ersten `TRUTH`-Zeile = LilyPond, danach Verovio);
    Overlays in `/tmp/omr-work/omr/` (unter Windows `%LOCALAPPDATA%\Temp\omr-work\omr`).
