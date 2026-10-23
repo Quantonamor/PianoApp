@@ -556,7 +556,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
 
         // 4) Small dots → augmentation dots.
         val noCrop = noStaff.crop(left, top, right, bottom)
-        val symbols = Components.find(noCrop)
+        val symbols = Components.find(noCrop, keepPixels = true)
         if (options.layout == StaffLayout.AUTO || options.layout == StaffLayout.PIANO) {
             detectClefs(noStaff, sd)
             detectClefChanges(symbols, sd, left, top, headerEnd)
@@ -717,7 +717,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
 
     /** Flat: only the thin stem in the upper part, a wide bowl in the lower part. */
     private fun flatShape(img: BitImage, b: Blob, ss: Double): Boolean {
-        fun rowWidth(y: Int): Int { var l = -1; var r = -1; for (x in b.minX..b.maxX) if (img[x, y]) { if (l < 0) l = x; r = x }; return if (l < 0) 0 else r - l + 1 }
+        // only the glyph's own pixels: a neighbouring accidental may reach into its box
+        val rowL = IntArray(b.height) { Int.MAX_VALUE }; val rowR = IntArray(b.height) { -1 }
+        if (b.pixels.isNotEmpty()) for (q in b.pixels) {
+            val i = q / img.width - b.minY; val x = q % img.width; rowL[i] = min(rowL[i], x); rowR[i] = max(rowR[i], x)
+        } else for (y in b.minY..b.maxY) for (x in b.minX..b.maxX) if (img[x, y]) { rowL[y - b.minY] = min(rowL[y - b.minY], x); rowR[y - b.minY] = max(rowR[y - b.minY], x) }
+        fun rowWidth(y: Int): Int = (rowR[y - b.minY] - rowL[y - b.minY] + 1).coerceAtLeast(0)
         val upper = (b.minY..(b.minY + b.height * 0.35).toInt()).maxOf { rowWidth(it) }
         val lower = ((b.maxY - b.height * 0.35).toInt()..b.maxY).maxOf { rowWidth(it) }
         return upper <= ss * 0.32 && lower >= ss * 0.45
