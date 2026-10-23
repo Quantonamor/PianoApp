@@ -27,6 +27,8 @@
   auch für schon gespeicherte Stücke); kurze Kacheln werden dank engerer Schrift öfter beschriftet.
 * Dialoge „Übungsschleife“, „Tempo“ und „Geschafft“ waren auf Handys im Querformat zu schmal (Überlappungen,
   „125 %“ unerreichbar) – jetzt bis 560/640 dp breit; das Ergebnis ist je nach Trefferquote grün/orange/rot.
+* Absturz behoben: Beim Öffnen einer Datei per „Teilen → PianoTiles“ konnte das gerade importierte Stück
+  verschwinden (zweites App-Fenster lud die Bibliothek gleichzeitig neu) – Laden/Speichern sind jetzt serialisiert.
 
 ## 0.1.0 – erste Version
 

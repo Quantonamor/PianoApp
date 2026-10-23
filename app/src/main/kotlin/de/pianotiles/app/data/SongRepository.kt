@@ -7,6 +7,8 @@ import de.pianotiles.core.model.SongJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -20,15 +22,21 @@ class SongRepository(private val context: Context) {
     private val pdfDir = File(context.filesDir, "pdfs").apply { mkdirs() }
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs
+    /**
+     * Serialises [load] with [save]/[delete]: a second activity (e.g. opened via "share to PianoTiles")
+     * re-loads the library while its import saves the new song – without the lock the reload could
+     * replace the list with the older state on disk and the new song would vanish.
+     */
+    private val lock = Mutex()
 
-    suspend fun load() = withContext(Dispatchers.IO) {
+    suspend fun load() = withContext(Dispatchers.IO) { lock.withLock {
         val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
         if (!prefs.getBoolean("demos_installed_v1", false)) {
             DemoSongs.all().forEach { writeFile(it) }
             prefs.edit().putBoolean("demos_installed_v1", true).apply()
         }
         _songs.value = readAll()
-    }
+    } }
 
     private fun readAll(): List<Song> = songsDir.listFiles { f -> f.extension == "json" }.orEmpty().mapNotNull {
         runCatching { SongJson.decode(it.readText()) }.getOrNull()
@@ -42,16 +50,16 @@ class SongRepository(private val context: Context) {
 
     fun get(id: String): Song? = _songs.value.firstOrNull { it.id == id }
 
-    suspend fun save(song: Song) = withContext(Dispatchers.IO) {
+    suspend fun save(song: Song) = withContext(Dispatchers.IO) { lock.withLock {
         writeFile(song)
         _songs.value = _songs.value.filter { it.id != song.id } + song
-    }
+    } }
 
-    suspend fun delete(id: String) = withContext(Dispatchers.IO) {
+    suspend fun delete(id: String) = withContext(Dispatchers.IO) { lock.withLock {
         File(songsDir, "$id.json").delete()
         File(pdfDir, "$id.pdf").delete()
         _songs.value = _songs.value.filter { it.id != id }
-    }
+    } }
 
     fun pdfFile(id: String) = File(pdfDir, "$id.pdf")
 
@@ -72,7 +80,7 @@ class SongRepository(private val context: Context) {
     }
 
     /** Restores a backup made by [backup]; existing songs with the same id are replaced. Returns the count. */
-    suspend fun restore(input: java.io.InputStream): Int = withContext(Dispatchers.IO) {
+    suspend fun restore(input: java.io.InputStream): Int = withContext(Dispatchers.IO) { lock.withLock {
         var count = 0
         java.util.zip.ZipInputStream(input).use { zip ->
             while (true) {
@@ -94,11 +102,11 @@ class SongRepository(private val context: Context) {
         }
         _songs.value = readAll()
         count
-    }
+    } }
 
     /** Re-installs the built-in demo pieces (e.g. after they were deleted). */
-    suspend fun restoreDemos() = withContext(Dispatchers.IO) {
+    suspend fun restoreDemos() = withContext(Dispatchers.IO) { lock.withLock {
         DemoSongs.all().forEach { writeFile(it) }
         _songs.value = readAll()
-    }
+    } }
 }
