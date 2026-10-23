@@ -366,7 +366,18 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 img.verticalRun(x, b.cy.roundToInt())?.let { it.last - it.first + 1 >= ss * 1.5 && it.first < b.minY && it.last > b.maxY } == true
             }
             val reach = (ss * 0.3).roundToInt()
-            if (longStroke(b.minX - 1 downTo b.minX - reach) && longStroke(b.maxX + 1..b.maxX + reach)) return false
+            // (stacked whole notes touching each other make long strokes of their rings too; their holes are oval,
+            // an accidental's window is not)
+            val oval = b.height >= max(6.0, ss * 0.65) && run {
+                val rw = IntArray(b.height)
+                for (p in b.pixels) rw[p / img.width - b.minY]++
+                // (a ring is thick at its sides; an accidental's stroke beside a cell is thin)
+                val cy = b.cy.roundToInt()
+                var l = 0; while (img[b.minX - 1 - l, cy]) l++
+                var r = 0; while (img[b.maxX + 1 + r, cy]) r++
+                (rw[0] + rw[1] + rw[b.height - 1] + rw[b.height - 2]) / 4.0 <= rw.max() * 0.6 && min(l, r) >= ss * 0.22
+            }
+            if (!oval && longStroke(b.minX - 1 downTo b.minX - reach) && longStroke(b.maxX + 1..b.maxX + reach)) return false
             // A head's hole is enclosed by its own ring; a long stroke right at the border means a cell between
             // an accidental (or stem, bar line) and its neighbours.
             // (A stem leaves the head in one direction only; these strokes reach above and below the cell.)
@@ -421,8 +432,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             for (p in b.pixels) rowWidth[p / img.width - b.minY]++
             val maxW = rowWidth.max()
             val ends = (rowWidth[0] + rowWidth[1].coerceAtLeast(rowWidth[0]) + rowWidth[b.height - 1] + rowWidth[b.height - 2].coerceAtLeast(rowWidth[b.height - 1])) / 4.0
-            return ends <= maxW * 0.75 && w <= 1.2
+            // (a thin slanted ring leaves a wide hole: allowed when clearly oval)
+            return ends <= maxW * 0.75 && (w <= 1.2 || (w <= 1.3 && ends <= maxW * 0.55))
         }
+        val halves = ArrayList<IntArray>()
         for (b in Components.find(origCrop, ink = false, keepPixels = true)) {
             if (!isHole(b, origCrop, 0.97)) continue
             for (p in b.pixels) filled.data[p] = true
@@ -432,13 +445,40 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 for (x in b.minX..b.maxX) if (origCrop[x, y]) filled[x, y] = true
             holeCenters.add(b.cx + left to b.cy + top)
             holeAreas.add(b.area)
+            if (b.height <= ss * 0.55) halves.add(intArrayOf(b.minX, b.minY, b.maxX, b.maxY))
             if (System.getProperty("omr.trace") != null) println("HOLE1 x=${b.minX + left}-${b.maxX + left} y=${b.minY + top}-${b.maxY + top}")
         }
         for (b in Components.find(filled, ink = false, keepPixels = true)) {
-            if (!isHole(b, filled, 0.78)) continue
+            if (!isHole(b, filled, 0.97)) continue
             for (p in b.pixels) filled.data[p] = true
             holeCenters.add(b.cx + left to b.cy + top)
             holeAreas.add(b.area)
+        }
+        // A head on a line whose ring is broken at a thin spot (rasterisation): only one half of its hole was found,
+        // the other leaks out. Thickened by a pixel the ring closes; the half across the line from a found one is
+        // filled (within its box, so the leak stays out).
+        if (halves.isNotEmpty()) {
+            val thick = origCrop.dilate(1)
+            for (b in Components.find(thick, ink = false, keepPixels = true)) {
+                if (b.minX <= 1 || b.minY <= 1 || b.maxX >= thick.width - 2 || b.maxY >= thick.height - 2) continue
+                if (filled[b.cx.roundToInt(), b.cy.roundToInt()]) continue
+                val partner = halves.any { hb ->
+                    min(hb[2], b.maxX) - max(hb[0], b.minX) >= min(hb[2] - hb[0], b.maxX - b.minX) * 0.5 &&
+                        (hb[1] - b.maxY in 2..(st.lineThickness + 4) || b.minY - hb[3] in 2..(st.lineThickness + 4))
+                }
+                if (!partner || !isHole(b, thick, 0.97)) continue
+                val x0 = b.minX - 2; val x1 = b.maxX + 2; val y0 = b.minY - 1; val y1 = b.maxY + 1
+                val queue = ArrayDeque<Int>(); b.pixels.forEach { queue.add(it) }
+                while (queue.isNotEmpty()) {
+                    val q = queue.removeFirst(); val x = q % thick.width; val y = q / thick.width
+                    if (x !in x0..x1 || y !in y0..y1 || origCrop[x, y] || filled[x, y]) continue
+                    filled[x, y] = true
+                    queue.add(q - 1); queue.add(q + 1); queue.add(q - thick.width); queue.add(q + thick.width)
+                }
+                holeCenters.add(b.cx + left to b.cy + top)
+                holeAreas.add(b.area)
+                if (System.getProperty("omr.trace") != null) println("HOLE3 x=${b.minX + left}-${b.maxX + left} y=${b.minY + top}-${b.maxY + top}")
+            }
         }
 
         // 2) Opening removes stems, lines, thin symbols; note heads survive.
@@ -506,7 +546,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // A small "C" (Verovio) whose arcs lie on staff lines falls apart when the lines are removed:
         // join nearby fragments in the header area and test the joined box.
         if (timeSigBoxes.isEmpty()) {
-            val frags = Components.find(noStaffCrop).filter { it.cx + left in (st.xStart + ss * 2.5)..(st.xStart + ss * 12) && it.height < ss * 2.6 && it.width < ss * 2.2 }
+            // (a piece may be over 2.6 spaces tall when the digits touch; sharps and naturals are that tall too)
+            val frags = Components.find(noStaffCrop).filter {
+                it.cx + left in (st.xStart + ss * 2.5)..(st.xStart + ss * 12) && it.width < ss * 2.2 &&
+                    (it.height < ss * 2.6 || (it.height < ss * 3.3 && verticalStrokes(noStaffCrop, it, ss * 1.0).size < 2))
+            }
             val boxes = frags.map { intArrayOf(it.minX, it.minY, it.maxX, it.maxY) }.toMutableList()
             var merged = true
             while (merged) {
@@ -638,7 +682,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // cut out by the staff lines.
         sd.heads.removeAll { h ->
             !h.hollow && sd.heads.any { o ->
-                o !== h && o.hasStem && o.beams > 0 && !o.stemUp && abs(o.stemX - h.x0) < ss * 0.6 &&
+                o !== h && o.hasStem && (o.beams > 0 || h.x1 - h.x0 > ss * 1.35) && !o.stemUp &&
+                    (abs(o.stemX - h.x0) < ss * 0.6 || abs(o.stemX - h.x1) < ss * 0.6) &&
                     o.stemEnd in h.y0 - 2..h.y1 + 2 && abs(o.cy - h.cy) > ss * 2
             }
         }
@@ -1091,7 +1136,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         probe(hd.x1 - ss * 0.35, hd.x1 + ss * 0.25, up = true)
         probe(hd.x0 - ss * 0.25, hd.x0 + ss * 0.35, up = false)
-        hd.twoStems = hd.hollow && found[0] && found[1]
+        hd.twoStems = found[0] && found[1]
         if (hd.hasStem) hd.beams = countBeams(img, hd, ss, heads)
     }
 
@@ -1432,7 +1477,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         if (sum() <= measureLen + 0.05) return
         val changed = ArrayList<Column>()
-        for (mx in marks.sorted()) {
+        // (groups of three equal notes first: a stray mark, e.g. an up-bow sign, must not take an uneven group)
+        for (uneven in listOf(false, true)) for (mx in marks.sorted()) {
             if (sum() <= measureLen + 0.05) break
             // three neighbouring columns centred on the digit
             val centre = cols.indices.minByOrNull { abs(midX(cols[it]) - mx) } ?: continue
@@ -1440,7 +1486,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val group = cols.subList(start, start + 3)
             if (group.any { it.factor != 1.0 }) continue
             val a = group.map { it.advance }
-            if (a.maxOrNull()!! - a.minOrNull()!! > 1e-6 && abs(a[0] + a[1] - a[2]) > 1e-6 && abs(a[1] + a[2] - a[0]) > 1e-6) continue
+            val equal = a.maxOrNull()!! - a.minOrNull()!! <= 1e-6
+            if (!equal && (!uneven || (abs(a[0] + a[1] - a[2]) > 1e-6 && abs(a[1] + a[2] - a[0]) > 1e-6))) continue
             group.forEach { it.factor = 2.0 / 3.0; changed.add(it) }
         }
         if (abs(sum() - measureLen) > 0.05) {
@@ -1576,19 +1623,28 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         for (sys in systems) for (sd in sys.staves) {
             val ss = sd.staff.space
             for (arc in sd.arcs) {
-                val near = sd.heads.filter { abs(it.cy - arc[2]) <= ss * 1.4 }
+                // (a tie under a voice may lie up to ~1.8 spaces from its heads; closer pairs win)
+                val wide = sd.heads.filter { abs(it.cy - arc[2]) <= ss * 1.8 }
+                val near = wide.filter { abs(it.cy - arc[2]) <= ss * 1.4 }
                 // (an arc along a staff line loses its thin ends with the line)
                 val onLine = sd.staff.lines.any { abs(it - arc[2]) <= ss * 0.35 }
-                val a = near.filter { it.x1 >= arc[0] - ss * (if (onLine) 2.3 else 1.7) && it.x1 <= arc[0] + ss * 0.8 }
+                fun starts(hs: List<Head>) = hs.filter { it.x1 >= arc[0] - ss * (if (onLine) 2.3 else 1.7) && it.x1 <= arc[0] + ss * 0.8 }
+                val a = starts(near)
                 // a tie may stop before the bar line that lies between the two notes
-                val reach = arc[1] + ss * 1.5 + if (sd.barlines.any { it.first >= arc[1] - 2 && it.last <= arc[1] + ss * 2.5 }) ss * 1.5 else 0.0
-                for (h1 in a) {
-                    // (the end head may be pushed right by a second whose other head stands where the tie ends)
-                    fun displaced(h: Head) = sd.heads.any { o -> abs(o.step - h.step) == 1 && o.x0 < h.x0 && o.x1 >= h.x0 - ss * 0.25 && o.x0 <= reach }
-                    val h2 = near.filter { it.step == h1.step && it.x0 > h1.x1 && it.x0 >= arc[1] - ss * 0.8 && (it.x0 <= reach || displaced(it)) }
-                        .minByOrNull { it.x0 } ?: continue
-                    if (h2 !in tieSource) tieSource[h2] = h1
+                val reach = arc[1] + ss * (if (onLine) 2.3 else 1.5) + if (sd.barlines.any { it.first >= arc[1] - 2 && it.last <= arc[1] + ss * 2.5 }) ss * 1.5 else 0.0
+                // (the end head may be pushed right by a second whose other head stands where the tie ends)
+                fun displaced(h: Head) = sd.heads.any { o -> abs(o.step - h.step) == 1 && o.x0 < h.x0 && o.x1 >= h.x0 - ss * 0.25 && o.x0 <= reach }
+                // (a tie joins neighbouring notes: with a note of the same voice in between it is a slur)
+                fun between(h1: Head, h2: Head) = sd.heads.any { o ->
+                    o.x0 > h1.x1 + 1 && o.x1 < h2.x0 - ss * 0.3 && o.hasStem && h1.hasStem && o.stemUp == h1.stemUp
                 }
+                fun pairs(hs: List<Head>) = starts(hs).mapNotNull { h1 ->
+                    hs.filter { it.step == h1.step && it.x0 > h1.x1 && it.x0 >= arc[1] - ss * 0.8 && (it.x0 <= reach || displaced(it)) }
+                        .minByOrNull { it.x0 }?.takeIf { !between(h1, it) }?.let { h1 to it }
+                }
+                // (farther away only without accidentals: a slur from B♮ to B♭ looks the same)
+                for ((h1, h2) in pairs(near).ifEmpty { pairs(wide).filter { (h1, h2) -> h1.accidental == null && h2.accidental == null } })
+                    if (h2 !in tieSource) tieSource[h2] = h1
                 // An arc before the first note of the line that ends at a head: a tie from the previous line.
                 if (a.isEmpty() && arc[0] < (sd.heads.minOfOrNull { it.x0 } ?: 0)) {
                     // (also a head pushed right by a second whose other head stands at the tie's end)
@@ -1730,6 +1786,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                             notes[srcIdx] = first.copy(duration = measureStart + onset + dur * 0.95 - first.start)
                             noteEnd[srcIdx] = measureStart + onset + dur
                             noteIndex[h] = srcIdx
+                            // (a head with two stems belongs to two voices: one holds the tie, the other strikes anew)
+                            if (h.twoStems) {
+                                val d2 = min(dur, max(0.25, nextOnset - onset))
+                                notes.add(Note(h.pitch, measureStart + onset, d2 * 0.95, hand))
+                                noteEnd.add(measureStart + onset + d2)
+                            }
                         } else {
                             noteIndex[h] = notes.size
                             notes.add(Note(h.pitch, measureStart + onset, dur * 0.95, hand))
@@ -1783,12 +1845,15 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val cu = columnsOf(up + free, rests.filter { (it.y0 + it.y1) / 2.0 < mid + ss * 0.3 }, ss)
         val cd = columnsOf(down + free, rests.filter { (it.y0 + it.y1) / 2.0 > mid - ss * 0.3 }, ss)
         if (abs(cu.sumOf { it.advance } - measureLen) > 0.05 || abs(cd.sumOf { it.advance } - measureLen) > 0.05) return null
+        // (heads a second apart are printed side by side, touching)
+        fun together(a: Column, b: Column) = a.heads.isNotEmpty() && b.heads.isNotEmpty() && (abs(a.x - b.x) < ss * 0.5 ||
+            a.heads.any { h -> b.heads.any { g -> abs(h.step - g.step) == 1 && min(h.x1, g.x1) - max(h.x0, g.x0) >= -ss * 0.3 } })
         // two voices sound together somewhere (a single line whose stems change direction does not)
-        if (cu.none { a -> a.heads.isNotEmpty() && cd.any { b -> b.heads.isNotEmpty() && abs(a.x - b.x) < ss * 0.5 } }) return null
+        if (cu.none { a -> cd.any { b -> together(a, b) } }) return null
         val ou = sequential(cu); val od = sequential(cd)
         // notes of both voices printed above each other must start together
         for ((i, a) in cu.withIndex()) for ((j, b) in cd.withIndex())
-            if (a.heads.isNotEmpty() && b.heads.isNotEmpty() && abs(a.x - b.x) < ss * 0.5 && abs(ou[i] - od[j]) > 0.05) return null
+            if (together(a, b) && abs(ou[i] - od[j]) > 0.05) return null
         val freeSet = free.toSet()
         val merged = cu.indices.map { cu[it] to ou[it] } +
             cd.indices.map { Column(cd[it].x, cd[it].heads.filter { h -> h !in freeSet }, cd[it].restDuration).also { c -> c.factor = cd[it].factor } to od[it] }
