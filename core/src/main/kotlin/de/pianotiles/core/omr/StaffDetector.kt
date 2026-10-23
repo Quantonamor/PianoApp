@@ -62,7 +62,24 @@ object StaffDetector {
         val maxScore = score.maxOrNull() ?: 0
         if (maxScore == 0) return emptyList()
         val threshold = maxOf(maxScore * 0.35, img.width * 0.15)
+        val staves = findStaves(img, score, threshold, lt, spacing, minRun)
+        // A short last system (e.g. a single final measure) has much shorter lines: search the rest of the
+        // page again with a lower threshold; such staves start where the other staves start.
+        if (staves.isNotEmpty()) {
+            val starts = staves.map { it.xStart }.sorted()
+            val usual = starts[starts.size / 2]
+            val free = IntArray(img.height) { yy ->
+                if (staves.any { yy > it.top - spacing * 2 && yy < it.bottom + spacing * 2 }) 0 else score[yy]
+            }
+            for (st in findStaves(img, free, maxOf(maxScore * 0.1, spacing * 10), lt, spacing, minRun))
+                if (st.xEnd - st.xStart >= spacing * 8 && abs(st.xStart - usual) <= spacing * 3) staves.add(st)
+            staves.sortBy { it.top }
+        }
+        return staves
+    }
 
+    /** Staff lines are rows whose [score] reaches [threshold]; staves are five equally spaced lines. */
+    private fun findStaves(img: BitImage, score: IntArray, threshold: Double, lt: Int, spacing: Double, minRun: Int): MutableList<Staff> {
         // Merge neighbouring candidate rows into lines.
         data class Line(val y: Double, val thickness: Int)
         val lines = ArrayList<Line>()
