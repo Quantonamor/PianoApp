@@ -659,6 +659,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // Ties and slurs, searched with the bar lines erased (a tie across a bar line touches it).
         val noBars = noCrop.copy()
         for (bl in sd.barlines) for (x in (bl.first - 1 - left)..(bl.last + 1 - left)) for (y in 0 until noBars.height) noBars[x, y] = false
+        // stems too: a short tie may touch the stem of its note
+        for (hd in sd.heads) if (hd.hasStem) {
+            val ya = (min(hd.cy, hd.stemEnd.toDouble()) - top).roundToInt(); val yb = (max(hd.cy, hd.stemEnd.toDouble()) - top).roundToInt()
+            for (x in hd.stemX - 1 - left..hd.stemX + 1 - left) for (y in ya..yb) if (x in 0 until noBars.width && y in 0 until noBars.height) noBars[x, y] = false
+        }
         for (b in Components.find(noBars)) {
             val w = b.width / ss; val h = b.height / ss
             if (System.getProperty("omr.trace") != null && w in 1.0..12.0 && h < 2.5)
