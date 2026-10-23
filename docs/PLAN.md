@@ -113,14 +113,15 @@ Ziel: Zufallsrunden mit je 5 neuen Stücken (beide Notensatz-Programme), bis **5
 Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `tools/omr-eval/README.md`.
 
 Stand (2026-10-23):
-- Runde 1 (Choräle BWV 4, 253, 370; Volkslieder Lancashire Clog, Salem Hornpipe): 3 von 10 PDFs bei 100 %,
-  Runde-1-Schnitt 97,4 % Noten / 98,1 % Präzision / 97,6 % Rhythmus. **Noch keine Runde vollständig
+- Runde 1 (Choräle BWV 4, 253, 370; Volkslieder Lancashire Clog, Salem Hornpipe): 5 von 10 PDFs bei 100 %,
+  Runde-1-Schnitt ≈ 99,5 % Noten / 99,6 % Präzision / 99,1 % Rhythmus. **Noch keine Runde vollständig
   bestanden – Zähler: 0/5.**
-- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **92,5 % Noten, 93,3 % Präzision, 95,4 % Rhythmus**
+- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **94,2 % Noten, 94,3 % Präzision, 96,4 % Rhythmus**
   (Sessionbeginn 87,6/91,1/89,5). Lösungen (`truth.txt`) wurden auf Auftakte korrigiert (`truthlib.py`).
 - 2026-10-23 umgesetzt: Auftakt in den Lösungen (✅ alter Punkt 5), unvollständige Takte, ♮/♯-Fenster nicht als
   Notenloch füllen, Balken vs. Nachbarkopf, gemeinsamer Hals bei halben Noten, Vorzeichen-Zuordnung,
-  Verovio-„C“, Akkord ≠ Taktangabe.
+  Verovio-„C“, Akkord ≠ Taktangabe; danach: Balkenlücke ≠ hohler Kopf, Rhythmus je Stimme (Halsrichtung),
+  Haltebögen über Taktstrich/Zeilenumbruch, kurze letzte Notenzeile, Choral-Generator korrigiert (neu gesetzt).
 - Bereits umgesetzt in dieser Schleife: Triolen (Ziffer „3“ + Taktsummen-Prüfung), verbundene
   Taktangaben-Ziffern, verschmolzene Kreuze in der Tonart, Hilfslinien-Ausnahme nur bei gedruckter Linie,
   Vorzeichen-Erkennung über ganze Zeichen, Fehlerarten-Statistik in der Auswertung.
@@ -133,8 +134,7 @@ Stand (2026-10-23):
      Akkordtöne, v. a. Verovio), gefüllte Köpfe fälschlich „hohl“ in gestapelten Akkorden, Vorzeichen in Akkorden.
   4. Tremolo-Schrägstrich (Salem Hornpipe) als Balken fehlinterpretiert (LilyPond jetzt 100 %, Verovio 99 %).
   5. ✅ Lösung bei Auftakten korrigiert (`truthlib.py`, neu erzeugen mit `rescore.py`).
-  6. Neue Runden erzeugen unter Windows: `make_corpus.py` braucht noch `pdfunite`/Cairo (cairosvg) –
-     ggf. durch pypdf + Verovio-PDF-Ausgabe ersetzen.
+  6. ✅ Runden-Erzeugung läuft unter Windows (pypdf statt pdfunite, LilyPonds eigenes python.exe).
 - Ehrliche Einschätzung: 100 % auf *jedem* Zufallsstück ist für Sonderfälle (Verzierungen, N-tolen > 3,
   Chorsätze) eventuell nicht erreichbar; dann Pool auf klaviertypische Literatur eingrenzen und dokumentieren.
 

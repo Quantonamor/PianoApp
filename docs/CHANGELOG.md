@@ -29,8 +29,9 @@
   „125 %“ unerreichbar) – jetzt bis 560/640 dp breit; das Ergebnis ist je nach Trefferquote grün/orange/rot.
 * Absturz behoben: Beim Öffnen einer Datei per „Teilen → PianoTiles“ konnte das gerade importierte Stück
   verschwinden (zweites App-Fenster lud die Bibliothek gleichzeitig neu) – Laden/Speichern sind jetzt serialisiert.
-* PDF-Erkennung (Konvergenz-Schleife, Regressions-Satz 87,6/91,1/89,5 % → 92,5/93,3/95,4 % Noten/Präzision/
-  Rhythmus): Auftakte und unvollständige Takte mitten im Stück (vor Wiederholungen) behalten ihre Länge;
+* PDF-Erkennung (Konvergenz-Schleife, Regressions-Satz 87,6/91,1/89,5 % → 94,2/94,3/96,4 % Noten/Präzision/
+  Rhythmus): Haltebögen über Taktstriche und Zeilenumbrüche; Rhythmus je Stimme bei zwei Stimmen pro Zeile;
+  kurze letzte Notenzeile wird gefunden; Lücke zwischen zwei Balken ist kein hohler Notenkopf; Auftakte und unvollständige Takte mitten im Stück (vor Wiederholungen) behalten ihre Länge;
   ♮/♯ werden nicht mehr als „Loch“ einer halben Note gefüllt (verschmolzen sonst mit dem Notenkopf);
   Balkenzählung stolpert nicht mehr über Köpfe der anderen Stimme; halbe Noten mit gemeinsamem Hals;
   Vorzeichen gehören zum nächsten Kopf rechts; Verovio-„C“ (4/4), das beim Entfernen der Notenlinien

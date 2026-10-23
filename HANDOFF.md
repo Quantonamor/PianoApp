@@ -1,6 +1,6 @@
 # Übergabe für die nächste Session („weiter“)
 
-Stand: **2026-10-23 (abends)**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI komplett grün**
+Stand: **2026-10-23 (spät)**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI komplett grün**
 (Core-Tests, APK-Build, Emulator-Bedientest). Allgemeine Regeln und Befehle stehen in `CLAUDE.md`.
 
 ## Was als Nächstes zu tun ist (Reihenfolge)
@@ -14,15 +14,17 @@ Stand: **2026-10-23 (abends)**, letzter Commit auf Branch `ccr-257ad710-x5upqq`,
    Anleitung `tools/omr-eval/README.md`). Konkret:
    ```bash
    bash tools/omr-eval/setup.sh                                   # einmal pro Session
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 92,5 / 93,3 / 95,4 %
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r1           # Runde 1: 3 von 10 PDFs bei 100 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 94,2 / 94,3 / 96,4 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r1           # Runde 1: 5 von 10 PDFs bei 100 %
    ```
-   Läuft auch lokal unter Windows (Git Bash). Offene Punkte (Reihenfolge): fehlende Akkordtöne bei zwei
-   Stimmen pro Zeile (Sekunden/gemeinsame Köpfe, v. a. Verovio-Choräle) → gefüllte Köpfe fälschlich „hohl“ in
-   gestapelten Akkorden → Vorzeichen in Akkorden → kleine „8“ am Violinschlüssel bei Verovio. Erst wenn Runde 1
-   sauber ist: neue Runde (`source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 2 <seed>` – unter
-   Windows fehlen dafür noch `pdfunite`/Cairo, siehe PLAN Punkt 6), **Runde danach ins Repo sichern**
-   (Befehl im README). Zähler „5 Runden hintereinander 100 %“: **0/5**.
+   Läuft auch lokal unter Windows (Git Bash). Offene Punkte in Runde 1 (Reihenfolge, Details per
+   `DIFF=1 bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r1` – zeigt jetzt auch EXTRA/MISS mit Seitenposition):
+   BWV 4 (Akkord-Sekunde 46/62@38 fehlt, Vorzeichen), BWV 370 (Rhythmus 96–97 %: Takt um Schlag 29–31,
+   Oktavfehler beim ersten Akkord), Lancashire Clog Verovio (eine fehlende Note 76@54.5). Dann neue Runde:
+   `source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 2 <seed>` (läuft jetzt auch unter Windows),
+   **Runde danach ins Repo sichern** (Befehl im README). Zähler „5 Runden hintereinander 100 %“: **0/5**.
+   Choräle des Generators wurden korrigiert und neu gesetzt (Tonart in beiden Systemen, ♮ ausgeschrieben,
+   Hals oben/unten je Stimme) – alte PDFs waren nicht lösungstreu.
    Werkzeuge zur Fehlersuche: `-Pomr.trace=1` gibt u. a. `BLOB`, `HEAD`, `TIMESIG`, `ACCCAND`, `SLOT` aus;
    Overlays in `/tmp/omr-work/omr/` (unter Windows `%LOCALAPPDATA%\Temp\omr-work\omr`).
 3. Kleinere Ideen, falls Zeit bleibt: Verovio-PDFs mit sehr kleinen Notenköpfen, Hilfe-Text um Editor/KI ergänzen,
