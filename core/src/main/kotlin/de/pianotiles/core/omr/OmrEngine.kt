@@ -404,6 +404,19 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         if (System.getProperty("omr.trace") != null) Components.find(noStaffCrop).filter { it.cx + left < st.xStart + ss * 14 && it.height / ss > 1.0 }.forEach {
             println("TSCAND x=${it.minX + left}-${it.maxX + left} y=${it.minY + top}-${it.maxY + top} top=${st.top} mid=${st.middle} bot=${st.bottom} h=${"%.2f".format(it.height / ss)} w=${"%.2f".format(it.width / ss)}")
         }
+        /** The bow of a "C" alone: bulging left at mid height, with ink right of it near the top (the ball) and the bottom (the tail). */
+        fun bowOfC(b: Blob): Boolean {
+            fun ink(y0: Int, y1: Int): Double {
+                var n = 0; var t = 0
+                for (y in max(0, y0)..min(noStaffCrop.height - 1, y1)) for (x in b.maxX + 1..min(noStaffCrop.width - 1, b.maxX + ss.roundToInt())) { t++; if (noStaffCrop[x, y]) n++ }
+                return if (t == 0) 0.0 else n.toDouble() / t
+            }
+            val mid = (b.minY + b.maxY) / 2; val band = (ss * 0.25).roundToInt(); val edge = (ss * 0.6).roundToInt()
+            // the bow bulges to the left at mid height
+            fun leftmost(y0: Int, y1: Int) = (y0..y1).mapNotNull { y -> (b.minX..b.maxX).firstOrNull { x -> noStaffCrop[x, y] } }.minOrNull() ?: b.maxX
+            val bulge = leftmost(mid - band, mid + band) <= b.minX + 1 && leftmost(b.minY, b.minY + band) >= b.minX + 3
+            return bulge && ink(mid - band, mid + band) < 0.3 && ink(b.minY, b.minY + edge) > 0.1 && ink(b.maxY - edge, b.maxY) > 0.03
+        }
         /** A note with its stem: most rows are just the thin stem (digits are wide in nearly every row). */
         fun mostlyStem(b: Blob): Boolean {
             var thin = 0
@@ -450,6 +463,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 abs((it.minY + it.maxY) / 2.0 + top - st.middle) < ss * 0.5 && !mostlyStem(it) &&
                 it.cx + left < st.xStart + ss * 12 && it.cx + left > st.xStart + ss * 2.5 && openRight(it)
         }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)); sd.commonTime = true; sd.cutTime = true }
+        // a "C" whose top end (the ball) came apart when the staff lines were removed: only its narrow bow is left;
+        // the box covers the whole C, so the loose ball is not read as a note
+        if (timeSigBoxes.isEmpty()) Components.find(noStaffCrop).firstOrNull {
+            it.height / ss in 1.6..2.6 && it.width / ss in 0.5..0.8 && abs((it.minY + it.maxY) / 2.0 + top - st.middle) < ss * 0.5 &&
+                it.cx + left < st.xStart + ss * 12 && it.minX + left > st.xStart + ss * 2.5 && bowOfC(it)
+        }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, max(it.maxX, it.minX + (ss * 1.5).toInt()), it.maxY)); sd.commonTime = true }
         if (System.getProperty("omr.trace") != null) timeSigBoxes.forEach { println("TSBOX x=${it[0] + left}-${it[2] + left} y=${it[1] + top}-${it[3] + top} common=${sd.commonTime} cut=${sd.cutTime}") }
         timeSigBoxes.forEach { sd.timeSigs.add(intArrayOf(it[0] + left, it[1] + top, it[2] + left, it[3] + top)) }
         fun inTimeSig(b: Blob) = timeSigBoxes.any { bx -> b.cx >= bx[0] - 2 && b.cx <= bx[2] + 2 && b.cy >= bx[1] - 2 && b.cy <= bx[3] + 2 }
@@ -533,6 +552,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // Second pass with the cleaned list: a stem must not end inside another head of the same chord.
         for (hd in sd.heads) { hd.stemX = -1; hd.beams = 0; findStem(noStaff, hd, ss, sd.heads, allowEndInHead = false) }
         sd.heads.removeAll { !it.hollow && !it.hasStem && (it.x1 - it.x0) / ss < 1.0 } // isolated blobs, likely noise
+        // the same for hollow ones that only borrowed a neighbour's stem in the first pass (the hook of a flag) –
+        // unless it belongs to a chord (a half note of a chord can lose its stem here)
+        val lone = sd.heads.filter { h -> sd.heads.none { o -> o !== h && o.x0 <= h.x1 && o.x1 >= h.x0 && abs(o.cy - h.cy) < ss * 4 } }.toSet()
+        sd.heads.removeAll { it.hollow && !it.hasStem && (it.x1 - it.x0 + 1) / ss < (if (it in lone) 1.3 else 1.0) }
         // Stacked heads without a stem (whole-note chords) need a hole in every head; otherwise the blob is
         // something else (time signature digits, clef parts, ...).
         val badBlobs = sd.heads.groupBy { it.blobId }.filter { (_, hs) -> hs.size > 1 && hs.none { it.hasStem } && hs.any { !it.hollow } }.keys
