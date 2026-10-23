@@ -1235,23 +1235,32 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             slot.perStaff.forEachIndexed { si, cols ->
                 applyTuplets(cols, slot.staves[si].tupletMarks.filter { it > slot.left && it < slot.right }, measureLen, ss)
             }
-            val sums = slot.perStaff.map { cols -> cols.sumOf { it.advance } }
-            val good = slot.perStaff.indices.filter { slot.perStaff[it].isNotEmpty() && abs(sums[it] - measureLen) < 0.05 }
-            if (System.getProperty("omr.trace") != null) println("SLOT $mi marks=${slot.staves.map { sd -> sd.tupletMarks.filter { it > slot.left && it < slot.right }.map { it.toInt() } }} sys=${slot.system} x=${slot.left.toInt()}-${slot.right.toInt()} L=$measureLen sums=$sums cols=${slot.perStaff.map { c -> c.map { "%.2f".format(it.advance) } }}")
+            // Two voices in one staff with different rhythms: the columns do not add up, but the stems-up and the
+            // stems-down voice each fill the measure. Such staves get their onsets per voice.
+            val perStaff = slot.perStaff.toMutableList()
+            val voiceOnsets = HashMap<Int, List<Double>>()
+            for (si in perStaff.indices) {
+                if (abs(perStaff[si].sumOf { it.advance } - measureLen) < 0.05) continue
+                val split = splitVoices(slot.staves[si], perStaff[si], slot, measureLen, ss) ?: continue
+                perStaff[si] = split.first; voiceOnsets[si] = split.second
+            }
+            val sums = perStaff.mapIndexed { si, cols -> if (si in voiceOnsets) measureLen else cols.sumOf { it.advance } }
+            val good = perStaff.indices.filter { perStaff[it].isNotEmpty() && abs(sums[it] - measureLen) < 0.05 }
+            if (System.getProperty("omr.trace") != null) println("SLOT $mi marks=${slot.staves.map { sd -> sd.tupletMarks.filter { it > slot.left && it < slot.right }.map { it.toInt() } }} sys=${slot.system} x=${slot.left.toInt()}-${slot.right.toInt()} L=$measureLen sums=$sums cols=${perStaff.map { c -> c.map { "%.2f".format(it.advance) } }}")
             var length = measureLen
             var short = false
             val onsets: List<List<Double>> // per staff per column
             if (good.isNotEmpty()) {
-                val ref = good.maxBy { slot.perStaff[it].size }
-                val anchorsX = ArrayList<Double>(); val anchorsT = ArrayList<Double>()
-                var t = 0.0
-                for (c in slot.perStaff[ref]) { anchorsX.add(c.x); anchorsT.add(t); t += c.advance }
+                val goodOnsets = good.associateWith { voiceOnsets[it] ?: sequential(perStaff[it]) }
+                val ref = good.maxBy { perStaff[it].size }
+                val anchors = perStaff[ref].indices.map { perStaff[ref][it].x to goodOnsets.getValue(ref)[it] }.sortedBy { it.first }
+                val anchorsX = ArrayList(anchors.map { it.first }); val anchorsT = ArrayList(anchors.map { it.second })
                 anchorsX.add(slot.right); anchorsT.add(measureLen)
-                onsets = slot.perStaff.mapIndexed { si, cols ->
-                    if (si in good) sequential(cols) else cols.map { quantize(interpolate(it.x, anchorsX, anchorsT), 0.25) }
+                onsets = perStaff.mapIndexed { si, cols ->
+                    goodOnsets[si] ?: cols.map { quantize(interpolate(it.x, anchorsX, anchorsT), 0.25) }
                 }
             } else {
-                val nonEmpty = slot.perStaff.indices.filter { slot.perStaff[it].isNotEmpty() }
+                val nonEmpty = perStaff.indices.filter { perStaff[it].isNotEmpty() }
                 val consistent = nonEmpty.isNotEmpty() && nonEmpty.all { abs(sums[it] - sums[nonEmpty[0]]) < 0.05 }
                 // Pick-up, or an incomplete measure inside the piece (e.g. before a repeat sign) that both
                 // staves agree on.
@@ -1266,16 +1275,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 if (short) {
                     if (mi == 0) pickup = sums[nonEmpty[0]]
                     length = sums[nonEmpty[0]]
-                    onsets = slot.perStaff.map { sequential(it) }
+                    onsets = perStaff.map { sequential(it) }
                 } else {
                     estimated.add(mi + 1)
-                    val firstX = slot.perStaff.flatten().minOfOrNull { it.x } ?: slot.left
-                    onsets = slot.perStaff.map { cols ->
+                    val firstX = perStaff.flatten().minOfOrNull { it.x } ?: slot.left
+                    onsets = perStaff.map { cols ->
                         cols.map { c -> quantize((c.x - firstX) / max(1.0, slot.right - ss * 0.8 - firstX) * measureLen, 0.25).coerceAtMost(measureLen - 0.25) }
                     }
                 }
             }
-            for ((si, cols) in slot.perStaff.withIndex()) {
+            for ((si, cols) in perStaff.withIndex()) {
                 val sd = slot.staves[si]
                 val hand = sd.hand
                 val accidentals = HashMap<Int, Int>()
@@ -1334,6 +1343,33 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             flaggedMeasures = estimated.map { it - 1 },
         )
         return song to estimated
+    }
+
+    /**
+     * Splits a staff's measure into the stems-up and the stems-down voice. Returns the columns of both voices
+     * (sorted by onset) with their onsets, or null when the staff has no two voices or one of them does not
+     * fill the measure. Stemless heads (whole notes) and rests on the middle line belong to both voices.
+     */
+    private fun splitVoices(sd: StaffData, cols: List<Column>, slot: MeasureSlot, measureLen: Double, ss: Double): Pair<List<Column>, List<Double>>? {
+        val heads = cols.flatMap { it.heads }
+        val up = heads.filter { it.hasStem && it.stemUp }
+        val down = heads.filter { it.hasStem && !it.stemUp }
+        if (up.isEmpty() || down.isEmpty()) return null
+        val free = heads.filter { !it.hasStem }
+        val rests = sd.rests.filter { it.cx > slot.left && it.cx < slot.right }
+        val mid = sd.staff.middle
+        val cu = columnsOf(up + free, rests.filter { (it.y0 + it.y1) / 2.0 < mid + ss * 0.3 }, ss)
+        val cd = columnsOf(down + free, rests.filter { (it.y0 + it.y1) / 2.0 > mid - ss * 0.3 }, ss)
+        if (abs(cu.sumOf { it.advance } - measureLen) > 0.05 || abs(cd.sumOf { it.advance } - measureLen) > 0.05) return null
+        val ou = sequential(cu); val od = sequential(cd)
+        // notes of both voices printed above each other must start together
+        for ((i, a) in cu.withIndex()) for ((j, b) in cd.withIndex())
+            if (a.heads.isNotEmpty() && b.heads.isNotEmpty() && abs(a.x - b.x) < ss * 0.5 && abs(ou[i] - od[j]) > 0.05) return null
+        val freeSet = free.toSet()
+        val merged = cu.indices.map { cu[it] to ou[it] } +
+            cd.indices.map { Column(cd[it].x, cd[it].heads.filter { h -> h !in freeSet }, cd[it].restDuration).also { c -> c.factor = cd[it].factor } to od[it] }
+        val out = merged.filter { it.first.heads.isNotEmpty() }.sortedWith(compareBy({ it.second }, { it.first.x }))
+        return out.map { it.first } to out.map { it.second }
     }
 
     private fun sequential(cols: List<Column>): List<Double> {
