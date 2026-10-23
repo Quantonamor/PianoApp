@@ -174,6 +174,8 @@ Stand (2026-10-22):
 - Bereits umgesetzt in dieser Schleife: Triolen (Ziffer „3“ + Taktsummen-Prüfung), verbundene
   Taktangaben-Ziffern, verschmolzene Kreuze in der Tonart, Hilfslinien-Ausnahme nur bei gedruckter Linie,
   Vorzeichen-Erkennung über ganze Zeichen, Fehlerarten-Statistik in der Auswertung.
+- Hinweis: In `r2/chorale_bwv318/lilypond.pdf` fehlt der Taktstrich nach dem Auftakt (Export music21 → LilyPond ohne
+  `\partial`) – der erste Takt ist im PDF 5 Schläge lang; diese Abweichung ist kein Erkennungsfehler.
 - **Nächste Schritte (in dieser Reihenfolge):**
   1. ✅ Oktavierter Violinschlüssel – auch wenn die 8 mit dem Schlüssel-Schwanz verschmilzt (Verovio) bzw. sehr
      dünn ist (LilyPond): lift_every_voice 73→94 % (LilyPond), 54→93 % (Verovio).
