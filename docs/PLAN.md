@@ -113,18 +113,24 @@ Ziel: Zufallsrunden mit je 5 neuen Stücken (beide Notensatz-Programme), bis **5
 Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `tools/omr-eval/README.md`.
 
 Stand (2026-10-23, spät, Session 2):
-- **Runde 1 und Runde 2 jetzt je 10 von 10 PDFs bei 100 %** (nach Korrekturen – zählen nicht für den Zähler,
-  der nur frische Runden zählt). Runde 3 (Seed 3033) frisch: 2 von 10 bei 100 %, Schnitt 99,0 / 99,0 / 95,9 %.
-  **Zähler „5 Runden hintereinander 100 %“: 0/5.**
-- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **94,9 % Noten, 94,8 % Präzision, 97,4 % Rhythmus**
-  (vorher 94,2/94,3/96,4).
+- **Runden 1–3 je 10/10 PDFs bei 100 %** (nach Korrekturen; zählen nicht für den Zähler). Runde 4 (Seed 4044)
+  frisch: 3/10 bei 100 %, nach Korrekturen 5/10 (offen: BWV 336/388 Verovio Präzision 98,7/99,5 %, BWV 392
+  Vorzeichen in beiden + Verovio-Rhythmus 96 % (Kopf berührt Taktstrich → Taktstrich fehlt), Molly McGuire's Reel
+  LilyPond 98,3 % (16tel-Fähnchen im Auftakt als Achtel gelesen)). **Zähler „5 Runden hintereinander 100 %“: 0/5.**
+- Regressions-Satz (fester Korpus + Runde 1, 36 PDFs): **94,9 % Noten, 94,9 % Präzision, 97,6 % Rhythmus**
+  (Sessionbeginn 94,2/94,3/96,4).
+- Generator korrigiert: Vorzeichen in Chorälen über beide Stimmen eines Systems (Verovio ließ ♮ weg); alle
+  Runden-Choräle neu gesetzt. `rescore.py` findet den richtigen Choral (bwv244 → bwv244.15 über `used_pieces.txt`).
 - Session 2 umgesetzt: ♭-Form nur aus eigenen Pixeln (♮ daneben), hohle Note mit zwei Hälsen (beide Stimmen),
   Balkensuche schneidet ♮-Strich nicht mehr an, Haltebogen-Stücke am Taktstrich vor der Formprüfung verbinden,
   Stimmen-Trennung auch in unvollständigen Takten, Viertel+Hals ≠ verbundene Taktangabe, Haltebogen zu
   verschobenem Sekundkopf / entlang einer Notenlinie, Vorzeichen durch Haltebogen ausgeschnitten, Zelle zwischen
   ♯/♮ und Kopf kein Loch, Taktart zählt jede Systemsumme, Fermate am Halsende ist kein Balken, Tonart-♯ nicht als
   Vorzeichen der ersten Note, gebrochene 6/8-Ziffer, Einklang/Sekunde zweier Stimmen = eine Spalte,
-  winzige Zelle Kopf/Hals/Linie kein Loch.
+  winzige Zelle Kopf/Hals/Linie kein Loch; 8tel/16tel-Pausen über ihre Form, unbezifferte Tuolen, Aufstrich-„V“
+  ≠ Triolen-3, Wiederholungspunkte ≠ Verlängerungspunkt, Abschnittsende + Auftakt, letzter Takt ergänzt den
+  Auftakt, Fermaten-Takte (3+1) auch wenn ein System zufällig 4 Schläge ergibt, Stimmen der Ober-/Unterstimme
+  mit verschobenen Pausen, leere Takte zwischen Doppelstrichen, ♭ der Tonart ≠ Taktangabe.
 - 2026-10-23 umgesetzt: Auftakt in den Lösungen (✅ alter Punkt 5), unvollständige Takte, ♮/♯-Fenster nicht als
   Notenloch füllen, Balken vs. Nachbarkopf, gemeinsamer Hals bei halben Noten, Vorzeichen-Zuordnung,
   Verovio-„C“, Akkord ≠ Taktangabe; danach: Balkenlücke ≠ hohler Kopf, Rhythmus je Stimme (Halsrichtung),

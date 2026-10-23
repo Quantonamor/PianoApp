@@ -14,14 +14,15 @@ Stand: **2026-10-23 (Session 2)**, letzter Commit auf Branch `ccr-bbbc1057-0ev5g
    Anleitung `tools/omr-eval/README.md`). Konkret:
    ```bash
    bash tools/omr-eval/setup.sh                                   # einmal pro Session
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 94,9 / 94,8 / 97,4 %
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r3           # Runde 3: 2 von 10 PDFs bei 100 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 94,9 / 94,9 / 97,6 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r4           # Runde 4: 5 von 10 PDFs bei 100 %
    ```
-   Runden 1 und 2 sind inzwischen vollständig (10/10). **Offen in Runde 3** (Seed 3033, gesichert unter
-   `tools/omr-eval/rounds/r3`): BWV 244 Verovio (Vorzeichen, 94,8 %), Old National Theatre Jig (Rhythmus 84–86 %,
-   fehlende Noten), Clear the Track / Miss Jess Watson / Night of the Fair (Rhythmus 97–99 %). Danach Runde 4:
-   `source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 4 <seed>` und **ins Repo sichern** (Befehl im
-   README). Zähler „5 Runden hintereinander 100 %“: **0/5** (nur frische Runden zählen).
+   Runden 1–3 sind vollständig (10/10). **Offen in Runde 4** (Seed 4044, gesichert unter `tools/omr-eval/rounds/r4`):
+   Molly McGuire's Reel LilyPond (16tel-Fähnchen im Auftakt → als Achtel gelesen; `countBeams`), BWV 392 (ein
+   Vorzeichen in beiden Renderern; Verovio: Kopf berührt Taktstrich, die Zelle dazwischen wird als Loch gefüllt →
+   Taktstrich fehlt; zwei Versuche verworfen, siehe Commit-Verlauf), BWV 336/388 Verovio (je eine Extra-Note).
+   Danach Runde 5: `source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 5 <seed>` und **ins Repo sichern**
+   (Befehl im README). Zähler „5 Runden hintereinander 100 %“: **0/5** (nur frische Runden zählen).
    Werkzeuge zur Fehlersuche: `-Pomr.trace=1` gibt u. a. `BLOB`, `HEAD`, `HOLE1`, `TIMESIG`, `ACCCAND`, `ARCCAND`,
    `BARS`, `SLOT` aus (Zeilen vor der ersten `TRUTH`-Zeile = LilyPond, danach Verovio);
    Overlays in `/tmp/omr-work/omr/` (unter Windows `%LOCALAPPDATA%\Temp\omr-work\omr`).
