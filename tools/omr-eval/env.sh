@@ -11,6 +11,8 @@ else PY=python; fi
 if [ -x "$W/lyenv/Scripts/python.exe" ]; then VPY="$W/lyenv/Scripts/python.exe"; else VPY="$W/lyenv/bin/python"; fi
 winpath() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else echo "$1"; fi; }
 export REPO W
+# Python scripts read OMR_WORK; on Windows they need the native path (C:/...)
+export OMR_WORK="$(winpath "$W")"
 # Java classpath separator
 if command -v cygpath >/dev/null 2>&1; then SEP=';'; else SEP=':'; fi
 export PYTHONIOENCODING=utf-8

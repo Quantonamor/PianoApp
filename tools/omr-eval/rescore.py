@@ -1,5 +1,6 @@
-"""Rebuilds truth.txt for existing pieces (fixed corpus or round folders) from the music21 corpus,
-without engraving the PDFs again. Usage: rescore.py DIR [DIR ...]  (each DIR holds one folder per piece)."""
+"""Rebuilds truth.txt for existing pieces (fixed corpus or round folders) from the music21 corpus.
+Usage: rescore.py [--pdf] DIR [DIR ...]  (each DIR holds one folder per piece);
+--pdf also engraves lilypond.pdf and verovio.pdf again (after a fix of the generator in make_corpus.py)."""
 import os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -36,12 +37,17 @@ def score_for(name):
 
 
 os.makedirs(os.path.join(W, 'tmp'), exist_ok=True)
-for root in sys.argv[1:]:
+engrave = '--pdf' in sys.argv
+for root in [a for a in sys.argv[1:] if a != '--pdf']:
     for name in sorted(os.listdir(root)):
         d = os.path.join(root, name)
         if not os.path.isfile(os.path.join(d, 'truth.txt')): continue
         try:
             xml = os.path.join(W, 'tmp', name + '.musicxml')
+            if engrave:
+                mc['write_pdfs'](name, score_for(name), d)
+                for f in os.listdir(d):
+                    if f.endswith(('.png', '.ly', '.musicxml')): os.remove(os.path.join(d, f))
             score_for(name).write('musicxml', fp=xml)
             old = open(os.path.join(d, 'truth.txt')).read().split('\n')
             write_truth(converter.parse(xml), d)

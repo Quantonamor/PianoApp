@@ -1,12 +1,21 @@
 import os, sys, subprocess, copy, traceback
-from music21 import corpus, stream, converter, layout, clef, meter
+from music21 import corpus, stream, converter, layout, clef, meter, key
 import verovio, cairosvg
 
 W = os.environ.get('OMR_WORK', '/tmp/omr-work')  # working dir (see setup.sh)
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(W, 'corpus2')
 import glob
-LY = (glob.glob(os.path.join(W, 'lyenv/lib/python3*/site-packages/lilypond-binaries/bin')) or ['/usr/bin'])[0]
+LY = (glob.glob(os.path.join(W, 'lyenv/lib/python3*/site-packages/lilypond-binaries/bin')) +
+      glob.glob(os.path.join(W, 'lyenv/Lib/site-packages/lilypond-binaries/bin')) or ['/usr/bin'])[0]
+import shutil
+
+
+def ly_cmd(tool):
+    """LilyPond tools; on Windows the scripts run with LilyPond's bundled python.exe."""
+    if os.name == 'nt':
+        return [os.path.join(LY, 'lilypond.exe')] if tool == 'lilypond' else [os.path.join(LY, 'python.exe'), os.path.join(LY, tool + '.py')]
+    return [os.path.join(LY, tool)]
 
 def first_measures(s, n):
     return s.measures(1, n) if n else s
@@ -21,15 +30,28 @@ def piano_reduction_chorale(name):
     for src, dst, c in [((parts[0], parts[1]), sa, clef.TrebleClef()), ((parts[2], parts[3]), tb, clef.BassClef())]:
         m1 = src[0].getElementsByClass(stream.Measure)
         m2 = src[1].getElementsByClass(stream.Measure)
-        for a, b in zip(m1, m2):
+        for k, (a, b) in enumerate(zip(m1, m2)):
             m = stream.Measure(number=a.number)
-            if a.timeSignature: m.timeSignature = copy.deepcopy(a.timeSignature)
-            if a.keySignature: m.keySignature = copy.deepcopy(a.keySignature)
+            # the soprano's signatures for both staves (in some corpus chorales only the soprano has the key)
+            sop = parts[0].getElementsByClass(stream.Measure)[k]
+            ts = sop.timeSignature or a.timeSignature
+            ks = sop.keySignature
+            if ts: m.timeSignature = copy.deepcopy(ts)
+            if ks: m.keySignature = copy.deepcopy(ks)
             v1 = stream.Voice(); v2 = stream.Voice()
-            for e in a.notesAndRests: v1.insert(e.offset, copy.deepcopy(e))
-            for e in b.notesAndRests: v2.insert(e.offset, copy.deepcopy(e))
+            # two voices per staff, engraved like a piano reduction: stems up / stems down
+            for v, src_m, stem in ((v1, a, 'up'), (v2, b, 'down')):
+                for e in src_m.notesAndRests:
+                    e2 = copy.deepcopy(e)
+                    if e2.isNote or e2.isChord: e2.stemDirection = stem
+                    v.insert(e.offset, e2)
             m.insert(0, v1); m.insert(0, v2)
             dst.append(m)
+        # print every accidental the key does not imply (Verovio only draws accidentals written in the MusicXML)
+        cur = None
+        for m in dst.getElementsByClass(stream.Measure):
+            cur = m.keySignature or cur
+            m.makeAccidentals(useKeySignature=cur or True, inPlace=True, cautionaryNotImmediateRepeat=False)
         dst.insert(0, c)
     ns.insert(0, sa); ns.insert(0, tb)
     ns.insert(0, layout.StaffGroup([sa, tb], symbol='brace'))
@@ -63,20 +85,26 @@ def write_pdfs(name, score, d):
         svg = tk.renderToSVG(i)
         cairosvg.svg2pdf(bytestring=svg.encode(), write_to=os.path.join(d, f'vrv_p{i}.pdf'), background_color='white')
     pages = sorted(f for f in os.listdir(d) if f.startswith('vrv_p'))
-    if len(pages) == 1: os.rename(os.path.join(d, pages[0]), os.path.join(d, 'verovio.pdf')); pages = []
-    else: subprocess.run(['pdfunite'] + [os.path.join(d, p) for p in pages] + [os.path.join(d, 'verovio.pdf')], check=True)
+    if len(pages) == 1: os.replace(os.path.join(d, pages[0]), os.path.join(d, 'verovio.pdf')); pages = []
+    elif shutil.which('pdfunite'): subprocess.run(['pdfunite'] + [os.path.join(d, p) for p in pages] + [os.path.join(d, 'verovio.pdf')], check=True)
+    else:
+        from pypdf import PdfWriter
+        w = PdfWriter()
+        for p in pages: w.append(os.path.join(d, p))
+        with open(os.path.join(d, 'verovio.pdf'), 'wb') as f: w.write(f)
+        w.close()
     for p in pages: os.remove(os.path.join(d, p))
     # LilyPond via musicxml2ly
-    subprocess.run([os.path.join(LY, 'musicxml2ly'), '--no-beaming', '-o', os.path.join(d, 'lily.ly'), xml], check=True, capture_output=True)
+    subprocess.run(ly_cmd('musicxml2ly') + ['--no-beaming', '-o', os.path.join(d, 'lily.ly'), xml], check=True, capture_output=True)
     lyfile = os.path.join(d, 'lily.ly')
     txt = open(lyfile).read()
     txt = txt.replace('\\paper {', '\\paper {\n  #(set-paper-size "a4")', 1) if '\\paper {' in txt else txt + '\n\\paper { #(set-paper-size "a4") }\n'
     open(lyfile, 'w').write(txt)
-    r = subprocess.run([os.path.join(LY, 'lilypond'), '-s', '-o', os.path.join(d, 'lilypond'), lyfile], capture_output=True, text=True)
+    r = subprocess.run(ly_cmd('lilypond') + ['-s', '-o', os.path.join(d, 'lilypond'), lyfile], capture_output=True, text=True)
     if r.returncode != 0: print('lilypond failed', name, r.stderr[-500:])
     for eng in ['verovio', 'lilypond']:
         pdf = os.path.join(d, eng + '.pdf')
-        if os.path.exists(pdf):
+        if os.path.exists(pdf) and shutil.which('pdftoppm'):
             subprocess.run(['pdftoppm', '-gray', '-png', '-scale-to-x', '2000', '-scale-to-y', '-1', pdf, os.path.join(d, eng)], check=True)
 
 for name, path, nmeas, kind in CASES:
