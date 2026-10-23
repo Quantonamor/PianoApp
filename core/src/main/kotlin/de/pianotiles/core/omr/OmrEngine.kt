@@ -406,18 +406,23 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val firstNoteX = sd.heads.minOfOrNull { it.x0 } ?: Int.MAX_VALUE
             Components.find(noStaffCrop).filter {
                 val h = it.height / ss; val w = it.width / ss
+                // spans the staff from the top line to (nearly, the line removal eats the base of the lower
+                // digit) the bottom line; a note with its stem is off-centre
                 h in 2.6..4.7 && w in 1.1..2.4 && abs(it.cy + top - st.middle) < ss * 0.6 &&
+                    abs(it.minY + top - st.top) < ss * 0.7 && abs(it.maxY + top - st.bottom) < ss * 1.0 &&
                     it.maxX + left < firstNoteX && it.cx + left < st.xStart + ss * 14 && it.minX + left > st.xStart + ss * 2.5
             }.minByOrNull { it.minX }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)) }
         }
         if (timeSigBoxes.isEmpty()) glyphs.firstOrNull {
             abs(it.cy + top - st.middle) < ss * 0.5 && it.cx + left < st.xStart + ss * 12 && openRight(it)
         }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)); sd.commonTime = true }
+        if (System.getProperty("omr.trace") != null) println("TIMESIG staff=$staffNo ${timeSigBoxes.map { (it.map { v -> v }).toString() }} common=${sd.commonTime} left=$left top=$top")
         timeSigBoxes.forEach { sd.timeSigs.add(intArrayOf(it[0] + left, it[1] + top, it[2] + left, it[3] + top)) }
         fun inTimeSig(b: Blob) = timeSigBoxes.any { bx -> b.cx >= bx[0] - 2 && b.cx <= bx[2] + 2 && b.cy >= bx[1] - 2 && b.cy <= bx[3] + 2 }
         for ((blobId, b) in blobs.withIndex()) {
             if (inTimeSig(b)) continue
             val w = b.width / ss; val h = b.height / ss
+            if (System.getProperty("omr.trace") != null) println("BLOB staff=$staffNo x=${b.minX + left}-${b.maxX + left} y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} fill=${"%.2f".format(b.fill)}")
             if (h < 0.8 || w < 0.85 || b.fill < 0.45) continue
             if (b.cx + left < headerEnd) continue
             // Time signature: two digits covering exactly the staff height.
@@ -1176,6 +1181,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val good = slot.perStaff.indices.filter { slot.perStaff[it].isNotEmpty() && abs(sums[it] - measureLen) < 0.05 }
             if (System.getProperty("omr.trace") != null) println("SLOT $mi marks=${slot.staves.map { sd -> sd.tupletMarks.filter { it > slot.left && it < slot.right }.map { it.toInt() } }} sys=${slot.system} x=${slot.left.toInt()}-${slot.right.toInt()} L=$measureLen sums=$sums cols=${slot.perStaff.map { c -> c.map { "%.2f".format(it.advance) } }}")
             var length = measureLen
+            var short = false
             val onsets: List<List<Double>> // per staff per column
             if (good.isNotEmpty()) {
                 val ref = good.maxBy { slot.perStaff[it].size }
@@ -1189,9 +1195,19 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             } else {
                 val nonEmpty = slot.perStaff.indices.filter { slot.perStaff[it].isNotEmpty() }
                 val consistent = nonEmpty.isNotEmpty() && nonEmpty.all { abs(sums[it] - sums[nonEmpty[0]]) < 0.05 }
-                if (mi == 0 && consistent && sums[nonEmpty[0]] < measureLen - 0.05) {
-                    pickup = sums[nonEmpty[0]]
-                    length = pickup
+                // Pick-up, or an incomplete measure inside the piece (e.g. before a repeat sign) that both
+                // staves agree on.
+                // A single staff has nothing to agree with: there the neighbour must complete the measure
+                // (end of a section + pick-up of the next one).
+                fun slotSum(s: MeasureSlot?) = s?.perStaff?.filter { it.isNotEmpty() }?.map { cols -> cols.sumOf { it.advance } }
+                    ?.takeIf { it.isNotEmpty() && it.all { v -> abs(v - it[0]) < 0.05 } }?.get(0)
+                fun split() = listOf(slots.getOrNull(mi - 1), slots.getOrNull(mi + 1)).any { n ->
+                    slotSum(n)?.let { abs(it + sums[nonEmpty[0]] - measureLen) < 0.05 } == true
+                }
+                short = consistent && sums[nonEmpty[0]] < measureLen - 0.05 && (mi == 0 || nonEmpty.size >= 2 || split())
+                if (short) {
+                    if (mi == 0) pickup = sums[nonEmpty[0]]
+                    length = sums[nonEmpty[0]]
                     onsets = slot.perStaff.map { sequential(it) }
                 } else {
                     estimated.add(mi + 1)
@@ -1215,7 +1231,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         val alter = accidentals[h.step]
                         h.pitch = Pitch.fromDiatonic(diatonic, handKeys[hand] ?: keyFifths, alter).coerceIn(Pitch.LOWEST_PIANO, Pitch.HIGHEST_PIANO)
                         val baseDur = h.baseDuration * col.factor
-                        val dur = if (si in good || mi == 0 && pickup > 0) baseDur else min(baseDur, max(0.25, nextOnset - onset))
+                        val dur = if (si in good || short) baseDur else min(baseDur, max(0.25, nextOnset - onset))
                         h.duration = dur
                         h.onset = measureStart + onset
                         h.measure = mi

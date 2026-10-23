@@ -17,22 +17,12 @@ rnd = random.Random(SEED)
 OUT = os.path.join(W, 'rounds', f'r{N}')
 os.makedirs(OUT, exist_ok=True)
 
-paths = [str(p) for p in corpus.getPaths()]
+paths = [str(p).replace('\\', '/') for p in corpus.getPaths()]
 chorales = [p for p in paths if '/bach/bwv' in p and p.endswith(('.mxl', '.xml'))]
 folk_opus = [p for p in paths if 'essenFolksong' in p or 'oneills1850' in p or 'ryansMammoth' in p]
 used = set(open(os.path.join(W, 'rounds/used.txt')).read().split()) if os.path.exists(os.path.join(W, 'rounds/used.txt')) else set()
 
-def truth_for(s, d):
-    parts = list(s.parts)
-    sel = parts[-2:] if len(parts) > 2 else parts
-    lines = []
-    for i, p in enumerate(sel):
-        hand = 'L' if (len(sel) == 2 and i == 1) else 'R'
-        for nn in p.stripTies().flatten().notes:
-            if nn.duration.isGrace: continue
-            for pitch in nn.pitches:
-                lines.append(f"{pitch.midi} {float(nn.offset):.4f} {float(nn.quarterLength):.4f} {hand}")
-    open(os.path.join(d, 'truth.txt'), 'w').write('\n'.join(lines))
+from truthlib import write_truth as truth_for
 
 made = 0
 attempts = 0
