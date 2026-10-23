@@ -10,7 +10,7 @@ if ! ./gradlew :app:connectedDebugAndroidTest --console=plain -Pandroid.injected
   timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots
   timeout 60 adb logcat -d | grep -E "AndroidRuntime|FATAL|ANR|Fatal signal" | tail -60
   echo "==== LOGCAT TAIL ===="
-  grep -iE "pianotiles|AndroidRuntime|FATAL|lowmemorykiller|lmkd|Kill|EGL|gralloc|vulkan|OpenGL|ANR|watchdog|audio" logcat.txt | tail -120
+  grep -iE "HandRender|pianotiles|AndroidRuntime|FATAL|lowmemorykiller|lmkd|Kill|EGL|gralloc|vulkan|OpenGL|ANR|watchdog|audio" logcat.txt | tail -120
   echo "==== HOST ===="
   free -m; uptime
   sudo dmesg 2>/dev/null | grep -iE "oom|killed process|segfault|qemu|emulator|general protection" | tail -20
@@ -26,3 +26,5 @@ timeout 600 ./gradlew :app:connectedDebugAndroidTest --console=plain -Pandroid.i
   -Pandroid.testInstrumentationRunnerArguments.class=de.pianotiles.app.HandsShotTest || echo "==== HANDS TEST FAILED (not blocking) ===="
 # into the folder itself, not a nested one
 (mkdir -p screenshots && cd screenshots && timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots/. .) || true
+# render time of the hands on the emulator
+grep "HandRender" logcat.txt | tail -5 || true

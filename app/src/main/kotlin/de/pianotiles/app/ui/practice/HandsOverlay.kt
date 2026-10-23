@@ -43,6 +43,7 @@ private class HandRenderLoop(private val onFrame: () -> Unit) {
     private val images = arrayOfNulls<ImageBitmap>(3)
     private var pixels = IntArray(0)
     private var next = 0
+    private var count = 0
 
     private val thread = Thread({
         while (running) {
@@ -70,7 +71,10 @@ private class HandRenderLoop(private val onFrame: () -> Unit) {
             images[i] = bitmaps[i]!!.asImageBitmap()
         }
         if (pixels.size != r.w * r.h) pixels = IntArray(r.w * r.h)
+        val t0 = System.nanoTime()
         HandRenderer.render(r.geos, pixels, r.w, r.h, r.scale, r.keysHeight)
+        // how long a picture takes on this device (logged now and then)
+        if (count++ % 60 == 0) android.util.Log.i("HandRender", "${r.w}x${r.h}: ${(System.nanoTime() - t0) / 1_000_000} ms")
         bitmaps[i]!!.setPixels(pixels, 0, r.w, 0, 0, r.w, r.h)
         latestSize = IntSize(r.w, r.h)
         latest = images[i]

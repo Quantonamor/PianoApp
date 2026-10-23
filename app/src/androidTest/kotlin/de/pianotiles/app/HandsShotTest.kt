@@ -104,7 +104,7 @@ class HandsShotTest {
             compose.mainClock.autoAdvance = false
             compose.onAllNodesWithText("Ode an die Freude")[0].performClick()
             waitText("Takt")
-            play(1500)
+            play(4000) // the first picture of the hands takes a while on the emulator (rendered in software)
             shot("08_hands_paused")
             compose.onNodeWithContentDescription("Fließend").performClick()
             compose.onAllNodesWithContentDescription("Start")[0].performClick()
