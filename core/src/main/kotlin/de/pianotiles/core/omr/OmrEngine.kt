@@ -1277,7 +1277,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         var lastX = Double.NEGATIVE_INFINITY
         for (c in chords) {
             val x = c.minOf { it.cx }
-            if (cols.isNotEmpty() && x - lastX <= ss * 0.9) cols.last().addAll(c) else cols.add(c.toMutableList())
+            // (heads of two voices a unison or a second apart are printed side by side, touching)
+            val touching = cols.isNotEmpty() && c.any { h -> cols.last().any { g -> abs(h.step - g.step) <= 1 && h.x0 <= g.x1 + ss * 0.2 && h.x0 > g.x0 &&
+                (h.stemUp != g.stemUp || !h.hasStem || !g.hasStem) && (h.beams == 0 || g.beams == 0) } }
+            if (cols.isNotEmpty() && (x - lastX <= ss * 0.9 || touching)) cols.last().addAll(c) else cols.add(c.toMutableList())
             lastX = cols.last().minOf { it.cx }
         }
         val headCols = cols.map { Column(it.minOf { h -> h.cx }, it) }
