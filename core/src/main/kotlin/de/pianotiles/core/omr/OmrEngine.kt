@@ -1244,8 +1244,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             for (arc in sd.arcs) {
                 val near = sd.heads.filter { abs(it.cy - arc[2]) <= ss * 1.4 }
                 val a = near.filter { it.x1 >= arc[0] - ss * 1.2 && it.x1 <= arc[0] + ss * 0.8 }
+                // a tie may stop before the bar line that lies between the two notes
+                val reach = arc[1] + ss * 1.2 + if (sd.barlines.any { it.first >= arc[1] - 2 && it.last <= arc[1] + ss * 2.5 }) ss * 1.5 else 0.0
                 for (h1 in a) {
-                    val h2 = near.filter { it.step == h1.step && it.x0 > h1.x1 && it.x0 >= arc[1] - ss * 0.8 && it.x0 <= arc[1] + ss * 1.2 }
+                    val h2 = near.filter { it.step == h1.step && it.x0 > h1.x1 && it.x0 >= arc[1] - ss * 0.8 && it.x0 <= reach }
                         .minByOrNull { it.x0 } ?: continue
                     if (h2 !in tieSource) tieSource[h2] = h1
                 }
