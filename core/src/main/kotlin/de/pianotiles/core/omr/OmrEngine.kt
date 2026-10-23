@@ -1477,6 +1477,17 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             // An incomplete measure (pick-up, end of a section): two voices in one staff may fill the length
             // that another staff agrees on (also when a staff's columns happen to add up to a full measure).
             val filled = perStaff.indices.filter { perStaff[it].isNotEmpty() }
+            // (or when the next measure is short by the same amount in every staff: a measure split at a fermata)
+            val nextShort = slots.getOrNull(mi + 1)?.perStaff?.filter { it.isNotEmpty() }?.map { cols -> cols.sumOf { it.advance } }
+                ?.takeIf { v -> v.isNotEmpty() && v.all { abs(it - v[0]) < 0.05 } && v[0] < measureLen - 0.05 }?.get(0)
+            if (good.size == filled.size && filled.isNotEmpty() && nextShort != null) {
+                val target = measureLen - nextShort
+                val splits = filled.associateWith { splitVoices(slot.staves[it], perStaff[it], slot, target, ss) }
+                if (splits.values.all { it != null }) {
+                    for ((si, split) in splits) { perStaff[si] = split!!.first; voiceOnsets[si] = split.second; sums[si] = target }
+                    good = emptyList()
+                }
+            }
             if (good.size < filled.size) {
                 val nonEmpty = filled
                 for (shortLen in nonEmpty.map { sums[it] }.filter { it < measureLen - 0.05 }.distinct()) {
