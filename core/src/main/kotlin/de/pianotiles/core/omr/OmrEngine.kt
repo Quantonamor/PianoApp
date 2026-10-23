@@ -589,7 +589,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val w = b.width / ss; val h = b.height / ss
             if (System.getProperty("omr.trace") != null && w in 1.0..12.0 && h < 2.5)
                 println("ARCCAND staff=$staffNo x=${b.minX + left}-${b.maxX + left} y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} fill=${"%.2f".format(b.fill)} vrun=${"%.2f".format(maxVerticalRun(noBars, b) / ss)} stem=${sd.stemXs.filter { it > b.minX + left + ss * 0.3 && it < b.maxX + left - ss * 0.3 }}")
-            if (w < 1.0 || w > 12 || h > 1.6 || w / h < 2.2 || b.fill > 0.45) continue
+            // (short ties are thick crescents; beams are solid parallelograms)
+            if (w < 1.0 || w > 12 || h > 1.6 || w / h < 2.2 || b.fill > 0.6) continue
             if (maxVerticalRun(noBars, b) > ss * 0.32) continue
             // beams cross stems (at their height), ties and slurs do not
             val acy = b.cy + top
