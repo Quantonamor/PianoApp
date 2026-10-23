@@ -114,8 +114,16 @@ Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `to
 
 Stand (2026-10-23, Session 3):
 - Runde 4 durch Korrekturen der Parallel-Session 10/10. **Frische Runden:** 5 (Seed 5055) 5/10, 6 (Seed 6066)
-  6/10, 7 (Seed 7077) 3/10 – jeweils danach 10/10. **Zähler „5 Runden hintereinander 100 %“: 0/5.**
-- Regressions-Satz (fester Korpus + Runden 1–7, 96 PDFs): **98,2 % Noten, 98,2 % Präzision, 99,1 % Rhythmus**.
+  6/10, 7 (Seed 7077) 3/10, 8 (Seed 8088) 7/10, 9 (Seed 9099) 6/10 – jeweils danach 10/10.
+  **Zähler „5 Runden hintereinander 100 %“: 0/5.**
+- Regressions-Satz (fester Korpus + Runden 1–9, 116 PDFs): **98,6 % Noten, 98,6 % Präzision, 99,3 % Rhythmus**.
+- Runden 8–9 umgesetzt: hohle Köpfe (dünner schräger Ring, übereinanderliegende ganze Noten, gebrochener Ring
+  per 1-px-Verdickung), Haltebögen (unter einer Stimme bis 1,8 Abstände, auf Linien bis 3,2, über Hälse einer
+  anderen Stimme, kurzes Stück vor dem ersten Kopf = Bogen von der vorigen Zeile, keine Note derselben Stimme
+  dazwischen), Stimmentrennung an Sekunden und vor Triolen, geteilter Kopf mit stimmenweise eigenem Wert,
+  gefüllte Köpfe mit zwei Hälsen, Fermate/Vorzeichen am Halsende ≠ Balken, zerbrochene Taktziffern.
+- Lösungen: Haltebögen werden je Stimme aufgelöst (`truthlib.py`; music21 verband sie über Stimmgrenzen) –
+  Dichterliebe 2, BWV 407 (R8) und BWV 261 (R9) neu.
 - Umgesetzt: Triole im Auftakt (bezifferte „3“ mittig über drei gleichen Balkennoten; unbeziffert, wenn der
   Partnertakt – Schlusstakt bzw. Ende des vorigen Abschnitts – die Länge verlangt), unvollständiger Takt vor
   Wiederholungs-/Doppelstrich ergänzt den Auftakt (Prima Volta), Triolen-Ziffer über die Halsposition zuordnen,

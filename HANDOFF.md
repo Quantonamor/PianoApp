@@ -14,11 +14,13 @@ Stand: **2026-10-23 (Session 3)**, letzter Commit auf Branch `ccr-564d5418-uo5d3
    Anleitung `tools/omr-eval/README.md`). Konkret:
    ```bash
    bash tools/omr-eval/setup.sh                                   # einmal pro Session
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 98,2 / 98,2 / 99,1 % (96 PDFs)
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 98,6 / 98,6 / 99,3 % (116 PDFs)
    ```
-   Runden 1–7 sind vollständig (je 10/10 nach Korrekturen; frisch zuletzt 5, 6, 3 von 10). Nächste Runde:
-   `source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 8 <seed>` (Seeds bisher 4044, 5055, 6066,
-   7077), **sofort ins Repo sichern** (Befehl im README) und neue Stücke in `/tmp/omr-work/regress` verlinken.
+   Runden 1–9 sind vollständig (je 10/10 nach Korrekturen; frisch zuletzt 5, 6, 3, 7, 6 von 10). Nächste Runde:
+   `source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 10 <seed>` (Seeds bisher 4044 … 9099, Muster
+   N0NN), **sofort ins Repo sichern** (Befehl im README) und neue Stücke in `/tmp/omr-work/regress` verlinken.
+   Vor jedem Commit: volle Regression gegen den letzten Stand vergleichen (`diff` der OK/FAIL-Zeilen) – kleine
+   Regeln haben oft Nebenwirkungen in anderen Stücken; einzelne Regeln testweise abschalten hilft beim Eingrenzen.
    Zähler „5 Runden hintereinander 100 %“: **0/5** (nur frische Runden zählen).
    Schnell einzelne Stücke prüfen: `mkdir -p /tmp/omr-work/one; ln -s <stückordner> /tmp/omr-work/one/;
    DIFF=1 bash tools/omr-eval/evalr.sh /tmp/omr-work/one -Pomr.trace=1`.
