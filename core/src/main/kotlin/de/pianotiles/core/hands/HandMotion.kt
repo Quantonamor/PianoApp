@@ -29,7 +29,7 @@ class HandPose(
     val pitch: IntArray,
     /** 0 = resting, 1 = key fully down. */
     val down: FloatArray,
-    /** False before the hand's first and after its last note (plus a short grace time). */
+    /** False after the hand's last note (plus a short grace time). */
     val active: Boolean,
 )
 
@@ -55,7 +55,8 @@ class HandMotion(song: Song) {
         val fs = frames.getValue(hand)
         if (fs.isEmpty()) return null
         var i = fs.indexOfLast { it.start <= beat + 1e-9 }
-        val active = beat >= fs.first().start - 2.0 && beat <= fs.last().end + 2.0
+        // before the first note the hand already rests in its starting position (also during the lead-in)
+        val active = beat <= fs.last().end + 2.0
         val x: FloatArray
         val pitch: IntArray
         if (i < 0) {

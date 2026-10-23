@@ -5,6 +5,8 @@
 * **Hände in richtiger Größe**: die Handgröße wurde aus der (auf 40 px begrenzten) Fingerbreite zurückgerechnet – bei
   breiten Tasten (Querformat, große Bildschirme) waren die Hände zu klein und die Finger gespreizt. Bei kurz
   gezeichneten Tasten (Querformat) wird die Hand außerdem leicht perspektivisch gestaucht.
+* **Fehler behoben**: Vor dem ersten Ton (Vorlauf, pausierter Start) fehlten die Hände – sie galten erst 2 Schläge vor
+  dem ersten Ton als aktiv; jetzt liegen sie von Anfang an in Ausgangsstellung.
 * **Fehler behoben**: Bei pausiertem Stück waren die 3D-Hände unsichtbar (das fertige Bild aus dem Hintergrund-Thread
   wurde nie gezeichnet, weil ohne Abspielen kein neuer Frame kam); jetzt zeichnet ein fertiges Bild neu, gerendert
   wird nur bei geänderter Haltung.
