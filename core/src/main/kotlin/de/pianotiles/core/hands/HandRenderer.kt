@@ -2,6 +2,7 @@ package de.pianotiles.core.hands
 
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Pitch
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -67,7 +68,14 @@ object HandRenderer {
         knuckles[0] = floatArrayOf(sideX, palmTop + (palmBottom - palmTop) * 0.36f)
         return Geometry(pose.hand, tips, knuckles, fw, palmTop, palmBottom, palmLeft, palmRight, pose.down.copyOf(),
             (keyX(KeyX.of(64)) + keyX(KeyX.of(65))) / 2f,
-            FloatArray(5) { f -> if (pose.pitch[f] >= 0 && Pitch.isBlackKey(pose.pitch[f])) 0f else keysH * 0.5f }, keyW)
+            FloatArray(5) { f ->
+                when {
+                    pose.pitch[f] >= 0 && Pitch.isBlackKey(pose.pitch[f]) -> 0f
+                    // a free finger above a black key stays in front of it (resting on the white key's wide part)
+                    (21..108).any { p -> Pitch.isBlackKey(p) && abs(KeyX.of(p) - pose.x[f]) < 0.4f } -> keysH * 0.68f
+                    else -> keysH * 0.5f
+                }
+            }, keyW)
     }
 
     private class Cone(
