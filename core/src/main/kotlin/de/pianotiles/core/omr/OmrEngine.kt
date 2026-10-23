@@ -1276,11 +1276,15 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val ss = sd.staff.space
             for (arc in sd.arcs) {
                 val near = sd.heads.filter { abs(it.cy - arc[2]) <= ss * 1.4 }
-                val a = near.filter { it.x1 >= arc[0] - ss * 1.2 && it.x1 <= arc[0] + ss * 0.8 }
+                // (an arc along a staff line loses its thin ends with the line)
+                val onLine = sd.staff.lines.any { abs(it - arc[2]) <= ss * 0.35 }
+                val a = near.filter { it.x1 >= arc[0] - ss * (if (onLine) 2.0 else 1.2) && it.x1 <= arc[0] + ss * 0.8 }
                 // a tie may stop before the bar line that lies between the two notes
                 val reach = arc[1] + ss * 1.2 + if (sd.barlines.any { it.first >= arc[1] - 2 && it.last <= arc[1] + ss * 2.5 }) ss * 1.5 else 0.0
                 for (h1 in a) {
-                    val h2 = near.filter { it.step == h1.step && it.x0 > h1.x1 && it.x0 >= arc[1] - ss * 0.8 && it.x0 <= reach }
+                    // (the end head may be pushed right by a second whose other head stands where the tie ends)
+                    fun displaced(h: Head) = sd.heads.any { o -> abs(o.step - h.step) == 1 && o.x0 < h.x0 && o.x1 >= h.x0 - 2 && o.x0 <= reach }
+                    val h2 = near.filter { it.step == h1.step && it.x0 > h1.x1 && it.x0 >= arc[1] - ss * 0.8 && (it.x0 <= reach || displaced(it)) }
                         .minByOrNull { it.x0 } ?: continue
                     if (h2 !in tieSource) tieSource[h2] = h1
                 }
