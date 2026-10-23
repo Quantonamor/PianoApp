@@ -1318,7 +1318,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 val run = cols.subList(st, st + k)
                 if (run.any { it.heads.isEmpty() || abs(it.advance - run[0].advance) > 1e-6 }) continue
                 if (abs(run.sumOf { it.advance } / 3 - excess) > 0.01) continue
-                val spacing = (run.last().x - run.first().x) / (k - 1)
+                // tuplets start on a beat of their own length: such runs are preferred
+                val onset = cols.subList(0, st).sumOf { it.advance }
+                val span = run.sumOf { it.advance } * 2 / 3
+                val aligned = abs(onset / span - (onset / span).roundToInt()) < 1e-6
+                val spacing = (run.last().x - run.first().x) / (k - 1) + if (aligned) 0.0 else ss * 100
                 if (spacing < bestSpacing) { bestSpacing = spacing; best = st to k }
             }
             best?.let { (st, k) -> cols.subList(st, st + k).forEach { it.factor = 2.0 / 3.0 } }
