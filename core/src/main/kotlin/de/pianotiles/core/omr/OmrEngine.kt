@@ -1074,7 +1074,33 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
     private fun findAccidentalGlyphs(img: BitImage, blobs: List<Blob>, sd: StaffData, left: Int, top: Int, headerEnd: Double) {
         val st = sd.staff
         val ss = st.space
-        for (b in blobs) {
+        // An accidental crossed by a tie or slur is one wide symbol: its tall columns are the accidental.
+        val parts = blobs.flatMap { b ->
+            if (b.width / ss <= 1.5 || b.height / ss < 1.5 || b.pixels.isEmpty()) return@flatMap emptyList()
+            val colMin = IntArray(b.width) { Int.MAX_VALUE }; val colMax = IntArray(b.width) { -1 }
+            for (q in b.pixels) { val i = q % img.width - b.minX; val y = q / img.width; colMin[i] = min(colMin[i], y); colMax[i] = max(colMax[i], y) }
+            val extent = IntArray(b.width) { colMax[it] - colMin[it] + 1 }
+            val tall = BooleanArray(b.width) { extent[it] >= ss * 0.8 }
+            // the rest must be a thin arc (not the flag and slash of a grace note, say)
+            if ((0 until b.width).count { extent[it] <= ss * 0.5 } < ss * 0.8 || (0 until b.width).any { !tall[it] && extent[it] > ss * 0.5 })
+                return@flatMap emptyList()
+            val out = ArrayList<Blob>()
+            var i = 0
+            while (i < b.width) {
+                if (!tall[i]) { i++; continue }
+                var j = i; while (j + 1 < b.width && tall[j + 1]) j++
+                if ((j - i + 1) / ss in 0.2..1.5 && (i > 0 || j < b.width - 1)) {
+                    val px = b.pixels.filter { q -> (q % img.width - b.minX) in i..j }
+                    val sub = Blob(b.minX + i, px.minOf { it / img.width }, b.minX + j, px.maxOf { it / img.width }, px.size,
+                        px.sumOf { (it % img.width).toLong() }, px.sumOf { (it / img.width).toLong() })
+                    sub.pixels = px.toIntArray()
+                    out.add(sub)
+                }
+                i = j + 1
+            }
+            out
+        }
+        for (b in blobs + parts) {
             val w = b.width / ss; val h = b.height / ss
             if (h < 1.5 || h > 3.7 || w < 0.2 || w > 1.5) continue
             val x0 = b.minX + left; val x1 = b.maxX + left
