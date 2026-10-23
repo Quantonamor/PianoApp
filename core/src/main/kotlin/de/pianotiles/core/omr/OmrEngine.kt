@@ -929,6 +929,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val duration = when {
                 flags > 0 && h in 1.3..4.2 && w in 0.6..1.6 && vRun < 1.3 && cy > st.top && cy < st.bottom -> 0.5 / (1 shl (flags - 1))
                 h in 2.1..3.4 && w in 0.55..1.4 && b.fill in 0.2..0.65 && vRun < 1.5 && abs(cy - st.middle) < ss * 0.9 -> 1.0
+                // (rests of the upper or lower voice are moved up or down)
+                h in 2.6..3.4 && w in 0.7..1.4 && b.fill in 0.25..0.5 && vRun < 1.9 && abs(cy - st.middle) in ss * 1.5..ss * 3.2 -> 1.0
                 h in 1.3..2.1 && w in 0.6..1.4 && b.fill in 0.15..0.6 && vRun < 1.3 && cy > st.top && cy < st.bottom -> 0.5
                 h in 0.3..0.7 && w in 0.8..1.6 && b.fill > 0.8 && abs((b.maxY + top) - st.middle) < ss * 0.35 -> 2.0
                 // whole rest hangs from the second line from the top
