@@ -1285,6 +1285,23 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             ) rest.forEach { it.factor = 2.0 / 3.0 }
             else changed.forEach { it.factor = 1.0 }
         }
+        // (only for one voice: two voices in a staff make a measure too long as well)
+        val heads = cols.flatMap { it.heads }.filter { it.hasStem }
+        val oneVoice = heads.none { it.stemUp } || heads.all { it.stemUp }
+        if (marks.isEmpty() && oneVoice && cols.none { it.heads.size > 1 } && abs(sum() - measureLen) > 0.05) {
+            // Tuplets printed without a number: a run of equal notes (3, 6, 9 or 12) whose 2/3 makes the measure
+            // add up exactly; engravers set tuplet notes closer, so the most tightly spaced run wins.
+            val excess = sum() - measureLen
+            var best: Pair<Int, Int>? = null; var bestSpacing = Double.MAX_VALUE
+            for (k in intArrayOf(3, 6, 9, 12)) for (st in 0..cols.size - k) {
+                val run = cols.subList(st, st + k)
+                if (run.any { it.heads.isEmpty() || abs(it.advance - run[0].advance) > 1e-6 }) continue
+                if (abs(run.sumOf { it.advance } / 3 - excess) > 0.01) continue
+                val spacing = (run.last().x - run.first().x) / (k - 1)
+                if (spacing < bestSpacing) { bestSpacing = spacing; best = st to k }
+            }
+            best?.let { (st, k) -> cols.subList(st, st + k).forEach { it.factor = 2.0 / 3.0 } }
+        }
     }
 
     private class MeasureSlot(val system: Int, val left: Double, val right: Double, val perStaff: List<List<Column>>, val staves: List<StaffData>)
