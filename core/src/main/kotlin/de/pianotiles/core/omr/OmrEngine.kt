@@ -133,7 +133,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val accGlyphs: MutableList<DoubleArray> = ArrayList(),
         /** x centres of small digits outside the staff (possible tuplet numbers like "3"). */
         val tupletMarks: MutableList<Double> = ArrayList(),
-        /** Thin arcs (ties or slurs): x0, x1, centre y. */
+        /** Thin arcs (ties or slurs): x0, x1, centre y, short piece (1/0), height. */
         val arcs: MutableList<DoubleArray> = ArrayList(),
         /** Detected clefs (x position → clef), sorted by x. */
         val clefs: MutableList<Pair<Double, Clef>> = ArrayList(),
@@ -585,6 +585,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // 5) Thin vertical strokes (for accidentals and the key signature) and bar lines.
         findStrokesAndBarlines(noStaff, sd, left, right)
 
+        if (System.getProperty("omr.trace") != null) println("BARS staff=$staffNo ${sd.barlines.map { "${it.first}-${it.last}" }}")
         // Ties and slurs, searched with the bar lines erased (a tie across a bar line touches it).
         val noBars = noCrop.copy()
         for (bl in sd.barlines) for (x in (bl.first - 1 - left)..(bl.last + 1 - left)) for (y in 0 until noBars.height) noBars[x, y] = false
@@ -593,7 +594,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (System.getProperty("omr.trace") != null && w in 1.0..12.0 && h < 2.5)
                 println("ARCCAND staff=$staffNo x=${b.minX + left}-${b.maxX + left} y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} fill=${"%.2f".format(b.fill)} vrun=${"%.2f".format(maxVerticalRun(noBars, b) / ss)} stem=${sd.stemXs.filter { it > b.minX + left + ss * 0.3 && it < b.maxX + left - ss * 0.3 }}")
             // (short ties are thick crescents; beams are solid parallelograms)
-            if (w < 1.0 || w > 12 || h > 1.6 || w / h < 2.2 || b.fill > 0.6) continue
+            // A piece of an arc cut by an erased bar line may be short; it is only kept when joined below.
+            val x0 = b.minX + left; val x1 = b.maxX + left
+            val atBar = sd.barlines.any { abs(it.first - 1 - x1) <= 2 || abs(it.last + 1 - x0) <= 2 }
+            val piece = atBar && w >= 0.35 && h <= 0.8
+            if (!piece && (w < 1.0 || w / h < 2.2)) continue
+            if (w > 12 || h > 1.6 || b.fill > 0.6) continue
             if (maxVerticalRun(noBars, b) > ss * 0.32) continue
             // beams cross stems (at their height), ties and slurs do not
             val acy = b.cy + top
@@ -601,7 +607,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     it.hasStem && it.stemX > b.minX + left + ss * 0.3 && it.stemX < b.maxX + left - ss * 0.3 &&
                         acy >= min(it.cy, it.stemEnd.toDouble()) - ss * 0.5 && acy <= max(it.cy, it.stemEnd.toDouble()) + ss * 0.5
                 }) continue
-            sd.arcs.add(doubleArrayOf((b.minX + left).toDouble(), (b.maxX + left).toDouble(), b.cy + top))
+            sd.arcs.add(doubleArrayOf(x0.toDouble(), x1.toDouble(), b.cy + top, if (w < 1.0 || w / h < 2.2) 1.0 else 0.0, b.height.toDouble()))
         }
         // join the pieces of an arc that were cut by an erased bar line
         sd.arcs.sortBy { it[0] }
@@ -610,9 +616,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val a = sd.arcs[ai]; val c = sd.arcs[ai + 1]
             val bar = sd.barlines.any { it.first >= a[1] - 2 && it.last <= c[0] + 2 }
             if (bar && c[0] - a[1] <= ss * 0.8 && abs(c[2] - a[2]) < ss * 0.6) {
-                sd.arcs[ai] = doubleArrayOf(a[0], c[1], (a[2] + c[2]) / 2); sd.arcs.removeAt(ai + 1)
+                sd.arcs[ai] = doubleArrayOf(a[0], c[1], (a[2] + c[2]) / 2, 0.0, max(a[4], c[4])); sd.arcs.removeAt(ai + 1)
             } else ai++
         }
+        // short pieces that found no partner, and joined arcs that are still too short
+        sd.arcs.removeAll { it[3] > 0 || it[1] - it[0] + 1 < ss || (it[1] - it[0] + 1) / it[4] < 2.2 }
 
         // 6) Staff position of each head.
         for (hd in sd.heads) hd.step = ((st.bottom - hd.cy) / (ss / 2)).roundToInt()
