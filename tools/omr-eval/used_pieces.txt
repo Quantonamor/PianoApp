@@ -11,6 +11,7 @@ ch:bwv28.6.mxl
 ch:bwv286.mxl
 ch:bwv318.mxl
 ch:bwv32.6.mxl
+ch:bwv322.mxl
 ch:bwv336.mxl
 ch:bwv348.mxl
 ch:bwv370.mxl
@@ -24,6 +25,7 @@ ch:bwv413.mxl
 ch:bwv414.mxl
 ch:bwv55.5.mxl
 ch:bwv93.7.mxl
+folk:1001-1031.abc:11
 folk:AcaciaReel.abc:0
 folk:AmazonHornpipe.abc:0
 folk:AroundTheWorldReel.abc:0
@@ -36,7 +38,9 @@ folk:JennysWeddingReel.abc:0
 folk:JerseyLightningJig.abc:0
 folk:LegacyJig.abc:0
 folk:LevantinesBarrelReel.abc:0
+folk:LimerickLassJig.abc:0
 folk:McDonaldsReel.abc:0
+folk:MerryLadsOfAyerReel.abc:0
 folk:MissJessWatsonsHornpipe.abc:0
 folk:MollyMcGuiresReel.abc:0
 folk:MrsKinlochsReel.abc:0
@@ -44,6 +48,7 @@ folk:MunsterLassJig.abc:0
 folk:NightOfTheFairJig.abc:0
 folk:NortonsFavoriteHornpipe.abc:0
 folk:OldNationalTheatreJig.abc:0
+folk:OperaReel.abc:0
 folk:OwnysBestJig.abc:0
 folk:PandeenORaffertyJig.abc:0
 folk:SalemHornpipe.abc:0
