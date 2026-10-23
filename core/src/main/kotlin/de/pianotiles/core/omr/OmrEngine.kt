@@ -624,6 +624,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val w = b.width / ss; val h = b.height / ss
             val y0 = b.minY + top; val y1 = b.maxY + top
             if (h in 0.7..1.7 && w in 0.4..1.3 && b.fill in 0.2..0.7 && (y1 < st.top - ss * 0.2 || y0 > st.bottom + ss * 0.2) &&
+                !pointedBottom(b, noCrop.width) &&
                 (b.cx + left) > headerEnd && sd.heads.none { abs(it.cx - (b.cx + left)) < ss * 0.7 && abs(it.cy - (b.cy + top)) < ss * 0.8 }
             ) sd.tupletMarks.add(b.cx + left)
         }
@@ -929,6 +930,15 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (System.getProperty("omr.trace") != null) println("REST $duration flags=$flags x=${b.minX + left} y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} fill=${"%.2f".format(b.fill)} vrun=${"%.2f".format(vRun)} ts=${sd.timeSigs.map { it.toList() }}")
             sd.rests.add(Rest(b.minX + left, b.minY + top, b.maxX + left, b.maxY + top, duration))
         }
+    }
+
+    /** A "V" (up-bow) ends in a point at the bottom; the digit 3 is wide there. */
+    private fun pointedBottom(b: Blob, imgWidth: Int): Boolean {
+        if (b.pixels.isEmpty()) return false
+        val from = b.maxY - (b.height * 0.2).toInt()
+        var l = Int.MAX_VALUE; var r = -1
+        for (q in b.pixels) if (q / imgWidth >= from) { val x = q % imgWidth; l = min(l, x); r = max(r, x) }
+        return r >= 0 && r - l + 1 < b.width * 0.45
     }
 
     /**
