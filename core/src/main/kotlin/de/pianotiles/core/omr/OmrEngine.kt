@@ -668,7 +668,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val x0 = b.minX + left; val x1 = b.maxX + left
             val atBar = sd.barlines.any { abs(it.first - 1 - x1) <= 2 || abs(it.last + 1 - x0) <= 2 }
             val piece = atBar && w >= 0.35 && h <= 0.8
-            if (!piece && (w < 1.0 || w / h < 2.2)) continue
+            // (very short ties are stubby crescents, mostly empty in their box)
+            if (!piece && (w < 1.0 || w / h < (if (w < 1.6 && b.fill < 0.45) 1.7 else 2.2))) continue
             if (w > 12 || h > 1.6 || b.fill > 0.7) continue
             // (a short, thick crescent is still mostly empty in its box; beams are not)
             val vrun = maxVerticalRun(noBars, b)
@@ -679,7 +680,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     it.hasStem && it.stemX > b.minX + left + ss * 0.3 && it.stemX < b.maxX + left - ss * 0.3 &&
                         acy >= min(it.cy, it.stemEnd.toDouble()) - ss * 0.5 && acy <= max(it.cy, it.stemEnd.toDouble()) + ss * 0.5
                 }) continue
-            sd.arcs.add(doubleArrayOf(x0.toDouble(), x1.toDouble(), b.cy + top, if (w < 1.0 || w / h < 2.2) 1.0 else 0.0, b.height.toDouble()))
+            sd.arcs.add(doubleArrayOf(x0.toDouble(), x1.toDouble(), b.cy + top, if (w < 1.0 || w / h < 1.7) 1.0 else 0.0, b.height.toDouble()))
         }
         // join the pieces of an arc that were cut by an erased bar line
         sd.arcs.sortBy { it[0] }
@@ -692,7 +693,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             } else ai++
         }
         // short pieces that found no partner, and joined arcs that are still too short
-        sd.arcs.removeAll { it[3] > 0 || it[1] - it[0] + 1 < ss || (it[1] - it[0] + 1) / it[4] < 2.2 }
+        sd.arcs.removeAll { it[3] > 0 || it[1] - it[0] + 1 < ss || (it[1] - it[0] + 1) / it[4] < 1.7 }
 
         // 6) Staff position of each head.
         for (hd in sd.heads) hd.step = ((st.bottom - hd.cy) / (ss / 2)).roundToInt()
@@ -1474,7 +1475,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 val onLine = sd.staff.lines.any { abs(it - arc[2]) <= ss * 0.35 }
                 val a = near.filter { it.x1 >= arc[0] - ss * (if (onLine) 2.0 else 1.7) && it.x1 <= arc[0] + ss * 0.8 }
                 // a tie may stop before the bar line that lies between the two notes
-                val reach = arc[1] + ss * 1.2 + if (sd.barlines.any { it.first >= arc[1] - 2 && it.last <= arc[1] + ss * 2.5 }) ss * 1.5 else 0.0
+                val reach = arc[1] + ss * 1.5 + if (sd.barlines.any { it.first >= arc[1] - 2 && it.last <= arc[1] + ss * 2.5 }) ss * 1.5 else 0.0
                 for (h1 in a) {
                     // (the end head may be pushed right by a second whose other head stands where the tie ends)
                     fun displaced(h: Head) = sd.heads.any { o -> abs(o.step - h.step) == 1 && o.x0 < h.x0 && o.x1 >= h.x0 - ss * 0.25 && o.x0 <= reach }
