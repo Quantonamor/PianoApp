@@ -156,6 +156,10 @@ austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
       Schwierigkeit, „zuletzt geübt“-Leiste, Mehrfachauswahl zum Exportieren
 - [x] Notenbild `sheet.pdf` aus der Noten-Datei setzen (auch für MIDI/MusicXML-Stücke ohne Original) – `core/engrave/`, `EngraveTest`
 
+### Stand 2026-10-23 (Übergabe an lokale Entwicklung auf `master`)
+Offene Punkte und Reihenfolge stehen in `HANDOFF.md` → „Offene Punkte“: Hände im pausierten Zustand auf echtem
+Gerät prüfen, Rückmeldung vom Gerät, Hände weiter verbessern, Konvergenz-Schleife (Choräle), optional KI-Fingersatz.
+
 ### Konvergenz-Schleife der PDF-Erkennung (Wunsch des Nutzers, **läuft**)
 
 Ziel: Zufallsrunden mit je 5 neuen Stücken (beide Notensatz-Programme), bis **5 Runden hintereinander alle

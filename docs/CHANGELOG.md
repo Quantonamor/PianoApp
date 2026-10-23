@@ -2,6 +2,10 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **Übergabe an lokale Entwicklung**: alles liegt auf `master`; `HANDOFF.md` und `CLAUDE.md` beschreiben den Stand,
+  die lokalen Befehle (App bauen/installieren, UI-Tests, Hände-/Klang-Vorschauen) und die offenen Punkte.
+* **CI stabil**: Der Emulator (ohne Audio-Gerät) verschwand, sobald Musik spielte – die UI-Tests laufen jetzt ohne
+  Tonausgabe (`Synth.outputEnabled`), mit einmaliger Wiederholung falls der Emulator doch abstürzt.
 * **Hände in richtiger Größe**: die Handgröße wurde aus der (auf 40 px begrenzten) Fingerbreite zurückgerechnet – bei
   breiten Tasten (Querformat, große Bildschirme) waren die Hände zu klein und die Finger gespreizt. Bei kurz
   gezeichneten Tasten (Querformat) wird die Hand außerdem leicht perspektivisch gestaucht.
