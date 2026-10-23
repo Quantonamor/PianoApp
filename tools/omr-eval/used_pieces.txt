@@ -6,11 +6,13 @@ ch:bwv245.11.mxl
 ch:bwv245.5.mxl
 ch:bwv253.mxl
 ch:bwv268.mxl
+ch:bwv28.6.mxl
 ch:bwv336.mxl
 ch:bwv370.mxl
 ch:bwv388.mxl
 ch:bwv392.mxl
 ch:bwv4.8.mxl
+ch:bwv407.mxl
 ch:bwv413.mxl
 ch:bwv414.mxl
 ch:bwv93.7.mxl
@@ -24,6 +26,7 @@ folk:JennysWeddingReel.abc:0
 folk:LegacyJig.abc:0
 folk:MissJessWatsonsHornpipe.abc:0
 folk:MollyMcGuiresReel.abc:0
+folk:MrsKinlochsReel.abc:0
 folk:MunsterLassJig.abc:0
 folk:NightOfTheFairJig.abc:0
 folk:NortonsFavoriteHornpipe.abc:0
@@ -31,5 +34,7 @@ folk:OldNationalTheatreJig.abc:0
 folk:OwnysBestJig.abc:0
 folk:PandeenORaffertyJig.abc:0
 folk:SalemHornpipe.abc:0
+folk:StClairsHornpipe.abc:0
+folk:SteepleChaseReel.abc:0
 folk:WithinAMileOfClonburReel.abc:0
 folk:ballad20.abc:111
