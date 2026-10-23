@@ -254,7 +254,7 @@ object Hand3D {
      * Joint transforms so that the fingertips land on [tips] (screen pixels, index 0 = thumb).
      * Returns the per-joint affine transforms (model space) and the view.
      */
-    private fun pose(model: HandModel, hand: Hand, tips: Array<FloatArray>, keyW: Float, down: FloatArray, centerX: Float): Pair<Array<Affine>, View> {
+    private fun pose(model: HandModel, hand: Hand, tips: Array<FloatArray>, keyW: Float, down: FloatArray, restMinY: FloatArray, centerX: Float): Pair<Array<Affine>, View> {
         val side = if (hand == Hand.RIGHT) 1f else -1f // right: thumb at -z is on the left; left hand is mirrored
         val jp = model.jointPos
         fun p(i: Int, k: Int) = jp[i * 3 + k]
@@ -271,7 +271,7 @@ object Hand3D {
         val midLen = abs(p(tipsJ[1], 1) - p(prox[1], 1))
         val targetTipY = (1..4).map { tips[it][1] }.average().toFloat()
         val ox = targetKx - modelKx * scale
-        // the forearm comes from the player's body (screen centre, about 55 cm in front of the keys): a hand away
+        // the forearm comes from the player's body (middle of the piano, about 55 cm in front of the keys): a hand away
         // from the middle turns inwards; the wrist takes up half of the forearm's angle
         val yaw = 0.5f * kotlin.math.atan((targetKx - centerX) / (0.55f * scale))
         val pivot = FloatArray(3) { k -> prox.map { p(it, k) }.average().toFloat() }
@@ -285,7 +285,13 @@ object Hand3D {
             val view = View(side, scale, ox, oy)
             var worst = 0f
             var worstMiddle = 0f
-            val xf = solve(model, view, tips, side, base) { f, err, curl ->
+            // fingers that do not press rest further in when the hand has moved forward (instead of curling up
+            // into stubs), but not beyond the finger reaching furthest in, and on white keys not between the black ones
+            val inmost = tips.minOf { it[1] }
+            val aim = Array(5) { f ->
+                if (down[f] >= 0.5f) tips[f] else floatArrayOf(tips[f][0], minOf(tips[f][1], maxOf(inmost, restMinY[f], tips[f][1] - lift * 0.8f)))
+            }
+            val xf = solve(model, view, aim, side, base) { f, err, curl ->
                 if (f == 0 || f == 4) worst = maxOf(worst, err)
                 // a finger that reaches only (nearly) stretched out: the hand should come closer so it stays curved
                 else worstMiddle = maxOf(worstMiddle, err, (0.9f - curl) * midLen * scale * 0.5f)
@@ -399,7 +405,7 @@ object Hand3D {
         rowMin = height; rowMax = -1
         for (g in hands) {
             val model = HandModel.get(g.hand) ?: return false
-            val (xf, view) = pose(model, g.hand, g.tips, keyW, g.down, width / scale / 2f)
+            val (xf, view) = pose(model, g.hand, g.tips, keyW, g.down, g.restMinY, if (g.bodyX.isFinite()) g.bodyX else width / scale / 2f)
             rasterize(model, xf, view, width, height, scale, g.down, if (g.hand == Hand.RIGHT) 0 else 1)
         }
         shade(out, width, height, scale, keysBottom, alphaOverKeys, keyW)

@@ -29,6 +29,10 @@ object HandRenderer {
         val fingerWidth: Float,
         val palmTop: Float, val palmBottom: Float, val palmLeft: Float, val palmRight: Float,
         val down: FloatArray,             // 0..1 per finger: pressing
+        /** Screen x of the player's body (middle of a full piano, between E4 and F4): the forearms come from there. */
+        val bodyX: Float = Float.NaN,
+        /** How far in (smallest y) each finger may rest when it does not press: white keys only below the black ones. */
+        val restMinY: FloatArray = FloatArray(5),
     )
 
     /**
@@ -59,7 +63,9 @@ object HandRenderer {
         // thumb root on the side of the palm (index side), a third down
         val sideX = if (dir > 0) palmLeft + fw * 0.35f else palmRight - fw * 0.35f
         knuckles[0] = floatArrayOf(sideX, palmTop + (palmBottom - palmTop) * 0.36f)
-        return Geometry(pose.hand, tips, knuckles, fw, palmTop, palmBottom, palmLeft, palmRight, pose.down.copyOf())
+        return Geometry(pose.hand, tips, knuckles, fw, palmTop, palmBottom, palmLeft, palmRight, pose.down.copyOf(),
+            (keyX(KeyX.of(64)) + keyX(KeyX.of(65))) / 2f,
+            FloatArray(5) { f -> if (pose.pitch[f] >= 0 && Pitch.isBlackKey(pose.pitch[f])) 0f else keysH * 0.5f })
     }
 
     private class Cone(

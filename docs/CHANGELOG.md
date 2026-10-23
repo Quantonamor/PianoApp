@@ -2,6 +2,9 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **Natürlichere Hände**: der Unterarm kommt aus der Körpermitte (Mitte der Klaviatur, nicht Bildschirmmitte –
+  beim Zoomen drehte sich die Hand sonst zu stark); rückt die Hand für eine schwarze Taste vor, liegen die freien
+  Finger weiter innen auf den Tasten, statt sich zu Stummeln einzurollen.
 * **Schärfere Hände**: gerendert mit 50 % statt 40 % Auflösung (eigener Thread, ~5 ms pro Bild).
 * **Klang**: der Audio-Thread läuft höchstens 0,2 s der Echtzeit voraus (eine nicht blockierende Ausgabe ließ ihn sonst durchdrehen).
 * **Haltepedal**: aus MIDI (Controller 64), MusicXML („Ped.“-Zeichen, auch Pedalwechsel) und MuseScore übernommen; beim
