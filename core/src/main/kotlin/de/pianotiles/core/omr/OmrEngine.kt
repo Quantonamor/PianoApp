@@ -363,6 +363,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             // (A stem leaves the head in one direction only; these strokes reach above and below the cell.)
             fun through(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let { it.first <= b.minY - ss * 0.5 && it.last >= b.maxY + ss * 0.5 } == true
             if (through(b.minX - 1) || through(b.maxX + 1)) return false
+            // A tiny cell between a filled head, its stem and a staff line: a hole's ring separates it from the stem.
+            fun stemAt(x: Int) = (img.verticalRun(x, b.cy.roundToInt())?.let { it.last - it.first + 1 } ?: 0) >= ss * 2.0
+            if (a < 0.15 && (stemAt(b.minX - 1) || stemAt(b.maxX + 1))) return false
             // The cell between a sharp or natural and the head right of it: the accidental's two strokes stand
             // just left of it, both spanning the cell and of an accidental's length.
             fun accStroke(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let {
