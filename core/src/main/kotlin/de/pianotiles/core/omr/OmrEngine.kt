@@ -666,6 +666,17 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 o !== hd && !o.hollow && o.hasStem && abs(o.stemX - hd.stemX) <= ss * 0.15 && o.stemUp == hd.stemUp &&
                     o.cy in min(hd.cy, hd.stemEnd.toDouble())..max(hd.cy, hd.stemEnd.toDouble())
             }) hd.beams = 0
+        //    – unless no other stem ends at that height nearby: a beam joins stems; a fermata or slur touching
+        //      the stem end is no beam
+        //      (the head must own its stem: the curl of a flag on another head's stem is no head)
+        for (hd in sd.heads) if (hd.hollow && hd.hasStem && hd.beams > 0 &&
+            sd.heads.none { o -> o !== hd && o.hasStem && abs(o.stemX - hd.stemX) <= ss * 0.3 } && sd.heads.none { o ->
+                o !== hd && o.hasStem && o.stemUp == hd.stemUp && abs(o.stemX - hd.stemX).toDouble() in ss * 0.5..ss * 8.0 && abs(o.stemEnd - hd.stemEnd) <= ss * 1.5 &&
+                    (1..4).all { k ->
+                        val x = hd.stemX + (o.stemX - hd.stemX) * k / 5; val y = hd.stemEnd + (o.stemEnd - hd.stemEnd) * k / 5.0
+                        (-(ss * 0.4).roundToInt()..(ss * 0.4).roundToInt()).any { dy -> noStaff[x, (y + dy).roundToInt()] }
+                    }
+            }) hd.beams = 0
         sd.heads.removeAll { it.hollow && it.hasStem && it.beams > 0 }
         sd.heads.removeAll { !hasLedgerLines(orig, it, st) }
 
