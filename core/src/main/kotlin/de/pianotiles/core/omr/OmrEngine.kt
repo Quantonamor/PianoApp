@@ -90,6 +90,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         var stemX: Int = -1
         var stemUp = false
         var stemEnd = 0
+        /** A hollow head shared by two voices: a second stem in the other direction. */
+        var twoStems = false
         var beams = 0
         var dotted = false
         var accidental: Int? = null
@@ -899,6 +901,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         fun insideOtherHead(x: Int, y: Int) = heads.any { it !== hd && x >= it.x0 - ss * 0.3 && x <= it.x1 + ss * 0.3 && y >= it.y0 - ss * 0.3 && y <= it.y1 + ss * 0.3 }
         val minLen = ss * 2.2
         var best = 0.0
+        val found = BooleanArray(2)
         fun probe(xFrom: Double, xTo: Double, up: Boolean) {
             var x = xFrom.roundToInt()
             while (x <= xTo.roundToInt()) {
@@ -914,8 +917,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         val thin = beyond >= ss * 1.5 && doubleArrayOf(0.15, 0.3, 0.45).count { f -> isThin(img, x, edge + dir * beyond * f, ss) } >= 2
                         // A line ending in another head of the same chord is not the stem's free end.
                         val endY = if (up) run.first else run.last
-                        if (len >= minLen && thin && len > best && (allowEndInHead || !insideOtherHead(x, endY))) {
-                            best = len; hd.stemX = x; hd.stemUp = up; hd.stemEnd = if (up) run.first else run.last
+                        if (len >= minLen && thin && (allowEndInHead || !insideOtherHead(x, endY))) {
+                            found[if (up) 0 else 1] = true
+                            if (len > best) { best = len; hd.stemX = x; hd.stemUp = up; hd.stemEnd = if (up) run.first else run.last }
                         }
                         y = run.last + 1
                     } else y++
@@ -925,6 +929,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         probe(hd.x1 - ss * 0.35, hd.x1 + ss * 0.25, up = true)
         probe(hd.x0 - ss * 0.25, hd.x0 + ss * 0.35, up = false)
+        hd.twoStems = hd.hollow && found[0] && found[1]
         if (hd.hasStem) hd.beams = countBeams(img, hd, ss, heads)
     }
 
@@ -1435,10 +1440,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
      */
     private fun splitVoices(sd: StaffData, cols: List<Column>, slot: MeasureSlot, measureLen: Double, ss: Double): Pair<List<Column>, List<Double>>? {
         val heads = cols.flatMap { it.heads }
-        val up = heads.filter { it.hasStem && it.stemUp }
-        val down = heads.filter { it.hasStem && !it.stemUp }
+        val up = heads.filter { it.hasStem && it.stemUp && !it.twoStems }
+        val down = heads.filter { it.hasStem && !it.stemUp && !it.twoStems }
         if (up.isEmpty() || down.isEmpty()) return null
-        val free = heads.filter { !it.hasStem }
+        // stemless heads and heads with stems in both directions belong to both voices
+        val free = heads.filter { !it.hasStem || it.twoStems }
         val rests = sd.rests.filter { it.cx > slot.left && it.cx < slot.right }
         val mid = sd.staff.middle
         val cu = columnsOf(up + free, rests.filter { (it.y0 + it.y1) / 2.0 < mid + ss * 0.3 }, ss)
