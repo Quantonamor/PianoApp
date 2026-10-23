@@ -1520,13 +1520,18 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 }
             }
         }
+        // Tuplets first, for all measures (a measure looks at its neighbours' lengths).
+        for ((mi, slot) in slots.withIndex()) {
+            val ss = slot.staves.first().staff.space
+            slot.perStaff.forEachIndexed { si, cols ->
+                applyTuplets(cols, slot.staves[si].tupletMarks.filter { it > slot.left && it < slot.right }, measureLen, ss,
+                    pickup = mi == 0)
+            }
+        }
         /** Exact end (start + duration) of every note, for continuing ties. */
         val noteEnd = ArrayList<Double>()
         for ((mi, slot) in slots.withIndex()) {
             val ss = slot.staves.first().staff.space
-            slot.perStaff.forEachIndexed { si, cols ->
-                applyTuplets(cols, slot.staves[si].tupletMarks.filter { it > slot.left && it < slot.right }, measureLen, ss, pickup = mi == 0)
-            }
             // Two voices in one staff with different rhythms: the columns do not add up, but the stems-up and the
             // stems-down voice each fill the measure. Such staves get their onsets per voice.
             val perStaff = slot.perStaff.toMutableList()
