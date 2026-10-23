@@ -17,6 +17,8 @@ Jeder Test hat 5 Min. Timeout; bei Fehlern stehen alle Thread-Stacks im Log („
 **Emulator verschwand (Okt. 23):** Ursache war sehr wahrscheinlich der Audio-Thread: mit `-noaudio` blockiert
 `AudioTrack.write` nicht, der Thread lief ungebremst – seit `Synth` höchstens 0,2 s vorausläuft, läuft der große
 Bedientest durch. Bei Fehlern druckt die CI jetzt „==== HOST ====“ (Speicher, Kernel-Meldungen) und „LOGCAT TAIL“.
+**Seit Okt. 23 rendert der Emulator im Gast (`-gpu guest`)**: der SwiftShader-Renderer des Runners stürzte immer
+wieder ab („bad color buffer handle“); seitdem laufen alle Tests inkl. `HandsShotTest` durch und schneller.
 **Stau vermeiden:** Commits bündeln, veraltete Läufe mit `actions_run_trigger` → `cancel_workflow_run` abbrechen.
 
 ## Stand der letzten Arbeitseinheit (Wünsche des Nutzers: Hände, Klang, Hochformat, Ausblenden, 50-Personen-Review)

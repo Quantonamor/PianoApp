@@ -82,7 +82,7 @@ jobs:
             timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots || true
             # the 3D hands separately: the emulator's software renderer has crashed on them before, which must not hide the results above
             timeout 600 ./gradlew :app:connectedDebugAndroidTest --console=plain -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=de.pianotiles.app.HandsShotTest || echo "==== HANDS TEST FAILED (not blocking) ===="
-            timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots || true
+            (mkdir -p screenshots && cd screenshots && timeout 60 adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots/. .) || true # into the folder itself, not a nested one
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
