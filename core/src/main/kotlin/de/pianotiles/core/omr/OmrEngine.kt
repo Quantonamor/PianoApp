@@ -548,6 +548,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         // Musical sanity checks:
         //  - hollow heads (half notes) never have beams; such blobs are beam/stem junction artefacts
         //  - heads outside the staff need ledger lines (removes tempo marks, fingering, text)
+        //    – unless the stem runs on through a filled head of another voice, which owns the beams
+        for (hd in sd.heads) if (hd.hollow && hd.hasStem && hd.beams > 0 && sd.heads.any { o ->
+                o !== hd && !o.hollow && o.hasStem && abs(o.stemX - hd.stemX) <= ss * 0.15 && o.stemUp == hd.stemUp &&
+                    o.cy in min(hd.cy, hd.stemEnd.toDouble())..max(hd.cy, hd.stemEnd.toDouble())
+            }) hd.beams = 0
         sd.heads.removeAll { it.hollow && it.hasStem && it.beams > 0 }
         sd.heads.removeAll { !hasLedgerLines(orig, it, st) }
 
@@ -556,7 +561,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
 
         // 7) Accidentals in front of note heads.
         val usedAcc = HashSet<DoubleArray>()
-        for (hd in sd.heads.sortedByDescending { it.x0 }) hd.accidental = accidentalFor(hd, sd, ss, usedAcc)
+        // left to right: a glyph belongs to the nearest head on its right at the same height
+        for (hd in sd.heads.sortedBy { it.x0 }) hd.accidental = accidentalFor(hd, sd, ss, usedAcc)
     }
 
     /**
@@ -686,7 +692,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val firstNote = (sd.heads.filter { it.hasStem }.ifEmpty { sd.heads }).minOfOrNull { it.x0 } ?: Int.MAX_VALUE
         val firstBar = sd.barlines.minOfOrNull { it.first } ?: Int.MAX_VALUE
         val timeSig = sd.timeSigs.minOfOrNull { it[0] } ?: Int.MAX_VALUE
-        val to = minOf(firstNote - (ss * 0.3).toInt(), firstBar, timeSig, (st.xStart + ss * 14).toInt())
+        // an accidental right in front of the first note belongs to that note
+        val to = minOf(firstNote - (ss * 0.7).toInt(), firstBar, timeSig, (st.xStart + ss * 14).toInt())
         var sharps = 0; var flats = 0; var other = 0
         var keyEnd = -1
         for (b in inStaff.sortedBy { it.minX }) {
@@ -839,6 +846,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val scan = min(ss * 1.8, stemLen - ss * 1.1)
         if (scan <= 0) return 0
         var best = 0
+        val m = ss * 0.2
         for (side in intArrayOf(-1, 1)) {
             var sideCount = 0
             for (off in doubleArrayOf(0.45, 0.7)) {
@@ -848,7 +856,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 var run = 0
                 while (i <= scan) {
                     val y = if (hd.stemUp) hd.stemEnd + i else hd.stemEnd - i
-                    val onHead = heads.any { x >= it.x0 && x <= it.x1 && y >= it.y0 && y <= it.y1 }
+                    // (with a margin: the detected box is slightly smaller than the printed head of another voice)
+                    val onHead = heads.any { it !== hd && x >= it.x0 - m && x <= it.x1 + m && y >= it.y0 - m && y <= it.y1 + m }
                     if (img[x, y] && !onHead) run++ else {
                         if (run >= ss * 0.25 && run <= ss * 1.0) count++
                         run = 0
@@ -965,6 +974,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             if (sd.heads.any { it.cx >= x0 - 1 && it.cx <= x1 + 1 && it.cy >= b.minY + top - 1 && it.cy <= b.maxY + top + 1 }) continue
             if (sd.barlines.any { (it.first + it.last) / 2 in x0..x1 }) continue
             val strokes = verticalStrokes(img, b, ss * 1.0)
+            if (System.getProperty("omr.trace") != null) println("ACCCAND x=$x0-$x1 y=${b.minY + top}-${b.maxY + top} w=${"%.2f".format(w)} h=${"%.2f".format(h)} strokes=${strokes.map { it - b.minX }} flat=${flatShape(img, b, ss)}")
             var type: Int? = null
             var refY = b.cy + top
             if (strokes.size == 2 && w >= 0.45) {
