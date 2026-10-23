@@ -5,6 +5,9 @@
 * PDF-Erkennung stark verbessert (fester Testkorpus 69 % → 83 % Noten): Schlüssel inkl. Wechsel, Tonart per
   Formerkennung mit Abstimmung, Balken auf Notenlinien, beliebige Taktarten, ganze Pausen, Haltebögen,
   Triolen, verbundene Taktziffern, Vorzeichen über ganze Zeichen.
+* PDF-Erkennung, Konvergenz-Schleife (Session 2): Runden 1 und 2 vollständig erkannt; Regressions-Satz
+  94,9 % Noten / 97,4 % Rhythmus (Zweistimmigkeit, Haltebögen über Taktstriche, Vorzeichen an Sekunden,
+  Fermaten, gebrochene Taktziffern).
 * Testkorpus mit 14 Stücken × 2 Notensatz-Programmen als Regressionstest in der CI; Konvergenz-Werkzeuge in `tools/omr-eval`.
 * Emulator-Bedientest in der CI, robustere Audio-Threads.
 * **Noten-Editor 2.0**: oben das Original-PDF mit Taktmarkierung, unten der Piano-Roll; Takt-Navigation,

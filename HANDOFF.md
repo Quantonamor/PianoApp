@@ -1,7 +1,7 @@
 # Übergabe für die nächste Session („weiter“)
 
-Stand: **2026-10-23 (spät)**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI komplett grün**
-(Core-Tests, APK-Build, Emulator-Bedientest). Allgemeine Regeln und Befehle stehen in `CLAUDE.md`.
+Stand: **2026-10-23 (Session 2)**, letzter Commit auf Branch `ccr-bbbc1057-0ev5g2` (setzt
+`ccr-257ad710-x5upqq` fort). Core-Tests lokal grün; CI nach jedem Push prüfen. Allgemeine Regeln in `CLAUDE.md`.
 
 ## Was als Nächstes zu tun ist (Reihenfolge)
 
@@ -14,18 +14,16 @@ Stand: **2026-10-23 (spät)**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, 
    Anleitung `tools/omr-eval/README.md`). Konkret:
    ```bash
    bash tools/omr-eval/setup.sh                                   # einmal pro Session
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 94,2 / 94,3 / 96,4 %
-   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r1           # Runde 1: 5 von 10 PDFs bei 100 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/regress             # Stand: 94,9 / 94,8 / 97,4 %
+   bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r3           # Runde 3: 2 von 10 PDFs bei 100 %
    ```
-   Läuft auch lokal unter Windows (Git Bash). Offene Punkte in Runde 1 (Reihenfolge, Details per
-   `DIFF=1 bash tools/omr-eval/evalr.sh /tmp/omr-work/rounds/r1` – zeigt jetzt auch EXTRA/MISS mit Seitenposition):
-   BWV 4 (Akkord-Sekunde 46/62@38 fehlt, Vorzeichen), BWV 370 (Rhythmus 96–97 %: Takt um Schlag 29–31,
-   Oktavfehler beim ersten Akkord), Lancashire Clog Verovio (eine fehlende Note 76@54.5). Dann neue Runde:
-   `source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 2 <seed>` (läuft jetzt auch unter Windows),
-   **Runde danach ins Repo sichern** (Befehl im README). Zähler „5 Runden hintereinander 100 %“: **0/5**.
-   Choräle des Generators wurden korrigiert und neu gesetzt (Tonart in beiden Systemen, ♮ ausgeschrieben,
-   Hals oben/unten je Stimme) – alte PDFs waren nicht lösungstreu.
-   Werkzeuge zur Fehlersuche: `-Pomr.trace=1` gibt u. a. `BLOB`, `HEAD`, `TIMESIG`, `ACCCAND`, `SLOT` aus;
+   Runden 1 und 2 sind inzwischen vollständig (10/10). **Offen in Runde 3** (Seed 3033, gesichert unter
+   `tools/omr-eval/rounds/r3`): BWV 244 Verovio (Vorzeichen, 94,8 %), Old National Theatre Jig (Rhythmus 84–86 %,
+   fehlende Noten), Clear the Track / Miss Jess Watson / Night of the Fair (Rhythmus 97–99 %). Danach Runde 4:
+   `source tools/omr-eval/env.sh; "$VPY" tools/omr-eval/round.py 4 <seed>` und **ins Repo sichern** (Befehl im
+   README). Zähler „5 Runden hintereinander 100 %“: **0/5** (nur frische Runden zählen).
+   Werkzeuge zur Fehlersuche: `-Pomr.trace=1` gibt u. a. `BLOB`, `HEAD`, `HOLE1`, `TIMESIG`, `ACCCAND`, `ARCCAND`,
+   `BARS`, `SLOT` aus (Zeilen vor der ersten `TRUTH`-Zeile = LilyPond, danach Verovio);
    Overlays in `/tmp/omr-work/omr/` (unter Windows `%LOCALAPPDATA%\Temp\omr-work\omr`).
 3. Kleinere Ideen, falls Zeit bleibt: Verovio-PDFs mit sehr kleinen Notenköpfen, Hilfe-Text um Editor/KI ergänzen,
    Deprecation-Warnungen (`Icons.Filled.MenuBook` → AutoMirrored) aufräumen.
