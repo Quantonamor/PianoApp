@@ -1591,10 +1591,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 fun slotSum(s: MeasureSlot?) = s?.perStaff?.filter { it.isNotEmpty() }?.map { cols -> cols.sumOf { it.advance } }
                     ?.takeIf { it.isNotEmpty() && it.all { v -> abs(v - it[0]) < 0.05 } }?.get(0)
                 // (or the neighbour is incomplete as well: end of a section with a pick-up into the next one)
-                // (the last measure completes the pick-up)
+                // (the end of a section, or the last measure, completes the pick-up)
                 fun split() = listOf(slots.getOrNull(mi - 1), slots.getOrNull(mi + 1)).any { n ->
                     slotSum(n)?.let { abs(it + sums[nonEmpty[0]] - measureLen) < 0.05 || it < measureLen - 0.05 } == true
-                } || (mi == slots.size - 1 && slotSum(slots.first())?.let { abs(it + sums[nonEmpty[0]] - measureLen) < 0.05 } == true)
+                } || (mi > 0 && slotSum(slots.first())?.let { it < measureLen - 0.05 && abs(it + sums[nonEmpty[0]] - measureLen) < 0.05 } == true)
                 short = consistent && sums[nonEmpty[0]] < measureLen - 0.05 && (mi == 0 || nonEmpty.size >= 2 || split())
                 if (short) {
                     if (mi == 0) pickup = sums[nonEmpty[0]]
