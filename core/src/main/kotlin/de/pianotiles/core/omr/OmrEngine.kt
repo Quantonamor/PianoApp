@@ -1300,12 +1300,13 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             // An incomplete measure (pick-up, end of a section): two voices in one staff may fill the length
             // that another staff agrees on.
             if (good.isEmpty()) {
-                val shortLen = perStaff.indices.filter { perStaff[it].isNotEmpty() }.map { sums[it] }.filter { it < measureLen - 0.05 }
-                    .groupingBy { (it * 4).roundToInt() }.eachCount().maxByOrNull { it.value }?.key?.let { it / 4.0 }
-                if (shortLen != null) for (si in perStaff.indices) {
-                    if (perStaff[si].isEmpty() || abs(sums[si] - shortLen) < 0.05) continue
-                    val split = splitVoices(slot.staves[si], perStaff[si], slot, shortLen, ss) ?: continue
-                    perStaff[si] = split.first; voiceOnsets[si] = split.second; sums[si] = shortLen
+                val nonEmpty = perStaff.indices.filter { perStaff[it].isNotEmpty() }
+                for (shortLen in nonEmpty.map { sums[it] }.filter { it < measureLen - 0.05 }.distinct()) {
+                    val splits = nonEmpty.filter { abs(sums[it] - shortLen) >= 0.05 }
+                        .associateWith { splitVoices(slot.staves[it], perStaff[it], slot, shortLen, ss) }
+                    if (splits.isEmpty() || splits.values.any { it == null }) continue
+                    for ((si, split) in splits) { perStaff[si] = split!!.first; voiceOnsets[si] = split.second; sums[si] = shortLen }
+                    break
                 }
             }
             if (System.getProperty("omr.trace") != null) println("SLOT $mi marks=${slot.staves.map { sd -> sd.tupletMarks.filter { it > slot.left && it < slot.right }.map { it.toInt() } }} sys=${slot.system} x=${slot.left.toInt()}-${slot.right.toInt()} L=$measureLen sums=$sums cols=${perStaff.map { c -> c.map { "%.2f".format(it.advance) } }}")
