@@ -396,6 +396,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         fun upperDigit(b: Blob) = abs(b.minY + top - st.top) < ss * 0.6 && abs(b.maxY + top - st.middle) < ss * 0.7
         fun lowerDigit(b: Blob) = abs(b.maxY + top - st.bottom) < ss * 0.6 && abs(b.minY + top - st.middle) < ss * 0.7
+        if (System.getProperty("omr.trace") != null) Components.find(noStaffCrop).filter { it.cx + left < st.xStart + ss * 14 && it.height > ss * 0.8 }.forEach {
+            println("TSGLYPH staff=$staffNo x=${it.minX + left}-${it.maxX + left} y=${it.minY + top}-${it.maxY + top} w=${"%.2f".format(it.width / ss)} h=${"%.2f".format(it.height / ss)} cy=${"%.1f".format(it.cy + top)} mid=${st.middle} open=${openRight(it)}")
+        }
         val timeSigBoxes = ArrayList<IntArray>()
         for (a in glyphs) if (upperDigit(a)) for (c in glyphs) if (lowerDigit(c) && abs(a.cx - c.cx) < ss * 0.8) {
             timeSigBoxes.add(intArrayOf(min(a.minX, c.minX), a.minY, max(a.maxX, c.maxX), c.maxY))
@@ -416,6 +419,32 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         if (timeSigBoxes.isEmpty()) glyphs.firstOrNull {
             abs(it.cy + top - st.middle) < ss * 0.5 && it.cx + left < st.xStart + ss * 12 && openRight(it)
         }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)); sd.commonTime = true }
+        // A small "C" (Verovio) whose arcs lie on staff lines falls apart when the lines are removed:
+        // join nearby fragments in the header area and test the joined box.
+        if (timeSigBoxes.isEmpty()) {
+            val frags = Components.find(noStaffCrop).filter { it.cx + left in (st.xStart + ss * 2.5)..(st.xStart + ss * 12) && it.height < ss * 2.6 && it.width < ss * 2.2 }
+            val boxes = frags.map { intArrayOf(it.minX, it.minY, it.maxX, it.maxY) }.toMutableList()
+            var merged = true
+            while (merged) {
+                merged = false
+                loop@ for (i in boxes.indices) for (j in i + 1 until boxes.size) {
+                    val a = boxes[i]; val c = boxes[j]; val gap = ss * 0.3
+                    if (c[0] <= a[2] + gap && a[0] <= c[2] + gap && c[1] <= a[3] + gap && a[1] <= c[3] + gap) {
+                        boxes[i] = intArrayOf(min(a[0], c[0]), min(a[1], c[1]), max(a[2], c[2]), max(a[3], c[3])); boxes.removeAt(j); merged = true; break@loop
+                    }
+                }
+            }
+            if (System.getProperty("omr.trace") != null) println("CBOXES staff=$staffNo frags=${frags.size} ${boxes.map { "${it[0] + left}-${it[2] + left}/${it[1] + top}-${it[3] + top}" }}")
+            boxes.firstOrNull { bx ->
+                val w = (bx[2] - bx[0] + 1) / ss; val h = (bx[3] - bx[1] + 1) / ss; val cy = (bx[1] + bx[3]) / 2.0
+                var ink = 0; var total = 0
+                // just below mid height: Verovio's upper terminal reaches down to the middle
+                for (y in (cy + ss * 0.05).roundToInt()..(cy + ss * 0.3).roundToInt())
+                    for (x in (bx[0] + (bx[2] - bx[0]) * 0.6).roundToInt()..bx[2]) { total++; if (noStaffCrop[x, y]) ink++ }
+                h in 1.4..2.6 && w in 0.8..2.2 && abs(cy + top - st.middle) < ss * 0.5 && total > 0 && ink < total * 0.2 &&
+                    frags.count { f -> f.minX >= bx[0] && f.maxX <= bx[2] && f.minY >= bx[1] && f.maxY <= bx[3] } >= 2
+            }?.let { timeSigBoxes.add(it); sd.commonTime = true }
+        }
         if (System.getProperty("omr.trace") != null) println("TIMESIG staff=$staffNo ${timeSigBoxes.map { (it.map { v -> v }).toString() }} common=${sd.commonTime} left=$left top=$top")
         timeSigBoxes.forEach { sd.timeSigs.add(intArrayOf(it[0] + left, it[1] + top, it[2] + left, it[3] + top)) }
         fun inTimeSig(b: Blob) = timeSigBoxes.any { bx -> b.cx >= bx[0] - 2 && b.cx <= bx[2] + 2 && b.cy >= bx[1] - 2 && b.cy <= bx[3] + 2 }
