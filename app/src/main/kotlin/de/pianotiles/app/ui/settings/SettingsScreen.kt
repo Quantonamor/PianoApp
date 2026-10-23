@@ -1,18 +1,23 @@
 package de.pianotiles.app.ui.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,23 +32,30 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import de.pianotiles.app.PianoTilesApp
+import de.pianotiles.app.audio.MicInput
 import de.pianotiles.app.i18n.I18n
 import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
 import de.pianotiles.core.ai.ClaudeReviewer
 import de.pianotiles.core.model.NoteNaming
+import de.pianotiles.core.model.Pitch
 import kotlinx.coroutines.launch
 
 @Composable
@@ -88,6 +100,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             Toggle(tr("Namen auf den fallenden Noten"), s.showNamesOnTiles) { v -> upd { it.copy(showNamesOnTiles = v) } }
             Toggle(tr("Namen auf den Tasten"), s.showNamesOnKeys) { v -> upd { it.copy(showNamesOnKeys = v) } }
             Toggle(tr("Taktnummern"), s.showMeasureNumbers) { v -> upd { it.copy(showMeasureNumbers = v) } }
+            Toggle(tr("Hände über der Klaviatur"), s.showHands) { v -> upd { it.copy(showHands = v) } }
+            Toggle(tr("Fingersatz auf den Noten"), s.showFingers) { v -> upd { it.copy(showFingers = v) } }
             SliderRow(tr("Vorschau / Zoom: %.1f s sichtbar", s.lookaheadSeconds), s.lookaheadSeconds, 1.5f..8f) { v -> upd { it.copy(lookaheadSeconds = v) } }
 
             Header(tr("Üben"))
@@ -95,6 +109,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             Toggle(tr("Andere Hand automatisch mitspielen"), s.accompaniment) { v -> upd { it.copy(accompaniment = v) } }
             Toggle(tr("Metronom standardmäßig an"), s.metronome) { v -> upd { it.copy(metronome = v) } }
             SliderRow(tr("Lautstärke: %s %%", (s.volume * 100).toInt()), s.volume, 0f..1f) { v -> upd { it.copy(volume = v) }; app.synth.volume = v }
+            Toggle(tr("Raumklang (leichter Hall)"), s.reverb) { v -> upd { it.copy(reverb = v) }; app.synth.reverb = v }
 
             Header(tr("Mikrofon"))
             SliderRow(tr("Empfindlichkeit: %s %%", (s.micSensitivity * 100).toInt()), s.micSensitivity, 0.1f..0.95f) { v -> upd { it.copy(micSensitivity = v) } }
@@ -102,6 +117,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 tr("Höher = auch leise Töne werden erkannt (aber eher Fehlalarme durch Geräusche). Bei Digitalpianos über Kopfhörer hört das Mikrofon nichts – dann bitte Lautsprecher verwenden."),
                 style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim,
             )
+            MicTest(s.micSensitivity, s.noteNaming)
             Toggle(tr("Oktavfehler tolerieren (empfohlen)"), s.octaveTolerant) { v -> upd { it.copy(octaveTolerant = v) } }
 
             Header(tr("KI-nachbessern (optional)"))
@@ -181,4 +197,46 @@ private fun Toggle(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
 private fun SliderRow(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
     Text(label, Modifier.padding(top = 8.dp))
     Slider(value = value, onValueChange = onChange, valueRange = range)
+}
+
+/** Live microphone check: level meter and the notes the detector hears right now. */
+@Composable
+private fun MicTest(sensitivity: Float, naming: NoteNaming) {
+    val context = LocalContext.current
+    var running by remember { mutableStateOf(false) }
+    var level by remember { mutableFloatStateOf(0f) }
+    var sounding by remember { mutableStateOf<List<Int>>(emptyList()) }
+    var heard by remember { mutableStateOf<List<Int>>(emptyList()) }
+    val mic = remember {
+        MicInput { f ->
+            level = (f.level * 8).toFloat().coerceIn(0f, 1f)
+            sounding = f.sounding.sorted()
+            if (f.onsets.isNotEmpty()) heard = (heard + f.onsets.sorted()).takeLast(12)
+        }
+    }
+    mic.sensitivity = sensitivity.toDouble()
+    DisposableEffect(Unit) { onDispose { mic.stop() } }
+    fun start() { heard = emptyList(); running = mic.start() }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) start() }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedButton(onClick = {
+            if (running) { mic.stop(); running = false; level = 0f; sounding = emptyList() }
+            else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) start()
+            else permission.launch(Manifest.permission.RECORD_AUDIO)
+        }) { Text(if (running) tr("Test beenden") else tr("Mikrofon testen")) }
+        if (running) {
+            Spacer(Modifier.padding(start = 12.dp))
+            Box(Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(PtColors.SurfaceHigh)) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(level).background(if (sounding.isNotEmpty()) PtColors.Hit else PtColors.TextDim))
+            }
+        }
+    }
+    if (running) {
+        Text(
+            if (sounding.isEmpty()) tr("Spiel ein paar Töne …") else tr("Ich höre: %s", sounding.joinToString(" ") { Pitch.fullName(it, naming) }),
+            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+        )
+        if (heard.isNotEmpty()) Text(tr("Zuletzt: %s", heard.joinToString(" ") { Pitch.fullName(it, naming) }), style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
+        Text(tr("Erkennt die App falsche Töne, die Empfindlichkeit senken; überhört sie leise Töne, erhöhen."), style = MaterialTheme.typography.bodySmall, color = PtColors.TextDim)
+    }
 }

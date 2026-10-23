@@ -67,9 +67,9 @@ import de.pianotiles.core.omr.PageDiagnostics
 import de.pianotiles.core.omr.StaffLayout
 
 @Composable
-fun ImportScreen(uri: Uri, onBack: () -> Unit, onDone: (songId: String, edit: Boolean) -> Unit) {
+fun ImportScreen(uris: List<Uri>, onBack: () -> Unit, onDone: (songId: String, edit: Boolean) -> Unit) {
     val app = LocalContext.current.applicationContext as Application
-    val vm: ImportViewModel = viewModel(key = "import-$uri") { ImportViewModel(app, uri) }
+    val vm: ImportViewModel = viewModel(key = "import-${uris.joinToString()}") { ImportViewModel(app, uris) }
     val state = vm.state
     LaunchedEffect(state) { if (state is ImportState.Done) onDone(state.songId, state.edit) }
 

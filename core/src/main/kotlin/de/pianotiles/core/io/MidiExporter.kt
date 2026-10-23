@@ -26,6 +26,11 @@ object MidiExporter {
                 ev.add(ticks(n.start) to byteArrayOf((0x90 or ch).toByte(), n.pitch.toByte(), n.velocity.coerceIn(1, 127).toByte()))
                 ev.add(ticks(n.end) to byteArrayOf((0x80 or ch).toByte(), n.pitch.toByte(), 0))
             }
+            // sustain pedal (controller 64) with the right hand's channel
+            if (ch == 0) for (p in song.pedal) {
+                ev.add(ticks(p.start) to byteArrayOf(0xB0.toByte(), 64, 127))
+                ev.add(ticks(p.end) to byteArrayOf(0xB0.toByte(), 64, 0))
+            }
             out.write(track(ev))
         }
         return out.toByteArray()

@@ -37,6 +37,7 @@ object MidiImporter {
         var keyFifths = 0
         var title: String? = null
         val notes = ArrayList<RawNote>()
+        val pedalEvents = ArrayList<Pair<Long, Boolean>>() // tick, down
         val trackNames = HashMap<Int, String>()
 
         for (t in 0 until trackCount) {
@@ -87,6 +88,7 @@ object MidiImporter {
                         val d2 = if (type == 0xC0 || type == 0xD0) 0 else r.u8()
                         if (ch == 9) continue // percussion channel
                         val key = ch * 128 + d1
+                        if (type == 0xB0 && d1 == 64) { pedalEvents.add(tick to (d2 >= 64)); continue }
                         if (type == 0x90 && d2 > 0) {
                             val n = RawNote(t, ch, d1, tick, -1, d2)
                             open.getOrPut(key) { ArrayDeque() }.addLast(n)
@@ -123,8 +125,23 @@ object MidiImporter {
                 .distinctBy { it.beat },
             source = SongSource.MIDI,
             createdAt = System.currentTimeMillis(),
+            pedal = pedalSpans(pedalEvents, tpq),
         )
         return song
+    }
+
+    /** Sustain pedal (controller 64) on/off events of all channels → spans in beats. */
+    private fun pedalSpans(events: List<Pair<Long, Boolean>>, tpq: Double): List<de.pianotiles.core.model.PedalSpan> {
+        val out = ArrayList<de.pianotiles.core.model.PedalSpan>()
+        var downAt = -1L
+        for ((tick, down) in events.sortedBy { it.first }) {
+            if (down && downAt < 0) downAt = tick
+            else if (!down && downAt >= 0) {
+                if (tick > downAt) out.add(de.pianotiles.core.model.PedalSpan(downAt / tpq, tick / tpq))
+                downAt = -1
+            }
+        }
+        return out
     }
 
     /** Uses track (or channel) separation when there are exactly two voices, else splits at middle C. */

@@ -2,31 +2,51 @@
 
 ## Erste Schritte
 
-1. App öffnen – in der **Bibliothek** liegen vier Demo-Stücke.
-2. Ein Stück antippen → der **Übungsbildschirm** öffnet sich (Querformat).
+1. App öffnen – in der **Bibliothek** liegen neun Demo-Stücke (Tonleiter, Alle meine Entchen, Twinkle Twinkle,
+   Hänschen klein, Ode an die Freude, Jingle Bells, Happy Birthday, Menuett in G, Für Elise). Beim ersten Start
+   erklärt eine Begrüßungskarte die drei wichtigsten Schritte; „Los geht's“ öffnet das erste Anfängerstück.
+2. Ein Stück antippen → der **Übungsbildschirm** öffnet sich (Hoch- oder Querformat, dreht mit dem Gerät).
 3. Gerät aufs Notenpult stellen, auf ▶ tippen. Beim ersten Mal fragt die App nach dem Mikrofon.
 
 ## Der Übungsbildschirm
 
+Die App funktioniert im Hoch- und im Querformat. Während die Musik läuft, sind nur Noten und Tasten zu sehen
+(oben links Zurück, oben rechts Pause); beim Anhalten erscheinen alle Knöpfe wieder.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ←  Titel / Takt 3 von 16 · 96 BPM   [Warten|Fließend|Anhören] [L|L+R|R] 80% ⏱ 🎤 ✎ │
+│ ←  Titel / Takt 3 von 16 · 96 BPM  [Warten|Fließend|Anhören] [L|L+R|R] 80% 🎤 📖 👁 ✎ │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                       fallende Noten (blau = rechts, orange = links)          │
 │ ── Taktlinien mit Nummern, violetter Bereich = Schleife                        │
 │ ═══════════════════════ Trefferlinie ═══════════════════════════════════════ │
-│                              Klaviatur                                       │
+│                     Klaviatur mit den Händen darüber                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ ↺  ⏪  ▶  ⏩   [▁▃▅▂▇▃ Zeitleiste ▁▂▅▃]   🔁  T. 5–8                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-* **Warten**: Die Noten halten an der Linie, bis du die richtigen Töne spielst. Unten steht, was zu spielen ist.
+* **Warten**: Die Noten halten an der Linie, bis du die richtigen Töne spielst. Oben steht, was zu spielen ist.
+  Akkorde zählen nur, wenn ihre Tasten zusammen angeschlagen oder gemeinsam gehalten werden. Musst du eine Taste
+  loslassen, während eine andere weiterklingt, wird sie weiß mit Pfeil markiert („Loslassen“); lässt du eine Note zu
+  früh los, leuchtet ihre Taste grün umrandet („Halten“).
 * **Fließend**: Läuft im gewählten Tempo; mit Mikrofon wird die Trefferquote angezeigt.
 * **Anhören**: Die App spielt vor.
 * **L / L+R / R**: Welche Hand du übst. Die andere Hand wird blasser dargestellt und mitgespielt.
 * **Tempo** (z. B. „80 %“): antippen zum Einstellen.
-* **⏱**: Metronom. **🎤**: Mikrofon an/aus (grüner Balken = Pegel). **✎**: Noten bearbeiten.
+* **🎤**: Mikrofon an/aus (grüner Balken = Pegel). **✎**: Noten bearbeiten.
+* **👁 Ansicht**: blendet Hände, Fingersatz, Notennamen (auf Noten/Tasten), Taktnummern und das Metronom ein oder aus.
+  Anfangs ist nur das Nötigste sichtbar.
+* **Notenblatt** (Buch-Symbol): zeigt die Noten neben den fallenden Noten, der aktuelle Takt ist markiert, Antippen
+  springt dorthin. Bei PDF- und Foto-Importen ist es das Original; bei allen anderen Stücken (MIDI, MusicXML, ABC,
+  MuseScore, Demos …) setzt die App das Notenblatt selbst aus den Noten – mit Fingersatz – und aktualisiert es nach
+  jeder Änderung im Editor.
+* **Hände** (im Menü Ansicht): blendet zwei gezeichnete Hände über der Klaviatur ein bzw. aus. Sie gleiten mit dem Stück mit; der
+  Finger, der gerade spielt, drückt seine Taste und leuchtet auf. Die Zahlen auf den Fingernägeln und in den
+  fallenden Noten sind der Fingersatz (1 = Daumen … 5 = kleiner Finger). Hat ein Stück keinen Fingersatz, rechnet
+  die App beim Öffnen automatisch einen aus (Tonleiter-Untersatz, Fünffinger-Lagen, Akkorde, möglichst kein Daumen
+  auf schwarzen Tasten); Fingersätze aus MusicXML-/MuseScore-Dateien bleiben erhalten. Fingerzahlen und Hände lassen
+  sich auch in den Einstellungen getrennt abschalten.
 
 ### Gesten
 
@@ -83,7 +103,17 @@ Erreichbar über das Stift-Symbol beim Üben oder im Stück-Menü der Bibliothek
    Piano-Roll. **Übernehmen**, **Verwerfen** oder **Alle übernehmen** – alles lässt sich mit Rückgängig zurücknehmen.
 4. Danach „Speichern“.
 
+## Fortschritt
+Oben in der Bibliothek steht, wie viele Minuten du heute und in den letzten 7 Tagen geübt hast und wie viele Tage
+in Folge (ab einer Minute pro Tag).
+
+## MIDI-Keyboard
+Digitalpiano/Keyboard mit USB- oder Bluetooth-MIDI anschließen – die App erkennt es automatisch (Klavier-Symbol in
+der Kopfzeile statt Mikrofon). Jede Taste wird exakt erkannt, auch Akkorde, Halten und Loslassen.
+
 ## Tipps fürs Mikrofon
+
+* **Einstellungen → Mikrofon testen** zeigt live Pegel und erkannte Töne.
 
 * Ruhige Umgebung, Gerät nah am Klavier.
 * Digitalpiano: über Lautsprecher spielen (nicht Kopfhörer).

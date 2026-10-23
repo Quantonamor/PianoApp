@@ -8,10 +8,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
@@ -19,20 +19,26 @@ import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import de.pianotiles.app.ui.common.ScreenScope
 import de.pianotiles.app.ui.editor.EditorScreen
 import de.pianotiles.app.ui.importflow.ImportScreen
+import de.pianotiles.app.ui.importflow.PhotoCaptureScreen
+import de.pianotiles.app.ui.library.CourseScreen
 import de.pianotiles.app.ui.library.LibraryScreen
 import de.pianotiles.app.ui.practice.PracticeScreen
 import de.pianotiles.app.ui.settings.HelpScreen
 import de.pianotiles.app.ui.settings.SettingsScreen
 import de.pianotiles.app.ui.theme.PianoTilesTheme
 import de.pianotiles.app.ui.theme.PtColors
+import kotlinx.coroutines.launch
 
 sealed interface Screen {
     data object Library : Screen
-    data class Practice(val songId: String) : Screen
-    data class Import(val uri: Uri) : Screen
+    data class Practice(val songId: String, val listen: Boolean = false, val lessonId: String? = null) : Screen
+    data object Course : Screen
+    data class Import(val uris: List<Uri>) : Screen
+    data object Photos : Screen
     data class Editor(val songId: String) : Screen
     data object Settings : Screen
     data object Help : Screen
@@ -61,9 +67,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             PianoTilesTheme {
                 LaunchedEffect(Unit) { app.songs.load() }
-                // Surface (not a plain Box) so that texts and icons get the light content color by default.
-                Surface(Modifier.fillMaxSize(), color = PtColors.Background) {
-                    Box(Modifier.fillMaxSize().safeDrawingPadding()) { Navigation() }
+                // light text on the dark background everywhere (titles were drawn in the default dark colour)
+                androidx.compose.material3.Surface(color = PtColors.Background, contentColor = androidx.compose.ui.graphics.Color.White) {
+                    Box(Modifier.fillMaxSize().background(PtColors.Background).safeDrawingPadding()) { Navigation() }
                 }
             }
         }
@@ -80,18 +86,34 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        val uri: Uri? = when (intent?.action) {
-            Intent.ACTION_VIEW -> intent.data
-            Intent.ACTION_SEND -> if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)
-            else -> null
+        val uris: List<Uri> = when (intent?.action) {
+            Intent.ACTION_VIEW -> listOfNotNull(intent.data)
+            Intent.ACTION_SEND -> listOfNotNull(
+                if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM),
+            )
+            Intent.ACTION_SEND_MULTIPLE -> (
+                if (Build.VERSION.SDK_INT >= 33) intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                else @Suppress("DEPRECATION") intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+            ).orEmpty()
+            else -> emptyList()
         }
-        if (uri != null) backStack.add(Screen.Import(uri))
+        if (uris.isNotEmpty()) backStack.add(Screen.Import(uris))
     }
 
     private fun push(s: Screen) { backStack.add(s) }
     private fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) else finish() }
     private fun replaceTop(s: Screen) { backStack[backStack.lastIndex] = s }
+
+    /** Opens a lesson of the learning path (its piece is added to the library first if needed). */
+    private fun openLesson(lesson: de.pianotiles.core.practice.Lesson, replace: Boolean) {
+        val app = application as PianoTilesApp
+        lifecycleScope.launch {
+            if (!app.songs.ensureCourseSong(lesson.songId)) return@launch
+            val s = Screen.Practice(lesson.songId, lessonId = lesson.id)
+            if (replace) replaceTop(s) else push(s)
+        }
+    }
 
     @Composable
     private fun Navigation() {
@@ -105,14 +127,22 @@ class MainActivity : ComponentActivity() {
         when (screen) {
             Screen.Library -> LibraryScreen(
                 onOpen = { push(Screen.Practice(it)) },
+                onPlay = { push(Screen.Practice(it, listen = true)) },
                 onImport = { push(Screen.Import(it)) },
+                onPhotos = { push(Screen.Photos) },
                 onEdit = { push(Screen.Editor(it)) },
                 onSettings = { push(Screen.Settings) },
                 onHelp = { push(Screen.Help) },
+                onCourse = { push(Screen.Course) },
             )
-            is Screen.Practice -> PracticeScreen(screen.songId, onBack = ::pop, onEdit = { push(Screen.Editor(it)) })
-            is Screen.Import -> ImportScreen(screen.uri, onBack = ::pop, onDone = { id, edit -> replaceTop(if (edit) Screen.Editor(id) else Screen.Practice(id)) })
+            is Screen.Practice -> PracticeScreen(
+                screen.songId, onBack = ::pop, onEdit = { push(Screen.Editor(it)) }, listen = screen.listen, lessonId = screen.lessonId,
+                onLesson = { lesson -> openLesson(lesson, replace = true) },
+            )
+            Screen.Course -> CourseScreen(onBack = ::pop, onOpen = { openLesson(it, replace = false) })
+            is Screen.Import -> ImportScreen(screen.uris, onBack = ::pop, onDone = { id, edit -> replaceTop(if (edit) Screen.Editor(id) else Screen.Practice(id)) })
             is Screen.Editor -> EditorScreen(screen.songId, onBack = ::pop, onOpenSettings = { push(Screen.Settings) })
+            Screen.Photos -> PhotoCaptureScreen(onBack = ::pop, onRecognize = { replaceTop(Screen.Import(it)) })
             Screen.Settings -> SettingsScreen(onBack = ::pop)
             Screen.Help -> HelpScreen(onBack = ::pop)
         }

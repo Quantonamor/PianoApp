@@ -8,8 +8,11 @@ ch:bwv253.mxl
 ch:bwv261.mxl
 ch:bwv268.mxl
 ch:bwv28.6.mxl
+ch:bwv286.mxl
+ch:bwv318.mxl
 ch:bwv32.6.mxl
 ch:bwv336.mxl
+ch:bwv348.mxl
 ch:bwv370.mxl
 ch:bwv373.mxl
 ch:bwv386.mxl
@@ -23,6 +26,7 @@ ch:bwv55.5.mxl
 ch:bwv93.7.mxl
 folk:AcaciaReel.abc:0
 folk:AmazonHornpipe.abc:0
+folk:AroundTheWorldReel.abc:0
 folk:CincinnatiLancashireClog.abc:0
 folk:ClearTheTrackHornpipe.abc:0
 folk:DandyMikesReel.abc:0
@@ -32,6 +36,7 @@ folk:JennysWeddingReel.abc:0
 folk:JerseyLightningJig.abc:0
 folk:LegacyJig.abc:0
 folk:LevantinesBarrelReel.abc:0
+folk:McDonaldsReel.abc:0
 folk:MissJessWatsonsHornpipe.abc:0
 folk:MollyMcGuiresReel.abc:0
 folk:MrsKinlochsReel.abc:0

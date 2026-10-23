@@ -908,7 +908,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         return Components.find(crop).any { b ->
             val w = b.width / ss; val h = b.height / ss
             h in 0.5..1.25 && w in 0.35..0.95 && b.minY > 0 && b.maxY < crop.height - 1 &&
-                b.minY + y0 > st.bottom + ss * 1.3 && b.fill in 0.3..0.85
+                b.minY + y0 > st.bottom + ss * 1.3 && b.fill in 0.25..0.85
+        } || Components.find(crop).any { b ->
+            // the 8 touches the clef's tail and merges with it: the tail alone ends about 1.5 spaces below the staff
+            val w = b.width / ss; val h = b.height / ss
+            h in 1.3..2.2 && w in 1.1..2.0 && b.maxY < crop.height - 1 && b.maxY + y0 > st.bottom + ss * 2.1
         }
     }
 
@@ -1823,7 +1827,10 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     // (a section ending at a thick repeat/double bar completes the pick-up, e.g. a first ending)
                     (pickup > 0 && abs(pickup + sums[nonEmpty[0]] - measureLen) < 0.05 &&
                         slot.staves.first().barlines.any { it.last - it.first > ss * 0.5 && slot.right >= it.first - ss && slot.right <= it.last + ss })
-                short = consistent && sums[nonEmpty[0]] < measureLen - 0.05 && (mi == 0 || nonEmpty.size >= 2 || split())
+                // (or at least half a measure, e.g. the end of a section completing the pick-up: the notes follow each
+                // other from the bar line)
+                short = consistent && sums[nonEmpty[0]] < measureLen - 0.05 &&
+                    (mi == 0 || nonEmpty.size >= 2 || split() || sums[nonEmpty[0]] >= measureLen * 0.5)
                 if (short) {
                     if (mi == 0) pickup = sums[nonEmpty[0]]
                     length = sums[nonEmpty[0]]

@@ -21,6 +21,8 @@ data class Note(
     val duration: Double,
     val hand: Hand = Hand.RIGHT,
     val velocity: Int = 80,
+    /** Finger 1 (thumb) … 5 (little finger); 0 = no fingering. Stored in the hand file (`hands.json`). */
+    val finger: Int = 0,
 ) {
     val end: Double get() = start + duration
 }
@@ -33,6 +35,10 @@ data class TempoChange(val beat: Double, val bpm: Double)
 @Serializable
 data class SheetMeasure(val measure: Int, val page: Int, val x0: Float, val y0: Float, val x1: Float, val y1: Float)
 
+/** The sustain (right) pedal is held down from [start] to [end] (beats). */
+@Serializable
+data class PedalSpan(val start: Double, val end: Double)
+
 /** A named range of the piece that can be practised as a loop ("Teil A", "Refrain", ...). */
 @Serializable
 data class Section(
@@ -42,7 +48,10 @@ data class Section(
 )
 
 @Serializable
-enum class SongSource { DEMO, MIDI, MUSICXML, PDF, MANUAL }
+enum class SongSource { DEMO, MIDI, MUSICXML, PDF, MANUAL, PHOTO, ABC, MUSESCORE, MEI, PACKAGE }
+
+@Serializable
+enum class FingeringSource { NONE, AUTO, AI, MANUAL, FILE }
 
 /** Practice statistics stored per song. */
 @Serializable
@@ -76,7 +85,20 @@ data class Song(
     val sheetMeasures: List<SheetMeasure> = emptyList(),
     /** Measures (0-based) the recognition was unsure about ("Bitte prüfen" in the editor). */
     val flaggedMeasures: List<Int> = emptyList(),
+    /** Key signature as number of sharps (>0) or flats (<0); null = unknown (guessed when needed). */
+    val keyFifths: Int? = null,
+    /** Where the fingering came from (see [FingeringSource]). */
+    val fingeringSource: FingeringSource = FingeringSource.NONE,
+    /** Sustain pedal (from MIDI or MusicXML files); notes released while it is down keep sounding. */
+    val pedal: List<PedalSpan> = emptyList(),
 ) {
+    /** When [note] stops sounding: its end, or – if it is released while the pedal is down – the pedal release. */
+    fun soundingEnd(note: Note): Double {
+        val e = note.end
+        for (p in pedal) if (e >= p.start - 1e-6 && e < p.end - 1e-6 && note.start < p.end) return p.end
+        return e
+    }
+
     /** Tempo at [beat], following [tempoChanges]. */
     fun bpmAt(beat: Double): Double = tempoChanges.lastOrNull { it.beat <= beat + 1e-9 }?.bpm ?: bpm
 

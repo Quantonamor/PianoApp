@@ -6,8 +6,10 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,16 +34,20 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.HourglassTop
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Piano
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -83,10 +90,13 @@ import de.pianotiles.core.practice.PracticeMode
 import kotlinx.coroutines.delay
 
 @Composable
-fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit) {
+fun PracticeScreen(
+    songId: String, onBack: () -> Unit, onEdit: (String) -> Unit, listen: Boolean = false, lessonId: String? = null,
+    onLesson: (de.pianotiles.core.practice.Lesson) -> Unit = {},
+) {
     val context = LocalContext.current
     val app = context.applicationContext as Application
-    val vm: PracticeViewModel = viewModel(key = "practice-$songId") { PracticeViewModel(app, songId) }
+    val vm: PracticeViewModel = viewModel(key = "practice-$songId-${lessonId.orEmpty()}") { PracticeViewModel(app, songId, listen, lessonId) }
     val settings by (app as PianoTilesApp).settings.settings.collectAsState()
     val song = vm.song
     val engine = vm.engine
@@ -116,111 +126,225 @@ fun PracticeScreen(songId: String, onBack: () -> Unit, onEdit: (String) -> Unit)
         else micPermission.launch(Manifest.permission.RECORD_AUDIO)
     }
     // Switch the microphone on automatically for "Warten" (the user can turn it off again).
-    LaunchedEffect(vm.mode) { if (vm.mode == PracticeMode.WAIT && !vm.micActive) requestMic(true) }
+    // (not when a MIDI keyboard is connected: its keys are exact)
+    LaunchedEffect(vm.mode, vm.midiDevices) { if (vm.mode == PracticeMode.WAIT && !vm.micActive && vm.midiDevices.isEmpty()) requestMic(true) }
     DisposableEffect(Unit) { onDispose { vm.setMic(false) } }
 
     var showSpeed by remember { mutableStateOf(false) }
-    val sheetFile = remember(song.id) { (app as PianoTilesApp).songs.pdfFile(song.id).takeIf { it.exists() && song.sheetMeasures.isNotEmpty() } }
+    val sheetFile = remember(song.id, song.sheetMeasures) { (app as PianoTilesApp).songs.sheetPages(song.id).takeIf { it.isNotEmpty() && song.sheetMeasures.isNotEmpty() } }
     var showSheet by remember { mutableStateOf(false) }
     var showLoop by remember { mutableStateOf(false) }
 
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Column(Modifier.fillMaxSize()) {
-            TopBar(
-                vm, onBack = onBack, onEdit = { vm.pause(); onEdit(songId) }, onMic = { requestMic(!vm.micActive) }, onSpeed = { showSpeed = true },
-                sheetAvailable = sheetFile != null, sheetShown = showSheet, onSheet = { showSheet = !showSheet },
-            )
-
-            Row(Modifier.fillMaxWidth().weight(1f)) {
-            if (showSheet && sheetFile != null) {
-                SheetPanel(
-                    pdf = sheetFile, measures = song.sheetMeasures, currentMeasure = vm.engine.currentMeasure.also { vm.frame },
-                    loopMeasures = if (vm.loop.enabled) vm.loopStartMeasure..vm.loopEndMeasure else null,
-                    onSeekMeasure = { vm.seekBeat(song.measureStart(it)) },
-                    modifier = Modifier.weight(0.42f).fillMaxHeight(),
-                )
-            }
-            BoxWithConstraints(Modifier.weight(0.58f).fillMaxHeight()) {
-                val keyboardHeight = (maxHeight * 0.30f).coerceIn(70.dp, 170.dp)
-                Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.fillMaxWidth().weight(1f)) {
-                        FallingNotes(
-                            engine = engine, range = range, frame = vm.frame,
-                            lookaheadSeconds = settings.lookaheadSeconds, naming = settings.noteNaming,
-                            showNames = settings.showNamesOnTiles, showMeasureNumbers = settings.showMeasureNumbers,
-                            onScrub = vm::scrubBy, onTap = vm::togglePlay, onDoubleTap = vm::loopCurrentMeasure,
-                        )
-                        Overlays(vm)
-                    }
-                    val expected = HashMap<Int, Hand>()
-                    val sounding = HashMap<Int, Hand>()
-                    vm.frame.also { }
-                    for (p in engine.expectedPitches) expected[p] = song.notes.firstOrNull { it.pitch == p && it.start >= engine.position - 0.6 }?.hand ?: Hand.RIGHT
-                    for (i in engine.soundingNotes()) {
-                        val n = song.notes[i]
-                        if (engine.noteStates[i] == NoteState.AUTO || engine.noteStates[i] == NoteState.HIT || vm.mode != PracticeMode.WAIT) sounding[n.pitch] = n.hand
-                    }
-                    Box(Modifier.fillMaxWidth().height(keyboardHeight)) {
-                        Keyboard(
-                            range = range, expected = expected, sounding = sounding, heard = vm.heardPitches,
-                            pressed = vm.tappedPitches, wrong = vm.wrongPitch, naming = settings.noteNaming,
-                            showNames = settings.showNamesOnKeys, onKeyDown = vm::keyDown, onKeyUp = vm::keyUp,
-                        )
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        // any touch shows the controls again for a while – counted when the finger lifts: on touch-down the small
+        // round buttons would vanish under the finger and their click would be lost
+        var lastTouch by remember { mutableStateOf(System.currentTimeMillis()) }
+        BoxWithConstraints(
+            Modifier.fillMaxSize().pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Release) lastTouch = System.currentTimeMillis()
                     }
                 }
+            },
+        ) {
+            val portrait = maxHeight > maxWidth
+            // while the music runs only notes and keys are visible; pausing brings the controls back
+            // hidden while the music runs and after a few seconds without touching (paused); dialogs keep them
+            vm.frame.also { }
+            val idle = System.currentTimeMillis() - lastTouch > 6000
+            val controls = vm.finished != null || showSpeed || showLoop || (!vm.isPlaying && !idle)
+            Column(Modifier.fillMaxSize()) {
+                AnimatedVisibility(controls, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                    TopBar(
+                        vm, portrait = portrait, onBack = onBack, onEdit = { vm.pause(); onEdit(songId) }, onMic = { requestMic(!vm.micActive) },
+                        onSpeed = { showSpeed = true }, sheetAvailable = sheetFile != null, sheetShown = showSheet, onSheet = { showSheet = !showSheet },
+                    )
+                }
+                val sheet: (@Composable (Modifier) -> Unit)? = if (showSheet && sheetFile != null) { mod ->
+                    SheetPanel(
+                        pages = sheetFile, measures = song.sheetMeasures, currentMeasure = vm.engine.currentMeasure.also { vm.frame },
+                        loopMeasures = if (vm.loop.enabled) vm.loopStartMeasure..vm.loopEndMeasure else null,
+                        onSeekMeasure = { vm.seekBeat(song.measureStart(it)) },
+                        modifier = mod,
+                    )
+                } else null
+                if (portrait) {
+                    sheet?.invoke(Modifier.fillMaxWidth().weight(0.38f))
+                    PlayArea(vm, settings, range, Modifier.fillMaxWidth().weight(0.62f), portrait = true)
+                } else {
+                    Row(Modifier.fillMaxWidth().weight(1f)) {
+                        sheet?.invoke(Modifier.weight(0.42f).fillMaxHeight())
+                        PlayArea(vm, settings, range, Modifier.weight(0.58f).fillMaxHeight(), portrait = false)
+                    }
+                }
+                AnimatedVisibility(controls, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                    BottomBar(vm, onLoopOptions = { showLoop = true })
+                }
             }
+            // while the controls are hidden: small back and pause buttons
+            if (!controls) {
+                @Composable
+                fun round(align: Alignment, icon: ImageVector, desc: String, onClick: () -> Unit) = Box(
+                    Modifier.align(align).padding(10.dp).size(40.dp).clip(CircleShape).background(Color(0x66000000)).clickable(onClick = onClick),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(icon, desc, tint = Color.White.copy(alpha = 0.85f)) }
+                round(Alignment.TopStart, Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück"), onBack)
+                if (vm.isPlaying) round(Alignment.TopEnd, Icons.Filled.Pause, "Pause") { vm.togglePlay() }
+                else round(Alignment.TopEnd, Icons.Filled.Tune, tr("Einstellungen zeigen")) { lastTouch = System.currentTimeMillis() }
             }
-            BottomBar(vm, onLoopOptions = { showLoop = true })
         }
 
         if (showSpeed) SpeedDialog(vm, onDismiss = { showSpeed = false })
         if (showLoop) LoopPanel(vm, onDismiss = { showLoop = false })
-        vm.finished?.let { FinishedDialog(vm, it, onBack) }
+        vm.finished?.let { FinishedDialog(vm, it, onBack, onLesson) }
+    }
+}
+
+/** Falling notes over the keyboard (+ hands). Keys are taller in portrait, like on a real piano seen from above. */
+@Composable
+private fun PlayArea(vm: PracticeViewModel, settings: de.pianotiles.app.data.AppSettings, range: IntRange, modifier: Modifier, portrait: Boolean) {
+    val song = vm.song
+    val engine = vm.engine
+    BoxWithConstraints(modifier) {
+        val whites = (range).count { !Pitch.isBlackKey(it) }.coerceAtLeast(1)
+        val keyboardHeight = if (portrait) (maxWidth / whites * 5.2f).coerceIn(90.dp, 190.dp).coerceAtMost(maxHeight * 0.32f)
+        else (maxHeight * 0.30f).coerceIn(80.dp, 180.dp)
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxWidth().weight(1f)) {
+                FallingNotes(
+                    engine = engine, range = range, frame = vm.frame,
+                    lookaheadSeconds = settings.lookaheadSeconds * (if (portrait) 1.4f else 1f), naming = settings.noteNaming,
+                    showNames = settings.showNamesOnTiles, showMeasureNumbers = settings.showMeasureNumbers,
+                    showFingers = settings.showFingers,
+                    onScrub = vm::scrubBy, onTap = vm::togglePlay, onDoubleTap = vm::loopCurrentMeasure,
+                )
+                Overlays(vm)
+            }
+            val expected = HashMap<Int, Hand>()
+            val sounding = HashMap<Int, Hand>()
+            vm.frame.also { }
+            for (p in engine.expectedPitches) expected[p] = song.notes.firstOrNull { it.pitch == p && it.start >= engine.position - 0.6 }?.hand ?: Hand.RIGHT
+            for (i in engine.soundingNotes()) {
+                val n = song.notes[i]
+                if (engine.noteStates[i] == NoteState.AUTO || engine.noteStates[i] == NoteState.HIT || vm.mode != PracticeMode.WAIT) sounding[n.pitch] = n.hand
+            }
+            val hints = engine.holdHints()
+            val pulse = ((kotlin.math.sin(System.nanoTime() / 1e9 * 6.0) + 1) / 2).toFloat()
+            // with hands shown, a strip below the keys holds the palms, so only the fingers cover the keys
+            val handZone = if (settings.showHands) keyboardHeight * 0.6f else 0.dp
+            Box(Modifier.fillMaxWidth().height(keyboardHeight + handZone)) {
+                Box(Modifier.fillMaxWidth().height(keyboardHeight).background(Color.Black)) {
+                Keyboard(
+                    range = range, expected = expected, sounding = sounding, heard = vm.heardPitches,
+                    pressed = vm.tappedPitches + vm.midiPitches, wrong = vm.wrongPitch, naming = settings.noteNaming,
+                    showNames = settings.showNamesOnKeys, release = hints.release, keepHolding = hints.keepHolding, pulse = pulse,
+                    onKeyDown = vm::keyDown, onKeyUp = vm::keyUp,
+                )
+                }
+                if (settings.showHands) {
+                    val kh = with(androidx.compose.ui.platform.LocalDensity.current) { keyboardHeight.toPx() }
+                    HandsOverlay(vm.handMotion, engine.position, vm.frame, range, showNumbers = settings.showFingers, keysHeight = kh)
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun TopBar(
-    vm: PracticeViewModel, onBack: () -> Unit, onEdit: () -> Unit, onMic: () -> Unit, onSpeed: () -> Unit,
+    vm: PracticeViewModel, portrait: Boolean, onBack: () -> Unit, onEdit: () -> Unit, onMic: () -> Unit, onSpeed: () -> Unit,
     sheetAvailable: Boolean, sheetShown: Boolean, onSheet: () -> Unit,
 ) {
-    Surface(color = MaterialTheme.colorScheme.surface) {
-        Row(
-            Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
-            Column(Modifier.weight(1f)) {
+    Surface(color = Color(0xFF0B0D14), contentColor = Color.White) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val compact = maxWidth < 900.dp
+            @Composable
+            fun title(modifier: Modifier) = Column(modifier) {
                 Text(vm.song.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 vm.frame.also { }
                 val m = vm.engine.currentMeasure + 1
                 Text(
-                    tr("Takt %s / %s · %s BPM", m, vm.song.measureCount, (vm.song.bpmAt(vm.engine.position) * vm.speed).toInt()),
-                    style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim,
+                    if (compact) tr("Takt %s / %s", m, vm.song.measureCount)
+                    else tr("Takt %s / %s · %s BPM", m, vm.song.measureCount, (vm.song.bpmAt(vm.engine.position) * vm.speed).toInt()),
+                    style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim, maxLines = 1,
                 )
             }
-            Segmented(
-                listOf(
-                    Triple(PracticeMode.WAIT, Icons.Filled.HourglassTop, tr("Warten")),
-                    Triple(PracticeMode.FLOW, Icons.Filled.PlayArrow, tr("Fließend")),
-                    Triple(PracticeMode.LISTEN, Icons.Filled.Hearing, tr("Anhören")),
-                ),
-                selected = vm.mode, onSelect = vm::changeMode,
+            @Composable
+            fun practiceControls() {
+                Segmented(
+                    listOf(
+                        Triple(PracticeMode.WAIT, Icons.Filled.HourglassTop, tr("Warten")),
+                        Triple(PracticeMode.FLOW, Icons.Filled.PlayArrow, tr("Fließend")),
+                        Triple(PracticeMode.LISTEN, Icons.Filled.Hearing, tr("Anhören")),
+                    ),
+                    selected = vm.mode, onSelect = vm::changeMode, showLabels = !compact,
+                )
+                Spacer(Modifier.width(6.dp))
+                HandSelector(vm.hands, vm::changeHands)
+                Spacer(Modifier.width(6.dp))
+                Chip(text = "${(vm.speed * 100).toInt()} %", icon = if (compact) null else Icons.Filled.Tune, active = vm.speed != 1f, onClick = onSpeed)
+            }
+            @Composable
+            fun actions() {
+                if (vm.midiDevices.isNotEmpty()) Icon(Icons.Filled.Piano, tr("MIDI-Keyboard verbunden: %s", vm.midiDevices.joinToString()), tint = PtColors.Hit, modifier = Modifier.padding(horizontal = 6.dp))
+                else MicButton(vm.micActive, vm.micLevel, onMic)
+                if (sheetAvailable) ToggleIcon(Icons.AutoMirrored.Filled.MenuBook, tr("Notenblatt"), sheetShown, onSheet)
+                ViewMenu(vm)
+                IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, tr("Noten bearbeiten")) }
+            }
+            if (portrait) {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
+                        title(Modifier.weight(1f))
+                        actions()
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+                    ) { practiceControls() }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
+                    title(Modifier.weight(1f))
+                    practiceControls()
+                    actions()
+                }
+            }
+        }
+    }
+}
+
+/** Everything that can be shown or hidden on the practice screen, in one menu. */
+@Composable
+private fun ViewMenu(vm: PracticeViewModel) {
+    var open by remember { mutableStateOf(false) }
+    val app = LocalContext.current.applicationContext as PianoTilesApp
+    val s by app.settings.settings.collectAsState()
+    Box {
+        IconButton(onClick = { open = true }) { Icon(Icons.Filled.Visibility, tr("Ansicht")) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            @Composable
+            fun item(label: String, checked: Boolean, onToggle: () -> Unit) = DropdownMenuItem(
+                text = { Text(label) },
+                leadingIcon = { Checkbox(checked = checked, onCheckedChange = null) },
+                onClick = { onToggle(); open = false },
             )
-            Spacer(Modifier.width(8.dp))
-            HandSelector(vm.hands, vm::changeHands)
-            Spacer(Modifier.width(8.dp))
-            Chip(text = "${(vm.speed * 100).toInt()} %", icon = Icons.Filled.Tune, active = vm.speed != 1f, onClick = onSpeed)
-            ToggleIcon(Icons.Filled.Timer, tr("Metronom"), vm.metronome, vm::toggleMetronome)
-            MicButton(vm.micActive, vm.micLevel, onMic)
-            if (sheetAvailable) ToggleIcon(Icons.Filled.MenuBook, tr("Notenblatt"), sheetShown, onSheet)
-            IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, tr("Noten bearbeiten")) }
+            item(tr("Hände über der Klaviatur"), s.showHands) { app.settings.update { it.copy(showHands = !it.showHands) } }
+            item(tr("Fingersatz auf den Noten"), s.showFingers) { app.settings.update { it.copy(showFingers = !it.showFingers) } }
+            item(tr("Notennamen auf den Noten"), s.showNamesOnTiles) { app.settings.update { it.copy(showNamesOnTiles = !it.showNamesOnTiles) } }
+            item(tr("Notennamen auf den Tasten"), s.showNamesOnKeys) { app.settings.update { it.copy(showNamesOnKeys = !it.showNamesOnKeys) } }
+            item(tr("Taktnummern"), s.showMeasureNumbers) { app.settings.update { it.copy(showMeasureNumbers = !it.showMeasureNumbers) } }
+            item(tr("Metronom"), vm.metronome) { vm.toggleMetronome() }
         }
     }
 }
 
 @Composable
-private fun <T> Segmented(items: List<Triple<T, ImageVector, String>>, selected: T, onSelect: (T) -> Unit) {
+private fun <T> Segmented(items: List<Triple<T, ImageVector, String>>, selected: T, onSelect: (T) -> Unit, showLabels: Boolean = true) {
     Row(Modifier.clip(RoundedCornerShape(20.dp)).background(PtColors.SurfaceHigh)) {
         for ((value, icon, label) in items) {
             val sel = value == selected
@@ -232,9 +356,12 @@ private fun <T> Segmented(items: List<Triple<T, ImageVector, String>>, selected:
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(icon, null, Modifier.size(16.dp), tint = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim)
-                Spacer(Modifier.width(4.dp))
-                Text(label, fontSize = 12.sp, color = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim, fontWeight = FontWeight.Medium)
+                Icon(icon, label, Modifier.size(16.dp), tint = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim)
+                // narrow screens: only the active mode is labelled, so its symbol is always explained
+                if (showLabels || sel) {
+                    Spacer(Modifier.width(4.dp))
+                    Text(label, fontSize = 12.sp, color = if (sel) MaterialTheme.colorScheme.onPrimary else PtColors.TextDim, fontWeight = FontWeight.Medium)
+                }
             }
         }
     }
@@ -286,7 +413,7 @@ private fun MicButton(active: Boolean, level: Float, onClick: () -> Unit) {
 
 @Composable
 private fun BottomBar(vm: PracticeViewModel, onLoopOptions: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surface) {
+    Surface(color = Color(0xFF0B0D14), contentColor = Color.White) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = vm::restart) { Icon(Icons.Filled.Replay, tr("Von vorn")) }
             IconButton(onClick = { vm.seekMeasureDelta(-1) }) { Icon(Icons.Filled.FastRewind, tr("Takt zurück")) }
@@ -321,16 +448,20 @@ private fun Overlays(vm: PracticeViewModel) {
     Box(Modifier.fillMaxSize()) {
         // big play hint when paused
         if (!vm.isPlaying && vm.finished == null) {
+            val firstTime = !vm.hasStarted
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     Modifier.size(72.dp).clip(CircleShape).background(Color(0x553E4A7A)).clickable { vm.togglePlay() },
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Filled.PlayArrow, "Start", Modifier.size(44.dp)) }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    tr("Tippen = Start/Pause · Wischen = Spulen · Doppeltipp = Takt wiederholen"),
-                    style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim,
-                )
+                if (firstTime) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        tr("Tippen = Start/Pause · Wischen = Spulen · Doppeltipp = Takt wiederholen"),
+                        style = MaterialTheme.typography.labelSmall, color = PtColors.TextDim,
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xAA0E1220)).padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                }
             }
         }
         // waiting hint
@@ -339,9 +470,26 @@ private fun Overlays(vm: PracticeViewModel) {
             val names = vm.engine.expectedPitches.sorted().joinToString("  ") { Pitch.fullName(it, vm.settings.noteNaming, flats) }
             Text(
                 tr("Spiele: %s", names),
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp).clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xAA0E1220)).padding(horizontal = 12.dp, vertical = 4.dp),
-                color = PtColors.Hit, fontWeight = FontWeight.Bold,
+                Modifier.align(Alignment.TopCenter).padding(top = 56.dp).clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xAA0E1220)).padding(horizontal = 8.dp, vertical = 2.dp),
+                color = PtColors.Hit, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+            )
+        }
+        // let go / keep holding
+        val hints = vm.engine.holdHints()
+        if (hints.release.isNotEmpty() || hints.keepHolding.isNotEmpty()) {
+            val text = buildString {
+                if (hints.release.isNotEmpty()) append(tr("Loslassen: %s", hints.release.sorted().joinToString(" ") { Pitch.fullName(it, vm.settings.noteNaming) }))
+                if (hints.keepHolding.isNotEmpty()) {
+                    if (isNotEmpty()) append("  ·  ")
+                    append(tr("Halten: %s", hints.keepHolding.sorted().joinToString(" ") { Pitch.fullName(it, vm.settings.noteNaming) }))
+                }
+            }
+            Text(
+                text,
+                Modifier.align(Alignment.TopCenter).padding(top = 92.dp).clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xAA0E1220)).padding(horizontal = 8.dp, vertical = 2.dp),
+                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp,
             )
         }
         // pass result toast
@@ -366,7 +514,7 @@ private fun Overlays(vm: PracticeViewModel) {
         if (vm.mode != PracticeMode.LISTEN && (vm.micActive || vm.tappedPitches.isNotEmpty() || vm.mode == PracticeMode.WAIT)) {
             Text(
                 "${vm.engine.accuracy()} %",
-                Modifier.align(Alignment.TopEnd).padding(10.dp).clip(RoundedCornerShape(10.dp)).background(Color(0x88171C30)).padding(horizontal = 10.dp, vertical = 4.dp),
+                Modifier.align(Alignment.TopCenter).padding(10.dp).clip(RoundedCornerShape(10.dp)).background(Color(0x88171C30)).padding(horizontal = 10.dp, vertical = 4.dp),
                 color = Color.White, fontWeight = FontWeight.Bold,
             )
         }

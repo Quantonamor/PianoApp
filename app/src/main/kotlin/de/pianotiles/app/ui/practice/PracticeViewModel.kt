@@ -10,11 +10,16 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import de.pianotiles.app.PianoTilesApp
 import de.pianotiles.app.audio.MicInput
+import de.pianotiles.app.audio.MidiInput
 import de.pianotiles.app.i18n.tr
 import de.pianotiles.core.audio.DetectionFrame
+import de.pianotiles.core.hands.AutoFingering
+import de.pianotiles.core.hands.HandMotion
 import de.pianotiles.core.model.Section
 import de.pianotiles.core.model.Song
+import de.pianotiles.core.practice.Course
 import de.pianotiles.core.practice.EngineEvent
+import de.pianotiles.core.practice.Lesson
 import de.pianotiles.core.practice.HandSelection
 import de.pianotiles.core.practice.LoopSettings
 import de.pianotiles.core.practice.PracticeEngine
@@ -24,24 +29,34 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 data class PassInfo(val pass: Int, val accuracy: Int, val newSpeed: Double?, val at: Long = System.currentTimeMillis())
-data class FinishInfo(val accuracy: Int, val seconds: Int, val worstMeasure: Int?)
+data class FinishInfo(
+    val accuracy: Int, val seconds: Int, val worstMeasure: Int?,
+    /** Learning path: the lesson, the stars reached and the lesson after it. */
+    val lesson: Lesson? = null, val stars: Int = 0, val nextLesson: Lesson? = null,
+)
 
-class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app) {
+class PracticeViewModel(app: Application, songId: String, listen: Boolean = false, lessonId: String? = null) : AndroidViewModel(app) {
+    /** The lesson of the learning path being practised, if any. */
+    val lesson: Lesson? = lessonId?.let { Course.lesson(it) }
     private val pt = app as PianoTilesApp
     private val synth = pt.synth
     val settings get() = pt.settings.settings.value
 
-    var song: Song by mutableStateOf(pt.songs.get(songId) ?: error("Song $songId not found"))
+    var song: Song by mutableStateOf(withFingering(pt.songs.get(songId) ?: error("Song $songId not found")))
         private set
     val engine = PracticeEngine(song)
+    /** Hand positions over time for the hands over the keyboard. */
+    val handMotion = HandMotion(song)
 
     /** Incremented every frame / state change so Compose redraws. */
     var frame by mutableLongStateOf(0L)
         private set
     var isPlaying by mutableStateOf(false); private set
-    var mode by mutableStateOf(PracticeMode.WAIT); private set
-    var hands by mutableStateOf(HandSelection.BOTH); private set
-    var speed by mutableFloatStateOf(1f); private set
+    /** Becomes true at the first start; the gesture hint is only shown before that. */
+    var hasStarted by mutableStateOf(listen); private set
+    var mode by mutableStateOf(if (listen) PracticeMode.LISTEN else lesson?.mode ?: PracticeMode.WAIT); private set
+    var hands by mutableStateOf(lesson?.hands ?: HandSelection.BOTH); private set
+    var speed by mutableFloatStateOf(lesson?.speed ?: 1f); private set
     var loop by mutableStateOf(LoopSettings()); private set
     var metronome by mutableStateOf(settings.metronome); private set
     var micActive by mutableStateOf(false); private set
@@ -55,6 +70,19 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
     var message by mutableStateOf<String?>(null)
 
     private val mic = MicInput(::onMicFrame)
+    /** Keys held on a connected MIDI keyboard. */
+    var midiPitches by mutableStateOf<Set<Int>>(emptySet()); private set
+    /** Names of connected MIDI keyboards (empty = none). */
+    var midiDevices by mutableStateOf<List<String>>(emptyList()); private set
+    private val midi = MidiInput(app, ::onMidiKey) { names ->
+        val added = names.firstOrNull { it !in midiDevices }
+        midiDevices = names
+        if (added != null) {
+            message = tr("MIDI-Keyboard verbunden: %s", added)
+            if (micActive) setMic(false) // the keyboard is exact; the microphone is not needed
+        }
+        syncHeld()
+    }
     /** Pitches recently produced by the synthesizer – ignored by the microphone to avoid self-triggering. */
     private val synthRecent = HashMap<Int, Long>()
     private var sessionStart = System.currentTimeMillis()
@@ -65,10 +93,22 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
         engine.octaveTolerant = settings.octaveTolerant
         engine.metronome = metronome
         engine.mode = mode
+        engine.hands = hands
+        engine.speed = speed.toDouble()
         engine.seek(-engine.song.measureLength * 0.5)
         synth.volume = settings.volume
+        synth.reverb = settings.reverb
         mic.sensitivity = settings.micSensitivity.toDouble()
         synth.start()
+        runCatching { midi.start() }
+        engine.playOwnHand = true // until the microphone listens to the real piano
+        engine.audioLookaheadSeconds = 0.12 // schedule playback slightly ahead for exact timing
+        engine.scoreInFlow = false // without microphone nothing can be "missed" in FLOW mode
+        // render the piano tones of this piece (and the visible keys) before they are needed
+        val pitches = song.notes.map { it.pitch }.toSet().let { ps -> ps + ((ps.minOrNull() ?: 60) - 12..(ps.maxOrNull() ?: 72) + 12) }
+        Thread({ runCatching { synth.prepare(pitches) } }, "SynthPrepare").apply { priority = Thread.MIN_PRIORITY; start() }
+        // "Abspielen" from the library: listen right away
+        if (listen) { engine.togglePlay(); isPlaying = engine.isPlaying; handle(engine.update(0.0)) }
     }
 
     private fun bump() { frame++ }
@@ -83,10 +123,12 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
     }
 
     private fun handle(events: List<EngineEvent>) {
+        // a chord's tones must be ready before the first of them is queued, so all start in the same audio block
+        synth.prepare(events.mapNotNull { (it as? EngineEvent.PlayNote)?.pitch })
         for (e in events) when (e) {
             is EngineEvent.PlayNote -> {
-                synth.noteOn(e.pitch, e.velocity, e.durationSeconds)
-                synthRecent[e.pitch] = System.currentTimeMillis() + (e.durationSeconds * 1000).toLong() + 400
+                synth.noteOn(e.pitch, e.velocity, e.durationSeconds, e.delaySeconds)
+                synthRecent[e.pitch] = System.currentTimeMillis() + ((e.delaySeconds + e.durationSeconds) * 1000).toLong() + 400
             }
             is EngineEvent.Click -> synth.click(e.accent)
             is EngineEvent.PassCompleted -> {
@@ -103,7 +145,17 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
     private fun onFinished(accuracy: Int) {
         val worst = engine.mistakesPerMeasure.maxByOrNull { it.value }?.key
         val seconds = engine.practiceSeconds.roundToInt()
-        if (mode != PracticeMode.LISTEN) finished = FinishInfo(accuracy, seconds, worst)
+        val l = lesson
+        if (mode != PracticeMode.LISTEN) {
+            if (l != null) {
+                // without microphone or MIDI keyboard the flowing mode cannot count mistakes: finishing counts
+                val measurable = mode == PracticeMode.WAIT || micActive || midiDevices.isNotEmpty()
+                val stars = if (measurable) l.stars(accuracy) else 1
+                pt.practiceLog.setStars(l.id, stars)
+                val next = Course.lessons.getOrNull(Course.lessons.indexOf(l) + 1)
+                finished = FinishInfo(accuracy, seconds, worst, l, stars, next)
+            } else finished = FinishInfo(accuracy, seconds, worst)
+        }
         saveStats(accuracy.takeIf { mode != PracticeMode.LISTEN && (mode == PracticeMode.WAIT || micActive) })
     }
 
@@ -116,6 +168,7 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
         val sounding = f.sounding.filterTo(HashSet()) { it !in synthRecent }
         val onsets = f.onsets.filterTo(HashSet()) { it !in synthRecent }
         heardPitches = sounding
+        syncHeld()
         if (onsets.isNotEmpty() || sounding.isNotEmpty()) handle(engine.onNotesPlayed(onsets, sounding))
         bump()
     }
@@ -123,11 +176,30 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
     fun keyDown(pitch: Int) {
         synth.noteOn(pitch, 90, 0.6)
         tappedPitches = tappedPitches + pitch
-        handle(engine.onNotesPlayed(setOf(pitch)))
+        syncHeld()
+        handle(engine.onNotesPlayed(setOf(pitch), tappedPitches))
         bump()
     }
 
-    fun keyUp(pitch: Int) { tappedPitches = tappedPitches - pitch }
+    private fun onMidiKey(pitch: Int, velocity: Int, down: Boolean) {
+        if (down) {
+            midiPitches = midiPitches + pitch
+            syncHeld()
+            handle(engine.onNotesPlayed(setOf(pitch), midiPitches))
+        } else {
+            midiPitches = midiPitches - pitch
+            syncHeld()
+        }
+        bump()
+    }
+
+    fun keyUp(pitch: Int) { tappedPitches = tappedPitches - pitch; syncHeld() }
+
+    /** The engine needs to know which keys are held (chords played together, "let go" / "keep holding" hints). */
+    private fun syncHeld() {
+        engine.heldPitches = tappedPitches + heardPitches + midiPitches
+        engine.heldIsExact = !micActive || midiDevices.isNotEmpty()
+    }
 
     // ---------------------------------------------------------------- controls
 
@@ -135,6 +207,7 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
         finished = null
         engine.togglePlay()
         isPlaying = engine.isPlaying
+        if (isPlaying) { hasStarted = true; handle(engine.update(0.0)) } // first notes scheduled right away
         if (!isPlaying) synth.allNotesOff()
         bump()
     }
@@ -162,9 +235,14 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
         if (on) {
             mic.sensitivity = settings.micSensitivity.toDouble()
             micActive = mic.start()
+            engine.playOwnHand = !micActive
+            engine.scoreInFlow = micActive
             if (!micActive) message = tr("Mikrofon konnte nicht gestartet werden")
         } else {
             mic.stop(); micActive = false; heardPitches = emptySet(); micLevel = 0f
+            syncHeld()
+            engine.playOwnHand = true
+            engine.scoreInFlow = false
         }
     }
 
@@ -244,6 +322,14 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
         return all.entries.sortedByDescending { it.value }.filter { it.value > 0 }.take(3).map { it.key }
     }
 
+    /** Songs without (complete) fingering get the automatic one, saved to the hand file. */
+    private fun withFingering(s: Song): Song {
+        val fingered = runCatching { AutoFingering.ensure(s) }.getOrNull() ?: return s
+        // the engraved sheet shows the fingering too: take over its new measure positions once stored
+        pt.appScope.launch { val stored = pt.songs.save(fingered); song = song.copy(sheetMeasures = stored.sheetMeasures) }
+        return fingered
+    }
+
     private fun persist(s: Song) {
         song = s
         pt.appScope.launch { pt.songs.save(s) }
@@ -254,6 +340,7 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
         engine.mistakesPerMeasure.forEach { (m, c) -> merged[m] = (merged[m] ?: 0) + c }
         val elapsed = (System.currentTimeMillis() - sessionStart) / 1000
         sessionStart = System.currentTimeMillis()
+        pt.practiceLog.add(elapsed)
         persist(song.copy(stats = song.stats.copy(
             bestAccuracy = max(song.stats.bestAccuracy, accuracy ?: 0),
             practiceSeconds = song.stats.practiceSeconds + elapsed,
@@ -265,6 +352,7 @@ class PracticeViewModel(app: Application, songId: String) : AndroidViewModel(app
 
     override fun onCleared() {
         mic.stop()
+        midi.stop()
         synth.allNotesOff()
         saveStats(null)
         super.onCleared()

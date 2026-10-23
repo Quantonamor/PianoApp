@@ -39,7 +39,8 @@ data class LoopSettings(
 )
 
 sealed class EngineEvent {
-    data class PlayNote(val pitch: Int, val velocity: Int, val durationSeconds: Double, val hand: Hand) : EngineEvent()
+    /** [delaySeconds]: the note is due this much later than now (playback scheduled ahead). */
+    data class PlayNote(val pitch: Int, val velocity: Int, val durationSeconds: Double, val hand: Hand, val delaySeconds: Double = 0.0) : EngineEvent()
     data class Click(val accent: Boolean) : EngineEvent()
     data class PassCompleted(val pass: Int, val accuracy: Int, val newSpeed: Double?) : EngineEvent()
     data class LoopFinished(val passes: Int) : EngineEvent()
@@ -65,6 +66,10 @@ class PracticeEngine(val song: Song) {
     var countIn: Boolean = true
     /** Play the hand the user does not practise. */
     var accompaniment: Boolean = true
+    /** FLOW mode: also sound the practised hand (useful without microphone, so the whole piece is heard). */
+    var playOwnHand: Boolean = false
+    /** How far ahead (seconds) notes are handed to the sound output in FLOW/LISTEN (0 = when they are due). */
+    var audioLookaheadSeconds: Double = 0.0
     /** Score hits in FLOW mode (requires microphone or on-screen input). */
     var scoreInFlow: Boolean = true
     /** Accept a played note one octave off (microphone harmonics can confuse octaves). */
@@ -73,6 +78,15 @@ class PracticeEngine(val song: Song) {
     var flowToleranceSeconds: Double = 0.30
     /** How early (seconds) a note may be played before it reaches the line in WAIT mode. */
     var waitEarlySeconds: Double = 0.35
+    /**
+     * Keys of a chord must be played together: struck within this many seconds of each other, or held down
+     * together. A key struck earlier and released again no longer counts.
+     */
+    var chordWindowSeconds: Double = 0.6
+    /** Keys the player holds right now (on-screen keys pressed, or still sounding for the microphone). */
+    var heldPitches: Set<Int> = emptySet()
+    /** False with the microphone: a released piano key keeps ringing, so "let go too early" cannot be told. */
+    var heldIsExact: Boolean = true
 
     var loop: LoopSettings = LoopSettings()
         set(value) {
@@ -102,6 +116,8 @@ class PracticeEngine(val song: Song) {
 
     private class PlayStep(val start: Double, val noteIdx: IntArray, val pitches: Set<Int>) {
         val satisfied = HashSet<Int>()
+        /** When each satisfied pitch was struck (engine clock, seconds). */
+        val satisfiedAt = HashMap<Int, Double>()
         var done = false
         var wrongWhileActive = false
     }
@@ -209,7 +225,7 @@ class PracticeEngine(val song: Song) {
     fun seek(beat: Double) {
         position = beat.coerceIn(-song.measureLength, max(song.lengthBeats, 0.0))
         for (s in steps) if (s.start >= position - 1e-6) {
-            s.done = false; s.satisfied.clear(); s.wrongWhileActive = false
+            s.done = false; s.satisfied.clear(); s.satisfiedAt.clear(); s.wrongWhileActive = false
             for (i in s.noteIdx) if (noteStates[i] != NoteState.INACTIVE) noteStates[i] = NoteState.PENDING
         }
         syncCursors()
@@ -225,12 +241,14 @@ class PracticeEngine(val song: Song) {
 
     /**
      * Advances time. [dtSeconds] is the real time since the last call.
-     * Returns events the app should react to (sounds, toasts, ...).
+     * Returns events the app should react to (sounds, toasts, ...). `update(0.0)` right after [play] schedules the
+     * first notes at once instead of one screen frame late.
      */
     fun update(dtSeconds: Double): List<EngineEvent> {
         val events = ArrayList<EngineEvent>()
-        if (!isPlaying || dtSeconds <= 0) return events
+        if (!isPlaying || dtSeconds < 0) return events
         practiceSeconds += dtSeconds
+        currentStep()?.let { expireChordKeys(it) }
         val beatsPerSecond = song.bpmAt(position) * speed / 60.0
         var delta = dtSeconds * beatsPerSecond
 
@@ -279,13 +297,17 @@ class PracticeEngine(val song: Song) {
             }
         }
 
-        // Auto-played notes (accompaniment / listen mode).
-        while (autoCursor < sortedIdx.size && song.notes[sortedIdx[autoCursor]].start <= target + 1e-9) {
+        // Auto-played notes (accompaniment / listen mode). Outside WAIT they are handed out a little ahead of time
+        // with their exact delay, so the sound does not jitter with the screen frames.
+        val ahead = if (mode == PracticeMode.WAIT) 0.0 else audioLookaheadSeconds * beatsPerSecond
+        while (autoCursor < sortedIdx.size && song.notes[sortedIdx[autoCursor]].start <= target + ahead + 1e-9) {
             val idx = sortedIdx[autoCursor]
             val n = song.notes[idx]
             if (n.start >= position - 1e-9 && inRange(n.start)) {
-                val shouldPlay = mode == PracticeMode.LISTEN || (!hands.includes(n.hand) && accompaniment)
-                if (shouldPlay) events.add(EngineEvent.PlayNote(n.pitch, n.velocity, n.duration / beatsPerSecond, n.hand))
+                val shouldPlay = mode == PracticeMode.LISTEN || (!hands.includes(n.hand) && accompaniment) ||
+                    (mode == PracticeMode.FLOW && playOwnHand && hands.includes(n.hand))
+                val delay = ((n.start - target) / beatsPerSecond).coerceAtLeast(0.0)
+                if (shouldPlay) events.add(EngineEvent.PlayNote(n.pitch, n.velocity, (song.soundingEnd(n) - n.start) / beatsPerSecond, n.hand, delay))
             }
             autoCursor++
         }
@@ -361,14 +383,16 @@ class PracticeEngine(val song: Song) {
         // Notes that are still sounding count as well (e.g. the key was pressed a moment before the
         // note reached the line) unless they were already part of the previous step (repeated notes
         // must be struck again).
+        val now = practiceSeconds
         for (p in sounding) {
             if (previousStepContains(p)) continue
-            s.pitches.firstOrNull { matches(p, it) }?.let { s.satisfied.add(it) }
+            s.pitches.firstOrNull { matches(p, it) }?.let { if (s.satisfied.add(it)) s.satisfiedAt[it] = now }
         }
         for (p in pitches) {
             val match = s.pitches.firstOrNull { matches(p, it) }
             if (match != null) {
                 s.satisfied.add(match)
+                s.satisfiedAt[match] = now
             } else if (!previousStepContains(p)) {
                 wrongNotes++
                 s.wrongWhileActive = true
@@ -376,6 +400,7 @@ class PracticeEngine(val song: Song) {
                 events.add(EngineEvent.WrongNote(p, song.measureIndexAt(s.start)))
             }
         }
+        expireChordKeys(s, sounding)
         if (s.satisfied.containsAll(s.pitches)) {
             s.done = true
             hitSteps++
@@ -384,6 +409,64 @@ class PracticeEngine(val song: Song) {
             events.add(EngineEvent.StepHit(s.pitches))
         }
         return events
+    }
+
+    /**
+     * Chord keys struck too long ago and no longer held do not count any more: a chord has to be played together,
+     * not collected one key after the other.
+     */
+    private fun expireChordKeys(s: PlayStep, alsoHeld: Set<Int> = emptySet()) {
+        if (s.pitches.size < 2 || s.satisfied.isEmpty()) return
+        val now = practiceSeconds
+        val held = heldPitches + alsoHeld
+        s.satisfied.removeAll { p ->
+            val old = now - (s.satisfiedAt[p] ?: now) > chordWindowSeconds
+            val stillHeld = held.any { matches(it, p) }
+            if (old && !stillHeld) { s.satisfiedAt.remove(p); true } else false
+        }
+    }
+
+    /** What the player should do with the keys right now, beyond striking the next notes. */
+    data class HoldHints(
+        /** Keys still held although their note has ended (e.g. one key of a held pair must be let go). */
+        val release: Set<Int>,
+        /** Keys of notes still sounding that were let go too early. */
+        val keepHolding: Set<Int>,
+    )
+
+    fun holdHints(): HoldHints {
+        if (!isPlaying || mode == PracticeMode.LISTEN) return HoldHints(emptySet(), emptySet())
+        val held = heldPitches
+        val early = secondsToBeats(if (mode == PracticeMode.WAIT) waitEarlySeconds else flowToleranceSeconds)
+        val release = HashSet<Int>()
+        val keep = HashSet<Int>()
+        // notes of the practised hands around now
+        var due = false
+        for (i in song.notes.indices) {
+            val n = song.notes[i]
+            if (!hands.includes(n.hand) || noteStates[i] == NoteState.INACTIVE) continue
+            if (n.start > position + early + 1e-9 || n.end < position - 4.0) continue
+            due = true
+        }
+        if (!due) return HoldHints(emptySet(), emptySet())
+        for (p in held) {
+            val needed = song.notes.indices.any { i ->
+                val n = song.notes[i]
+                hands.includes(n.hand) && noteStates[i] != NoteState.INACTIVE && matches(p, n.pitch) &&
+                    n.start <= position + early + 1e-9 && n.end > position + 0.05
+            }
+            // with the microphone a released key rings on a little: only complain a bit later
+            val grace = if (heldIsExact) 0.05 else -0.5
+            val endedRecently = song.notes.any { n -> hands.includes(n.hand) && matches(p, n.pitch) && n.end <= position + grace && n.end > position - 4.0 }
+            if (!needed && endedRecently) release.add(p)
+        }
+        if (heldIsExact) for (i in song.notes.indices) {
+            val n = song.notes[i]
+            if (!hands.includes(n.hand) || noteStates[i] != NoteState.HIT) continue
+            // a note that was played and should still be held for a while
+            if (n.start <= position && n.end - position > 0.3 && n.duration >= 0.75 && held.none { matches(it, n.pitch) }) keep.add(n.pitch)
+        }
+        return HoldHints(release, keep)
     }
 
     private fun previousStepContains(p: Int): Boolean {

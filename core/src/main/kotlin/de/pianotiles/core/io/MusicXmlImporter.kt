@@ -1,5 +1,6 @@
 package de.pianotiles.core.io
 
+import kotlin.math.abs
 import de.pianotiles.core.i18n.CoreText.t
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
@@ -20,6 +21,10 @@ import org.xml.sax.InputSource
  * grace notes (skipped), tempo, time and key signatures. Repeats are played as written (not expanded).
  */
 object MusicXmlImporter {
+    /** Velocity of the dynamic markings. */
+    private val DYNAMICS = mapOf("pppp" to 16, "ppp" to 24, "pp" to 36, "p" to 50, "mp" to 64, "mf" to 80, "f" to 96, "ff" to 110, "fff" to 120, "ffff" to 127)
+    private val ACCENTS = setOf("sf", "sfz", "sffz", "fz", "sfp", "rfz", "rf")
+
 
     private val stepIndex = mapOf('C' to 0, 'D' to 2, 'E' to 4, 'F' to 5, 'G' to 7, 'A' to 9, 'B' to 11)
 
@@ -55,14 +60,18 @@ object MusicXmlImporter {
         val notesByPart = ArrayList<List<Pair<Note, Int>>>() // note + staff number
         var maxStaves = 1
         var pickup = 0.0
+        var keyFifths: Int? = null
         val measures = ArrayList<MeasureInfo>() // from the first part
         val tempos = ArrayList<de.pianotiles.core.model.TempoChange>()
+        val pedalEvents = ArrayList<Pair<Double, String>>() // beat, "start" / "stop" / "change"
 
         for (part in parts) {
             val partNotes = ArrayList<Pair<Note, Int>>()
             var divisions = 1.0
             var measureStart = 0.0
             val tieOpen = HashMap<Int, Int>() // pitch -> index in partNotes
+            var dynamic = 80 // MIDI velocity of the current dynamic marking (mf)
+            var accentAt = -1.0 // sf / sfz / fz: louder notes at this time
             for ((measureIdx, measure) in part.children("measure").withIndex()) {
                 val info = MeasureInfo(measureStart)
                 if (parts.indexOf(part) == 0) {
@@ -90,8 +99,20 @@ object MusicXmlImporter {
                                 }
                             }
                             el.child("staves")?.text()?.toIntOrNull()?.let { maxStaves = maxOf(maxStaves, it) }
+                            if (keyFifths == null) el.child("key")?.child("fifths")?.text()?.toIntOrNull()?.let { keyFifths = it }
                         }
                         "direction" -> {
+                            // dynamics (pp … ff) set the loudness of the following notes; sf/sfz/fz only accent the next one
+                            el.descendants("dynamics").firstOrNull()?.childElements()?.firstOrNull()?.tagName?.let { d ->
+                                DYNAMICS[d]?.let { dynamic = it }
+                                if (d in ACCENTS) accentAt = measureStart + cursor
+                            }
+                            el.child("sound")?.getAttribute("dynamics")?.toDoubleOrNull()?.let { dynamic = (it * 0.9).toInt().coerceIn(16, 127) }
+                            // sustain pedal marks ("Ped." … "*"), from any part
+                            for (pd in el.descendants("pedal")) {
+                                val type = pd.getAttribute("type")
+                                if (type == "start" || type == "stop" || type == "change") pedalEvents.add(measureStart + cursor to type)
+                            }
                             val t = el.child("sound")?.getAttribute("tempo")?.toDoubleOrNull()
                                 ?: el.descendants("per-minute").firstOrNull()?.text()?.toDoubleOrNull()
                             if (t != null && t > 0) {
@@ -123,6 +144,8 @@ object MusicXmlImporter {
                             val midi = (octave + 1) * 12 + (stepIndex[step.uppercaseChar()] ?: 0) + alter
                             val staff = el.child("staff")?.text()?.toIntOrNull() ?: 1
                             val ties = el.children("tie").map { it.getAttribute("type") }
+                            val finger = el.child("notations")?.child("technical")?.child("fingering")?.text()
+                                ?.filter { it.isDigit() }?.take(1)?.toIntOrNull()?.takeIf { it in 1..5 } ?: 0
                             val absStart = measureStart + start
                             if ("stop" in ties && tieOpen.containsKey(midi)) {
                                 val idx = tieOpen.getValue(midi)
@@ -130,7 +153,9 @@ object MusicXmlImporter {
                                 partNotes[idx] = prev.copy(duration = absStart + dur - prev.start) to st
                                 if ("start" !in ties) tieOpen.remove(midi)
                             } else {
-                                partNotes.add(Note(midi, absStart, dur.coerceAtLeast(1.0 / 32)) to staff)
+                                val accent = if (accentAt >= 0 && abs(absStart - accentAt) < 0.26) 20 else 0
+                                val vel = el.getAttribute("dynamics").toDoubleOrNull()?.let { (it * 0.9).toInt() } ?: (dynamic + accent)
+                                partNotes.add(Note(midi, absStart, dur.coerceAtLeast(1.0 / 32), velocity = vel.coerceIn(16, 127), finger = finger) to staff)
                                 if ("start" in ties) tieOpen[midi] = partNotes.lastIndex
                             }
                         }
@@ -162,6 +187,7 @@ object MusicXmlImporter {
         }
 
         val (played, playedTempos) = expandRepeats(allNotes, measures, tempos)
+        val playedPedal = expandRepeatEvents(pedalEvents.sortedBy { it.first }, measures)
         return Song(
             id = SongUtils.newId(),
             title = title.trim().ifEmpty { fallbackTitle },
@@ -174,7 +200,40 @@ object MusicXmlImporter {
             source = SongSource.MUSICXML,
             createdAt = System.currentTimeMillis(),
             pickupBeats = pickup,
+            keyFifths = keyFifths,
+            fingeringSource = if (played.any { it.finger > 0 }) de.pianotiles.core.model.FingeringSource.FILE else de.pianotiles.core.model.FingeringSource.NONE,
+            pedal = pedalSpans(playedPedal),
         )
+    }
+
+    /** Pedal marks → spans; "change" lifts and presses again at the same moment. */
+    private fun pedalSpans(events: List<Pair<Double, String>>): List<de.pianotiles.core.model.PedalSpan> {
+        val out = ArrayList<de.pianotiles.core.model.PedalSpan>()
+        var downAt = -1.0
+        for ((beat, type) in events) {
+            when (type) {
+                "start" -> if (downAt < 0) downAt = beat
+                "stop" -> { if (downAt >= 0 && beat > downAt) out.add(de.pianotiles.core.model.PedalSpan(downAt, beat)); downAt = -1.0 }
+                "change" -> { if (downAt >= 0 && beat > downAt) out.add(de.pianotiles.core.model.PedalSpan(downAt, beat)); downAt = beat }
+            }
+        }
+        return out
+    }
+
+    /** Timed events in playing order (repeats expanded like the notes). */
+    private fun <T> expandRepeatEvents(events: List<Pair<Double, T>>, measures: List<MeasureInfo>): List<Pair<Double, T>> {
+        if (measures.none { it.backwardTimes > 0 } || events.isEmpty()) return events
+        val order = playOrder(measures.map { it.forward }, measures.map { it.backwardTimes }, measures.map { it.endings })
+        fun measureOf(beat: Double) = measures.indexOfLast { it.start <= beat + 1e-6 }.coerceAtLeast(0)
+        val byMeasure = events.groupBy { measureOf(it.first) }
+        val out = ArrayList<Pair<Double, T>>()
+        var t = 0.0
+        for (m in order) {
+            val info = measures[m]
+            byMeasure[m]?.forEach { out.add(t + it.first - info.start to it.second) }
+            t += info.length
+        }
+        return out
     }
 
     private class MeasureInfo(val start: Double) {

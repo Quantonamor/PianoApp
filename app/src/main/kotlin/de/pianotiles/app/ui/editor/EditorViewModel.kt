@@ -2,9 +2,7 @@ package de.pianotiles.app.ui.editor
 
 import android.app.Application
 import android.graphics.Bitmap
-import android.graphics.Color as AColor
-import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
+import de.pianotiles.app.data.SheetDocument
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -23,6 +21,7 @@ import de.pianotiles.core.ai.PageImage
 import de.pianotiles.core.edit.MeasureIssue
 import de.pianotiles.core.edit.MeasureOps
 import de.pianotiles.core.edit.RelNote
+import de.pianotiles.core.model.FingeringSource
 import de.pianotiles.core.model.Hand
 import de.pianotiles.core.model.Note
 import de.pianotiles.core.model.Song
@@ -69,7 +68,8 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         private set
     private var playJob: Job? = null
 
-    val pdf = pt.songs.pdfFile(songId).takeIf { it.exists() && song.sheetMeasures.isNotEmpty() }
+    /** Original sheet pages (PDF or prepared photos), if the measure positions are known. */
+    val pdf = pt.songs.sheetPages(songId).takeIf { it.isNotEmpty() && song.sheetMeasures.isNotEmpty() }
 
     private fun afterChange() {
         dirty = true
@@ -116,6 +116,15 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         pt.synth.noteOn(song.notes[i].pitch, 80, 0.4)
     }
 
+    /** Sets the finger of the selected note by hand (1–5); the song's fingering then counts as edited by hand. */
+    fun setFinger(finger: Int) {
+        val i = selected
+        if (i !in song.notes.indices) return
+        edit(keepSelection = true) { s ->
+            s.copy(notes = s.notes.toMutableList().also { it[i] = it[i].copy(finger = finger) }, fingeringSource = FingeringSource.MANUAL)
+        }
+    }
+
     fun addNote(n: Note) {
         edit { it.copy(notes = it.notes + n) }
         selected = song.notes.lastIndex
@@ -131,7 +140,9 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
     fun pasteMeasure() { clipboard?.let { c -> edit { MeasureOps.replace(it, measure, c) } } }
 
     fun save(then: () -> Unit = {}) {
-        val s = song.copy(notes = SongUtils.dedupe(song.notes))
+        var s = song.copy(notes = SongUtils.dedupe(song.notes))
+        // an automatic fingering is worked out again for the edited notes when practising
+        if (s.fingeringSource == FingeringSource.AUTO) s = s.copy(notes = s.notes.map { it.copy(finger = 0) })
         pt.appScope.launch { pt.songs.save(s); dirty = false; then() }
     }
 
@@ -147,15 +158,17 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         val ns = s.notes.filter { it.start >= from - 1e-6 && it.start < to - 1e-6 }.sortedBy { it.start }
         playing = true
         playJob = viewModelScope.launch {
+            // tones rendered beforehand, so chord notes start together
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { pt.synth.prepare(ns.map { it.pitch }.toSet()) }
+            // all notes scheduled at once with their exact start delay (no timing jitter)
+            var sec = 0.0
             var t = from
             for (n in ns) {
-                if (n.start > t) {
-                    delay(((n.start - t) * 60_000 / s.bpmAt(t)).toLong())
-                    t = n.start
-                }
-                pt.synth.noteOn(n.pitch, n.velocity, n.duration * 60 / s.bpmAt(n.start))
+                if (n.start > t) { sec += (n.start - t) * 60.0 / s.bpmAt(t); t = n.start }
+                pt.synth.noteOn(n.pitch, n.velocity, (s.soundingEnd(n) - n.start) * 60 / s.bpmAt(n.start), sec)
             }
-            delay(((to - t) * 60_000 / s.bpmAt(t)).toLong().coerceAtMost(3000))
+            sec += (to - t) * 60.0 / s.bpmAt(t)
+            delay((sec * 1000).toLong().coerceAtMost(30_000))
             playing = false
         }
     }
@@ -195,8 +208,8 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         aiJob = viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
-                        PdfRenderer(fd).use { renderer ->
+                    (SheetDocument.open(file) ?: error(tr("Notenblatt nicht verfügbar"))).use { renderer ->
+                        run {
                             ClaudeReviewer(key, model, language = I18n.aiLanguage).use { reviewer ->
                                 AiFixRunner(reviewer).run(
                                     snapshot, aiPages,
@@ -232,15 +245,12 @@ class EditorViewModel(app: Application, songId: String) : AndroidViewModel(app) 
         }
     }
 
-    private fun renderPage(r: PdfRenderer, page: Int): PageImage = r.openPage(page).use { p ->
-        val w = 1600
-        val bmp = Bitmap.createBitmap(w, (w.toDouble() * p.height / p.width).toInt(), Bitmap.Config.ARGB_8888)
-        bmp.eraseColor(AColor.WHITE)
-        p.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+    private fun renderPage(r: SheetDocument, page: Int): PageImage {
+        val bmp = r.render(page, 1600)
         val out = ByteArrayOutputStream()
         bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
         bmp.recycle()
-        PageImage(page, out.toByteArray(), jpeg = true)
+        return PageImage(page, out.toByteArray(), jpeg = true)
     }
 
     fun accept(p: Proposal) {

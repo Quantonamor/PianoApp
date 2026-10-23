@@ -66,24 +66,59 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Run UI tests on emulator (landscape tablet-like)
+      - name: Run UI tests on emulator (phone, landscape)
+        id: ui1
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           target: google_apis
           arch: x86_64
-          profile: pixel_tablet
+          profile: pixel_6
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: |
-            ./gradlew :app:connectedDebugAndroidTest --console=plain || (adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots; adb logcat -d | grep -E "AndroidRuntime|FATAL" | tail -60; echo "==== FAILED TESTS ===="; find app/build/outputs/androidTest-results -name "*.xml" -exec grep -h -A14 "<failure" {} + | head -80; exit 1)
-            adb pull /sdcard/Android/data/de.pianotiles.app/files/screenshots screenshots || true
+          emulator-options: -no-window -gpu guest -no-snapshot -noaudio -no-boot-anim
+          script: bash tools/ci/ui_tests.sh
+      # the emulator itself crashes now and then (it vanishes mid-test, no app error): once more on a fresh one
+      - name: Run UI tests again on a fresh emulator (only after an emulator crash)
+        id: ui2
+        if: steps.ui1.outcome == 'failure' && hashFiles('emulator_vanished') != ''
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu guest -no-snapshot -noaudio -no-boot-anim
+          script: rm -rf screenshots && bash tools/ci/ui_tests.sh
+      - name: UI test result
+        if: always()
+        run: |
+          echo "first run: ${{ steps.ui1.outcome }}, retry after an emulator crash: ${{ steps.ui2.outcome }}"
+          [ "${{ steps.ui1.outcome }}" = "success" ] || [ "${{ steps.ui2.outcome }}" = "success" ]
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ui-screenshots
           path: screenshots/
+      - name: Layout report and a few small screenshots in the log (readable without artifact download)
+        if: always()
+        shell: bash
+        run: |
+          [ -d screenshots ] || exit 0
+          echo "==== LAYOUT ===="; cat screenshots/layout.txt || true; echo "==== END LAYOUT ===="
+          [ -f screenshots/threads.txt ] && { echo "==== THREADS ===="; cat screenshots/threads.txt; echo "==== END THREADS ===="; } || true
+          # the most important screens come last: the end of the log is what can be fetched cheaply
+          key="08c_hands_landscape 08b_hands_playing 07_editor 01_library 01b_library_landscape 03e_landscape_paused 03d_landscape_playing 04_wait_mode 03_practice_playing"
+          for f in screenshots/*.small.jpg; do
+            n=$(basename "$f" .small.jpg); case " $key " in *" $n "*) continue;; esac
+            echo "==== SHOT $n ===="; base64 -w 0 "$f"; echo
+          done
+          for n in $key; do
+            [ -f "screenshots/$n.small.jpg" ] || continue
+            echo "==== SHOT $n ===="; base64 -w 0 "screenshots/$n.small.jpg"; echo
+          done
       - name: Upload UI test report
         if: always()
         uses: actions/upload-artifact@v4

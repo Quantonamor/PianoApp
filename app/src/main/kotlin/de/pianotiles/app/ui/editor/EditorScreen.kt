@@ -1,5 +1,8 @@
 package de.pianotiles.app.ui.editor
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -123,20 +126,27 @@ fun EditorScreen(songId: String, onBack: () -> Unit, onOpenSettings: () -> Unit 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // ---- top bar
         Surface(color = MaterialTheme.colorScheme.surface) {
-            Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { if (vm.dirty) confirmLeave = true else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
-                Text(tr("Noten bearbeiten – %s", song.title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1)
-                IconButton(onClick = vm::undo, enabled = vm.canUndo) { Icon(Icons.AutoMirrored.Filled.Undo, tr("Rückgängig")) }
-                IconButton(onClick = vm::redo, enabled = vm.canRedo) { Icon(Icons.AutoMirrored.Filled.Redo, tr("Wiederholen")) }
-                IconButton(onClick = { pxPerBeat = (pxPerBeat / 1.3f).coerceAtLeast(20f) }) { Icon(Icons.Filled.ZoomOut, tr("Verkleinern")) }
-                IconButton(onClick = { pxPerBeat = (pxPerBeat * 1.3f).coerceAtMost(400f) }) { Icon(Icons.Filled.ZoomIn, tr("Vergrößern")) }
-                if (vm.pdf != null) {
-                    FilledTonalButton(onClick = { if (showAi && !vm.aiRunning && vm.proposals.isNotEmpty()) showAi = false else if (vm.aiRunning || vm.proposals.isNotEmpty()) showAi = !showAi else startAi() }) {
-                        Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text(if (vm.aiRunning) tr("KI prüft …") else tr("KI-nachbessern"))
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                // narrow (portrait phone): short title, icons instead of labelled buttons, zoom in the measure bar
+                val narrow = maxWidth < 640.dp
+                Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { if (vm.dirty) confirmLeave = true else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Zurück")) }
+                    Text(if (narrow) song.title else tr("Noten bearbeiten – %s", song.title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    IconButton(onClick = vm::undo, enabled = vm.canUndo) { Icon(Icons.AutoMirrored.Filled.Undo, tr("Rückgängig")) }
+                    IconButton(onClick = vm::redo, enabled = vm.canRedo) { Icon(Icons.AutoMirrored.Filled.Redo, tr("Wiederholen")) }
+                    if (vm.pdf != null) {
+                        val onAi = { if (showAi && !vm.aiRunning && vm.proposals.isNotEmpty()) showAi = false else if (vm.aiRunning || vm.proposals.isNotEmpty()) showAi = !showAi else startAi() }
+                        if (narrow) IconButton(onClick = onAi) { Icon(Icons.Filled.AutoAwesome, tr("KI-nachbessern")) }
+                        else {
+                            FilledTonalButton(onClick = onAi) {
+                                Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(6.dp)); Text(if (vm.aiRunning) tr("KI prüft …") else tr("KI-nachbessern"))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                        }
                     }
-                    Spacer(Modifier.width(8.dp))
+                    if (narrow) IconButton(onClick = { vm.save() }, enabled = vm.dirty) { Icon(Icons.Filled.Save, tr("Speichern")) }
+                    else Button(onClick = { vm.save() }, enabled = vm.dirty) { Text(tr("Speichern")) }
                 }
-                Button(onClick = { vm.save() }, enabled = vm.dirty) { Text(tr("Speichern")) }
             }
         }
 
@@ -149,6 +159,8 @@ fun EditorScreen(songId: String, onBack: () -> Unit, onOpenSettings: () -> Unit 
                 IconButton(onClick = { vm.measure = (vm.measure - 1).coerceAtLeast(0) }) { Icon(Icons.Filled.ChevronLeft, tr("Vorheriger Takt")) }
                 Text(tr("Takt %s / %s", vm.measure + 1, song.measureCount), Modifier.width(130.dp), style = MaterialTheme.typography.titleSmall)
                 IconButton(onClick = { vm.measure = (vm.measure + 1).coerceAtMost(song.measureCount - 1) }) { Icon(Icons.Filled.ChevronRight, tr("Nächster Takt")) }
+                IconButton(onClick = { pxPerBeat = (pxPerBeat / 1.3f).coerceAtLeast(20f) }) { Icon(Icons.Filled.ZoomOut, tr("Verkleinern")) }
+                IconButton(onClick = { pxPerBeat = (pxPerBeat * 1.3f).coerceAtMost(400f) }) { Icon(Icons.Filled.ZoomIn, tr("Vergrößern")) }
                 Box {
                     FilterChip(
                         selected = vm.issues.isNotEmpty(), onClick = { showIssues = true },
@@ -208,18 +220,22 @@ fun EditorScreen(songId: String, onBack: () -> Unit, onOpenSettings: () -> Unit 
         }
 
         // ---- sheet + piano roll (+ AI panel)
-        Row(Modifier.fillMaxWidth().weight(1f)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+        val narrowArea = maxWidth < 640.dp
+        Row(Modifier.fillMaxSize()) {
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 vm.pdf?.let { pdf ->
                     SheetPanel(
-                        pdf = pdf, measures = song.sheetMeasures, currentMeasure = vm.measure, loopMeasures = null,
+                        pages = pdf, measures = song.sheetMeasures, currentMeasure = vm.measure, loopMeasures = null,
                         onSeekMeasure = { vm.measure = it }, modifier = Modifier.fillMaxWidth().weight(0.42f),
                         marked = vm.issues.mapTo(HashSet()) { it.measure },
                     )
                 }
                 PianoRoll(vm, grid, addMode, addHand, pxPerBeat, Modifier.fillMaxWidth().weight(0.58f))
             }
-            if (showAi) AiPanel(vm, naming, onClose = { showAi = false }, onRestart = ::startAi, modifier = Modifier.width(360.dp).fillMaxHeight())
+            if (showAi && !narrowArea) AiPanel(vm, naming, onClose = { showAi = false }, onRestart = ::startAi, modifier = Modifier.width(360.dp).fillMaxHeight())
+        }
+        if (showAi && narrowArea) AiPanel(vm, naming, onClose = { showAi = false }, onRestart = ::startAi, modifier = Modifier.fillMaxSize())
         }
 
         SelectionBar(vm, grid, naming)
@@ -435,6 +451,9 @@ private fun SelectionBar(vm: EditorViewModel, grid: Double, naming: de.pianotile
                 }
                 FilterChip(selected = true, onClick = { vm.modifySelected { it.copy(hand = if (it.hand == Hand.RIGHT) Hand.LEFT else Hand.RIGHT) } },
                     label = { Text(if (sel.hand == Hand.RIGHT) tr("Rechte Hand") else tr("Linke Hand")) })
+                // fingering: tap cycles 1 → 5
+                FilterChip(selected = sel.finger in 1..5, onClick = { vm.setFinger(sel.finger % 5 + 1) },
+                    label = { Text(if (sel.finger in 1..5) tr("Finger %s", sel.finger) else tr("Finger –")) })
                 IconButton(onClick = {
                     scope.launch { song.notes.filter { abs(it.start - sel.start) < 0.02 }.forEach { vm.preview(it.pitch) } }
                 }) { Icon(Icons.Filled.PlayArrow, tr("Anhören")) }

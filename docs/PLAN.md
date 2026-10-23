@@ -107,12 +107,76 @@ und aus dem Übungsbildschirm erreichbar („Noten korrigieren“):
   EncryptedSharedPreferences. Der Editor zeigt Vorschläge als grün gestrichelte Vorschau im Piano-Roll.
   Noch offen: echter Test mit API-Schlüssel (nur durch den Nutzer möglich).
 
+### M6 – Stück-Pakete, Bibliothek 2.0, Fotos, weitere Formate, 3D-Hände (Wunsch des Nutzers, 2026-10-22)
+
+Reihenfolge der Umsetzung = Reihenfolge der Punkte. Danach geht es mit der Konvergenz-Schleife weiter.
+
+**A) Getrennte Datenhaltung („Stück-Paket“)** – jedes Stück ist ein Ordner `files/library/<id>/` bzw. als
+Austauschdatei ein ZIP mit Endung `.pianotiles`. Für jeden Teil das beste bestehende Standardformat; alle Teile sind
+austauschbar, das `manifest.json` nennt Datei + Format jedes Teils:
+
+| Teil | Datei | Format | Warum |
+|---|---|---|---|
+| Noten-Datei | `score.musicxml` | **MusicXML 4.0** (W3C) | *der* Austausch-Standard; MuseScore, Finale, Sibelius, Dorico lesen ihn. Fingersätze stehen zusätzlich als `<fingering>` darin |
+| Notenbild aus der Noten-Datei | `sheet.pdf` | PDF | wird aus der Noten-Datei gesetzt (eigener einfacher Notensatz), zeigt also immer den aktuellen Stand |
+| Original | `original.pdf` bzw. `original-01.jpg …` | PDF / JPEG | unverändertes Import-Original (PDF, Fotos, MIDI-/XML-Datei) |
+| Tile-Datei | `tiles.json` | eigenes JSON (bisheriges Song-Format) | alles für die Übungsansicht: Noten mit Hand, Tempo-Karte, Abschnitte, Takt-Positionen im PDF, Prüfliste, Statistik |
+| Hand-Datei | `hands.json` | eigenes JSON | Fingersatz je Note + Quelle (automatisch/KI/von Hand) – dafür gibt es keinen Standard; zusätzlich in MusicXML |
+
+- [x] Plan
+- [x] Core: MusicXML-Export (inkl. Fingersatz), Paket lesen/schreiben (`core/library/SongPackage.kt`), Tests (`PackageTest`)
+- [x] App: Bibliothek auf Ordner je Stück umstellen (+ automatische Übernahme der alten Dateien), Backup = Pakete
+- [x] Import/Export einzelner Stücke als `.pianotiles` (Teilen, Öffnen aus Dateien/Mail); Import nimmt alle Teile mit
+
+**B) Weitere Formate importieren** (außer PDF/MIDI/MusicXML)
+- [x] ABC-Notation (Abgleich mit music21: `FormatCrossCheck`, Generator `tools/formats/gen.py`) (`.abc`, viele Volkslieder im Netz), MuseScore (`.mscz`/`.mscx`), MEI (`.mei`), Karaoke-MIDI (`.kar`),
+      Bilder (`.png`/`.jpg` → Fotoerkennung), eigene Pakete (`.pianotiles`)
+
+**C) Noten abfotografieren (Alternative zu PDF)**
+- [x] Core: Foto-Vorbereitung (`PhotoTest`: 88–97 % Übereinstimmung mit dem PDF) (Beleuchtung ausgleichen, Schräglage korrigieren, Rand abschneiden, auf Erkennungsgröße
+      skalieren) – getestet mit künstlich „verfotografierten“ Korpus-Seiten
+- [x] App: mehrere Fotos nacheinander aufnehmen oder aus der Galerie wählen, Reihenfolge ändern, dann wie beim PDF
+      erkennen; Fotos werden als Original gespeichert
+
+**D) 3D-Hände** – ein-/ausblendbar über der Klaviatur, zeigen welcher Finger welche Taste spielt
+- [x] Core: automatischer Fingersatz (dynamische Programmierung über Spannweite, Daumen-Unter-/Übersatz,
+      schwarze Tasten, Akkorde) + Handhaltung über die Zeit (`core/hands/`), Tests (`HandsTest`)
+- [x] App: 3D-Hände (perspektivisch gezeichnet, schattiert, Finger beugen sich beim Anschlag), Fingerzahlen auf den
+      fallenden Noten, Schalter „Hände“
+- [x] Fingersatz im Editor ändern (Chip „Finger n“ bei ausgewählter Note)
+- [x] Realistische Hände: Rig-Modell + Skinning + IK (`core/hands/HandModel.kt`, Vorschau `HandRenderTest`)
+- [ ] Optional „Fingersatz per KI“ (gleicher Schlüssel wie KI-nachbessern)
+
+**F) Nutzer-Review (50 Personas, `docs/USER_REVIEW.md`)**
+- [x] MIDI-Eingang, mehr Demos, Begrüßung, Modus-Beschriftung, Mikrofon-Test, Übungsstatistik
+- [x] Lernpfad (13 Lektionen, Sterne, `Course.kt`, `CourseScreen.kt`)
+- [x] Haltepedal (Import MIDI/MusicXML, Nachklingen, Anzeige)
+- [ ] Später: Dynamik-Anzeige, Lehrer-Modus
+
+**E) Abspielen & Bibliothek 2.0**
+- [x] Jedes Stück (auch importierte Pakete) direkt aus der Bibliothek abspielen (▶ auf der Karte)
+- [x] Schönere Bibliothek: Titelbild (Original-Seite bzw. Mini-Piano-Roll), Fortschrittsring, Filter nach Quelle,
+      Schwierigkeit, „zuletzt geübt“-Leiste, Mehrfachauswahl zum Exportieren
+- [x] Notenbild `sheet.pdf` aus der Noten-Datei setzen (auch für MIDI/MusicXML-Stücke ohne Original) – `core/engrave/`, `EngraveTest`
+
+### Stand 2026-10-23 (Übergabe an lokale Entwicklung auf `master`)
+Offene Punkte und Reihenfolge stehen in `HANDOFF.md` → „Offene Punkte“: Hände im pausierten Zustand auf echtem
+Gerät prüfen, Rückmeldung vom Gerät, Hände weiter verbessern, Konvergenz-Schleife (Choräle), optional KI-Fingersatz.
+
 ### Konvergenz-Schleife der PDF-Erkennung (Wunsch des Nutzers, **läuft**)
 
 Ziel: Zufallsrunden mit je 5 neuen Stücken (beide Notensatz-Programme), bis **5 Runden hintereinander alle
 Stücke 100 %** (Noten, Präzision, Rhythmus) erreichen. Ablauf & Werkzeuge: `tools/omr-eval/README.md`.
 
-Stand (2026-10-23, Session 3):
+Stand (2026-10-23, Session 3, mit `master` zusammengeführt):
+- Zusammenführung: `master` hatte parallel eine eigene „Runde 2“ (BWV 286, 318, 348, Around the World, McDonald's)
+  erzeugt – sie heißt jetzt `rounds/rm2` und wurde mit dem aktuellen Generator neu gesetzt (Lösungen mit
+  `truthlib.py`). Die OMR-Engine der Konvergenz-Kette ersetzt die von `master` (deren Einzelkorrekturen –
+  Taktangabe vs. Note mit Hals, zerfallenes „C“, Auftakt mit Ganztaktpause, Stimmen nach Halsrichtung – sind dort
+  in allgemeinerer Form enthalten). Vergleich auf dem Regressions-Satz (136 PDFs): `master`-Engine 95,4/96,5/94,4 %
+  (9 bei 100 %), Konvergenz-Engine **99,2/99,3/99,4 %** (113 bei 100 %) – nach Übernahme der zwei Stellen, an denen
+  die `master`-Engine besser war: oktavierter Violinschlüssel (8 am Schlüsselende), unvollständiger Takt ab halber
+  Länge mit aufeinanderfolgenden Noten. `rm2` danach: 8/10 bei 100 %.
 - Runde 4 durch Korrekturen der Parallel-Session 10/10. **Frische Runden:** 5 (Seed 5055) 5/10, 6 (Seed 6066)
   6/10, 7 (Seed 7077) 3/10, 8 (Seed 8088) 7/10, 9 (Seed 9099) 6/10 – jeweils danach 10/10; 10 (Seed 10101)
   7/10 → 9/10 (offen: Jersey Lightning Jig LilyPond 97 %: ein fast senkrechter 32tel-Balken verschluckt den Hals
@@ -167,8 +231,11 @@ Stand (2026-10-23, spät, Session 2):
 - Bereits umgesetzt in dieser Schleife: Triolen (Ziffer „3“ + Taktsummen-Prüfung), verbundene
   Taktangaben-Ziffern, verschmolzene Kreuze in der Tonart, Hilfslinien-Ausnahme nur bei gedruckter Linie,
   Vorzeichen-Erkennung über ganze Zeichen, Fehlerarten-Statistik in der Auswertung.
+- Hinweis: In `r2/chorale_bwv318/lilypond.pdf` fehlt der Taktstrich nach dem Auftakt (Export music21 → LilyPond ohne
+  `\partial`) – der erste Takt ist im PDF 5 Schläge lang; diese Abweichung ist kein Erkennungsfehler.
 - **Nächste Schritte (in dieser Reihenfolge):**
-  1. ✅ Oktavierter Violinschlüssel (LilyPond erkannt, 57→73 %); bei Verovio wird die kleine 8 noch nicht gefunden.
+  1. ✅ Oktavierter Violinschlüssel – auch wenn die 8 mit dem Schlüssel-Schwanz verschmilzt (Verovio) bzw. sehr
+     dünn ist (LilyPond): lift_every_voice 73→94 % (LilyPond), 54→93 % (Verovio).
   2. ✅ Gesangszeilen ohne Verbindung zum Klavier werden ignoriert; Klaviersysteme werden auch über
      geschweifte Klammer und durchgezogene Taktstriche erkannt, großer Abstand durch Liedtext erlaubt.
   2b. ✅ Tonart: Schlüssel-Auswahl ignoriert dünnen Systemstrich; obere/untere Zeilen stimmen getrennt ab.
