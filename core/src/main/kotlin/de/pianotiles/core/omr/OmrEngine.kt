@@ -1473,16 +1473,18 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 perStaff[si] = split.first; voiceOnsets[si] = split.second
             }
             val sums = perStaff.mapIndexed { si, cols -> if (si in voiceOnsets) measureLen else cols.sumOf { it.advance } }.toMutableList()
-            val good = perStaff.indices.filter { perStaff[it].isNotEmpty() && abs(sums[it] - measureLen) < 0.05 }
+            var good = perStaff.indices.filter { perStaff[it].isNotEmpty() && abs(sums[it] - measureLen) < 0.05 }
             // An incomplete measure (pick-up, end of a section): two voices in one staff may fill the length
-            // that another staff agrees on.
-            if (good.isEmpty()) {
-                val nonEmpty = perStaff.indices.filter { perStaff[it].isNotEmpty() }
+            // that another staff agrees on (also when a staff's columns happen to add up to a full measure).
+            val filled = perStaff.indices.filter { perStaff[it].isNotEmpty() }
+            if (good.size < filled.size) {
+                val nonEmpty = filled
                 for (shortLen in nonEmpty.map { sums[it] }.filter { it < measureLen - 0.05 }.distinct()) {
                     val splits = nonEmpty.filter { abs(sums[it] - shortLen) >= 0.05 }
                         .associateWith { splitVoices(slot.staves[it], perStaff[it], slot, shortLen, ss) }
                     if (splits.isEmpty() || splits.values.any { it == null }) continue
                     for ((si, split) in splits) { perStaff[si] = split!!.first; voiceOnsets[si] = split.second; sums[si] = shortLen }
+                    good = emptyList()
                     break
                 }
             }
@@ -1609,6 +1611,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         val cu = columnsOf(up + free, rests.filter { (it.y0 + it.y1) / 2.0 < mid + ss * 0.3 }, ss)
         val cd = columnsOf(down + free, rests.filter { (it.y0 + it.y1) / 2.0 > mid - ss * 0.3 }, ss)
         if (abs(cu.sumOf { it.advance } - measureLen) > 0.05 || abs(cd.sumOf { it.advance } - measureLen) > 0.05) return null
+        // two voices sound together somewhere (a single line whose stems change direction does not)
+        if (cu.none { a -> a.heads.isNotEmpty() && cd.any { b -> b.heads.isNotEmpty() && abs(a.x - b.x) < ss * 0.5 } }) return null
         val ou = sequential(cu); val od = sequential(cd)
         // notes of both voices printed above each other must start together
         for ((i, a) in cu.withIndex()) for ((j, b) in cd.withIndex())
