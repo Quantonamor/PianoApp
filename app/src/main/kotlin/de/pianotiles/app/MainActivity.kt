@@ -8,10 +8,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
@@ -61,7 +61,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             PianoTilesTheme {
                 LaunchedEffect(Unit) { app.songs.load() }
-                Box(Modifier.fillMaxSize().background(PtColors.Background).safeDrawingPadding()) { Navigation() }
+                // Surface (not a plain Box) so that texts and icons get the light content color by default.
+                Surface(Modifier.fillMaxSize(), color = PtColors.Background) {
+                    Box(Modifier.fillMaxSize().safeDrawingPadding()) { Navigation() }
+                }
             }
         }
     }

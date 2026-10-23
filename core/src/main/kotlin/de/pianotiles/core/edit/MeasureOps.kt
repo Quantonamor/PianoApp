@@ -82,12 +82,22 @@ object MeasureOps {
     }
 
     /**
-     * Measures that look wrong: rhythm estimated by the recognition, a hand whose notes don't fill
-     * the measure / run over the bar line, or unusually large jumps.
+     * Measures that look wrong: rhythm estimated by the recognition, a hand whose notes fill the
+     * measure much less than usual in this piece / run over the bar line, or unusually large jumps.
      */
     fun issues(song: Song): List<MeasureIssue> {
         val out = ArrayList<MeasureIssue>()
         val last = song.measureCount - 1
+        // Rests are normal (e.g. a left hand that only plays on the first beats): a measure is only
+        // suspicious when it is much emptier than the hand's typical measure in this piece.
+        val fill = HashMap<Pair<Int, Hand>, Double>()
+        for (m in 1 until last) for (hand in Hand.entries) {
+            val ns = notesIn(song, m, hand)
+            if (ns.isNotEmpty()) fill[m to hand] = coverage(ns, song.measureStart(m), lengthOf(song, m)) / lengthOf(song, m)
+        }
+        val typicalFill = Hand.entries.associateWith { hand ->
+            fill.filterKeys { it.second == hand }.values.sorted().let { if (it.isEmpty()) 1.0 else it[it.size / 2] }
+        }
         for (m in 0..last) {
             val reasons = ArrayList<String>()
             if (m in song.flaggedMeasures) reasons.add(t("Rhythmus wurde geschätzt", "Rhythm was estimated"))
@@ -97,15 +107,9 @@ object MeasureOps {
                 val ns = notesIn(song, m, hand)
                 if (ns.isEmpty()) continue
                 val name = if (hand == Hand.RIGHT) t("rechte Hand", "right hand") else t("linke Hand", "left hand")
-                // Coverage: time in the measure during which the hand plays something.
                 val steps = ns.toSteps()
-                var covered = 0.0
-                for ((i, st) in steps.withIndex()) {
-                    val next = steps.getOrNull(i + 1)?.start ?: (start + len)
-                    val end = minOf(st.notes.maxOf { it.end }, next, start + len)
-                    covered += (end - st.start).coerceAtLeast(0.0)
-                }
-                if (m != last && m != 0 && covered < len * 0.55) reasons.add(t("$name: Takt nicht gefüllt (Pausen oder fehlende Noten?)", "$name: measure not filled (rests or missing notes?)"))
+                val filled = fill[m to hand]
+                if (filled != null && filled < 0.55 && filled < typicalFill.getValue(hand) * 0.6) reasons.add(t("$name: Takt nicht gefüllt (Pausen oder fehlende Noten?)", "$name: measure not filled (rests or missing notes?)"))
                 val over = ns.maxOf { it.end } - (start + len)
                 if (over > 0.3 && ns.none { abs(it.end - (start + len)) < 0.1 }) reasons.add(t("$name: Noten ragen über den Taktstrich", "$name: notes extend past the bar line"))
                 val pitches = steps.map { st -> st.notes.sumOf { it.pitch } / st.notes.size }
@@ -114,5 +118,17 @@ object MeasureOps {
             if (reasons.isNotEmpty()) out.add(MeasureIssue(m, reasons))
         }
         return out
+    }
+
+    /** Time in the measure during which the hand plays something. */
+    private fun coverage(ns: List<Note>, start: Double, len: Double): Double {
+        val steps = ns.toSteps()
+        var covered = 0.0
+        for ((i, st) in steps.withIndex()) {
+            val next = steps.getOrNull(i + 1)?.start ?: (start + len)
+            val end = minOf(st.notes.maxOf { it.end }, next, start + len)
+            covered += (end - st.start).coerceAtLeast(0.0)
+        }
+        return covered
     }
 }

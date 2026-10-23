@@ -79,7 +79,7 @@ fun Keyboard(
             )
             if (showNames && naming != NoteNaming.NONE && (p % 12 == 0 || layout.whiteWidth > 34)) {
                 val label = if (p % 12 == 0) Pitch.name(p, naming) + Pitch.octave(p) else Pitch.name(p, naming)
-                drawLabel(measurer, label, Offset(x + 4f, h - 26f), Color(0xFF4A5070), if (layout.whiteWidth > 30) 11 else 9, maxWidth = layout.whiteWidth - 4)
+                drawLabel(measurer, label, Offset(x + layout.whiteWidth / 2, h - 4f), Color(0xFF4A5070), if (layout.whiteWidth > 30) 11 else 9, maxWidth = layout.whiteWidth - 4, pivot = Offset(0.5f, 1f))
             }
             if (p in heard) drawCircle(PtColors.Hit, radius = layout.whiteWidth * 0.18f, center = Offset(x + layout.whiteWidth / 2, h - 40f))
         }

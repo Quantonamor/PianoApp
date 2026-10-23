@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -59,6 +60,7 @@ fun FallingNotes(
     Canvas(
         modifier
             .fillMaxSize()
+            .clipToBounds() // notes above the visible area must not paint over the toolbar
             .pointerInput(lookaheadSeconds) {
                 detectVerticalDragGestures { change, dragAmount ->
                     change.consume()
@@ -107,7 +109,7 @@ fun FallingNotes(
             if (yy < -20) break
             if (yy <= h + 1) {
                 drawLine(Color(0x33FFFFFF), Offset(0f, yy), Offset(size.width, yy), 1.5f)
-                if (showMeasureNumbers) drawLabel(measurer, "${m + 1}", Offset(6f, yy - 22f), Color(0x88FFFFFF), 12)
+                if (showMeasureNumbers) drawLabel(measurer, "${m + 1}", Offset(6f, yy - 2f), Color(0x88FFFFFF), 12, pivot = Offset(0f, 1f))
             }
             m++
             if (m > song.measureCount + 1) break
@@ -153,10 +155,16 @@ fun FallingNotes(
                 )
                 drawRoundRect(brush, Offset(x, top), Size(w, tileH), radius)
                 if (state == NoteState.PENDING) drawRoundRect(Color.White.copy(alpha = 0.35f), Offset(x, top), Size(w, tileH), radius, style = Stroke(1.2f))
-                if (showNames && naming != NoteNaming.NONE && tileH > 20 && w > 14) {
+                if (showNames && naming != NoteNaming.NONE && w > 14) {
                     val label = Pitch.name(n.pitch, naming)
-                    val fs = if (w > 34) 13 else 10
-                    drawLabel(measurer, label, Offset(x + 3f, bottom - fs * 2.2f), Color(0xEE0B0F1C), fs, bold = true, maxWidth = w - 4f)
+                    // largest size that fits into the tile, so short notes are labelled too
+                    for (fs in if (w > 34) LABEL_SIZES_WIDE else LABEL_SIZES_NARROW) {
+                        if (drawLabel(
+                                measurer, label, Offset(x + w / 2, top + tileH - 1f), Color(0xEE0B0F1C), fs, bold = true,
+                                maxWidth = w - 4f, maxHeight = tileH - 1f, pivot = Offset(0.5f, 1f),
+                            )
+                        ) break
+                    }
                 }
             }
         }
@@ -169,16 +177,23 @@ fun FallingNotes(
         if (engine.countInRemaining > 0) {
             val beatsPerClick = if (song.beatUnit == 8 && song.beatsPerMeasure % 3 == 0) 1.5 else 4.0 / song.beatUnit
             val remainingClicks = ceil(engine.countInRemaining / beatsPerClick - 1e-6).toInt()
-            drawLabel(measurer, "$remainingClicks", Offset(size.width / 2 - 20f, h / 2 - 50f), Color.White.copy(alpha = 0.8f), 64, bold = true)
+            drawLabel(measurer, "$remainingClicks", Offset(size.width / 2, h / 2), Color.White.copy(alpha = 0.8f), 64, bold = true, pivot = Offset(0.5f, 0.5f))
         }
     }
 }
 
+private val LABEL_SIZES_WIDE = intArrayOf(13, 11, 9)
+private val LABEL_SIZES_NARROW = intArrayOf(10, 8)
+
+/** Draws [text] unless it is larger than [maxWidth] x [maxHeight]; returns whether it was drawn. */
 internal fun DrawScope.drawLabel(
     measurer: TextMeasurer, text: String, at: Offset, color: Color, sizeSp: Int,
-    bold: Boolean = false, maxWidth: Float = Float.MAX_VALUE,
-) {
+    bold: Boolean = false, maxWidth: Float = Float.MAX_VALUE, maxHeight: Float = Float.MAX_VALUE,
+    /** Which point of the text lands on [at], as a fraction of the text size: (0,0) top left, (0.5,1) bottom centre. */
+    pivot: Offset = Offset.Zero,
+): Boolean {
     val layout = measurer.measure(text, TextStyle(color = color, fontSize = sizeSp.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal))
-    if (layout.size.width > maxWidth) return
-    drawText(layout, topLeft = at)
+    if (layout.size.width > maxWidth || layout.size.height > maxHeight) return false
+    drawText(layout, topLeft = Offset(at.x - layout.size.width * pivot.x, at.y - layout.size.height * pivot.y))
+    return true
 }

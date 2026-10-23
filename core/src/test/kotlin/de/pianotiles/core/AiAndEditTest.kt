@@ -46,6 +46,22 @@ class AiAndEditTest {
     }
 
     @Test
+    fun restsTypicalForThePieceAreNotFlagged() {
+        // Like "Für Elise": the left hand plays in the first half of every measure, then rests.
+        val notes = ArrayList<Note>()
+        for (m in 0 until 6) {
+            for (b in 0 until 4) notes.add(Note(64 + b, m * 4.0 + b, 1.0, Hand.RIGHT))
+            notes.add(Note(45, m * 4.0, 0.5, Hand.LEFT)); notes.add(Note(52, m * 4.0 + 0.5, 0.5, Hand.LEFT))
+            notes.add(Note(57, m * 4.0 + 1.0, 0.5, Hand.LEFT))
+        }
+        val s = Song(id = "r", title = "Rests", notes = notes)
+        assertEquals(emptyList(), MeasureOps.issues(s))
+        // a measure where the left hand lost most of its notes still stands out
+        val holey = s.copy(notes = s.notes.filterNot { it.hand == Hand.LEFT && it.start in 8.4..9.5 })
+        assertEquals(listOf(2), MeasureOps.issues(holey).map { it.measure })
+    }
+
+    @Test
     fun pitchNames() {
         assertEquals(60, AiPrompt.parseSpn("C4"))
         assertEquals(66, AiPrompt.parseSpn("F#4"))

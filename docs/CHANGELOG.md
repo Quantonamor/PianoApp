@@ -19,6 +19,10 @@
 * Bibliothek sichern/wiederherstellen (ZIP), Stück als MIDI teilen.
 * Englische Oberfläche (Gerätesprache oder Einstellung „Sprache / Language“).
 * CI komplett grün: Core-Tests, APK-Build und Emulator-Bedientest.
+* Erster Test auf dem (lokalen) Emulator, behoben: Überschrift/Icons der Bibliothek waren schwarz auf dunklem
+  Grund; fallende Noten wurden über die obere Leiste gezeichnet; Notennamen auf den Kacheln und Tasten-
+  beschriftungen wurden abgeschnitten (jetzt mittig und passend verkleinert); „Bitte prüfen“ meldet Pausen
+  nicht mehr als Fehler, wenn sie im Stück üblich sind (z. B. linke Hand bei „Für Elise“).
 
 ## 0.1.0 – erste Version
 

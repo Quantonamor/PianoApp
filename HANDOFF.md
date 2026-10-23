@@ -1,10 +1,13 @@
 # Übergabe für die nächste Session („weiter“)
 
-Stand: **2026-10-22**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI komplett grün**
+Stand: **2026-10-23**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI komplett grün**
 (Core-Tests, APK-Build, Emulator-Bedientest). Allgemeine Regeln und Befehle stehen in `CLAUDE.md`.
 
 ## Was als Nächstes zu tun ist (Reihenfolge)
 
+0. **Lokal mit Emulator:** jede UI-Änderung selbst ansehen (`tools/emu.sh install` + `shot`). Erster Emulator-Durchgang
+   2026-10-23 erledigt (Bibliothek, Üben Warten/Fließend, Einstellungen, Hilfe, Editor) – noch nicht angesehen:
+   PDF-Import-Ablauf, PDF neben dem Üben, Schleifen-Dialog, Backup/Teilen, KI-Panel.
 1. **Rückmeldungen des Nutzers vom Gerätetest** haben immer Vorrang (Fehler beheben, CI grün halten, dokumentieren).
 2. Sonst: **Konvergenz-Schleife der PDF-Erkennung** fortsetzen (`docs/PLAN.md` → „Konvergenz-Schleife“,
    Anleitung `tools/omr-eval/README.md`). Konkret:
@@ -37,7 +40,9 @@ Stand: **2026-10-22**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI kom
 - KI-nachbessern mit eigenem Anthropic-API-Schlüssel ausprobieren.
 
 ## Umgebung (wichtig)
-- Lokal **kein Android-SDK** → App nur über die CI bauen; `./gradlew :core:test` läuft lokal.
+- **Zwei mögliche Umgebungen:** (a) lokal am Windows-PC (VS Code) mit Android-SDK + Emulator → App selbst bauen,
+  installieren und per Screenshot prüfen (`tools/emu.sh`, siehe CLAUDE.md); (b) Cloud-Container ohne SDK →
+  App nur über die CI bauen; `./gradlew :core:test` läuft überall.
 - GitHub nur über die MCP-Tools (`mcp__github__*`); Job-Logs: `get_job_logs` mit `tail_lines`.
   Laufstatus geht auch per `curl https://api.github.com/repos/Quantonamor/PianoApp/actions/runs?branch=<branch>`.
 - Hilfsdateien der Auswertung liegen in `/tmp/omr-work` (geht mit dem Container verloren → `setup.sh` legt sie neu an).

@@ -344,7 +344,7 @@ private fun PianoRoll(vm: EditorViewModel, grid: Double, addMode: Boolean, addHa
                 val y = (hi - p) * rowH
                 drawRect(if (Pitch.isBlackKey(p)) Color(0xFF12172A) else Color(0xFF181E36), Offset(labelW, y), Size(size.width - labelW, rowH))
                 drawRect(if (Pitch.isBlackKey(p)) PtColors.BlackKey else PtColors.WhiteKey, Offset(0f, y), Size(labelW - 4, rowH - 1))
-                if (p % 12 == 0 && rowH > 9) drawLabel(measurer, Pitch.fullName(p, app.settings.settings.value.noteNaming), Offset(4f, y + rowH / 2 - 9f), Color(0xFF333A55), 10)
+                if (p % 12 == 0 && rowH > 9) drawLabel(measurer, Pitch.fullName(p, app.settings.settings.value.noteNaming), Offset(4f, y + rowH / 2), Color(0xFF333A55), 10, pivot = Offset(0f, 0.5f))
             }
             fun xOf(beat: Double) = labelW + ((beat - scrollBeats) * pxPerBeat).toFloat()
             // current / suspicious measures
