@@ -346,6 +346,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val lineYs = st.lines.toList() + (1..5).flatMap { k -> listOf(st.top - k * ss, st.bottom + k * ss) }.filter { ledgerPrinted(it) }
             val touchesLine = lineYs.any { ly -> abs(b.minY + top - 1 - ly) <= st.lineThickness + 1 || abs(b.maxY + top + 1 - ly) <= st.lineThickness + 1 }
             if (!touchesLine && (h < 0.28 || w / h > 3.0)) return false
+            // The window of a natural or sharp: long vertical strokes on both sides (a head has its stem on
+            // one side at most).
+            fun longStroke(xs: IntProgression) = xs.any { x -> (img.verticalRun(x, b.cy.roundToInt())?.let { it.last - it.first + 1 } ?: 0) >= ss * 1.5 }
+            val reach = (ss * 0.3).roundToInt()
+            if (longStroke(b.minX - 1 downTo b.minX - reach) && longStroke(b.maxX + 1..b.maxX + reach)) return false
+            // A head's hole is enclosed by its own ring; a long stroke right at the border means a cell between
+            // an accidental (or stem, bar line) and its neighbours.
+            // (A stem leaves the head in one direction only; these strokes reach above and below the cell.)
+            fun through(x: Int) = img.verticalRun(x, b.cy.roundToInt())?.let { it.first <= b.minY - ss * 0.5 && it.last >= b.maxY + ss * 0.5 } == true
+            if (through(b.minX - 1) || through(b.maxX + 1)) return false
             if (h <= 0.78) return true
             // Taller holes (a head in a space, bounded by the staff lines) must be oval, not a
             // rectangular cell between stems and lines: top and bottom rows are clearly narrower.
@@ -364,6 +374,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 for (x in b.minX..b.maxX) if (origCrop[x, y]) filled[x, y] = true
             holeCenters.add(b.cx + left to b.cy + top)
             holeAreas.add(b.area)
+            if (System.getProperty("omr.trace") != null) println("HOLE1 x=${b.minX + left}-${b.maxX + left} y=${b.minY + top}-${b.maxY + top}")
         }
         for (b in Components.find(filled, ink = false, keepPixels = true)) {
             if (!isHole(b, filled, 0.78)) continue
