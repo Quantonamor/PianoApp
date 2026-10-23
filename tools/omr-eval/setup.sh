@@ -20,7 +20,10 @@ for r in "$REPO"/tools/omr-eval/rounds/r*; do [ -d "$W/rounds/$(basename "$r")" 
 # Regression set = fixed corpus + every round (Git Bash without symlink rights copies instead of linking).
 rm -rf "$W/regress"; mkdir -p "$W/regress"
 for d in "$REPO"/core/src/test/resources/corpus/*/ "$W"/rounds/r*/*/; do
-  [ -f "$d/truth.txt" ] && ln -sfn "${d%/}" "$W/regress/$(basename "$d")"
+  n=$(basename "$d")
+  # (two rounds may contain different chorales of the same BWV number: keep both)
+  [ -e "$W/regress/$n" ] && n="${n}_$(basename "$(dirname "$d")")"
+  [ -f "$d/truth.txt" ] && ln -sfn "${d%/}" "$W/regress/$n"
 done
 
 # Kotlin compiler classpath for kcheck.sh (jars come into the Gradle cache with the first core build).

@@ -193,6 +193,15 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                     StaffData(pageIdx, st, clef, hand)
                 }
                 for (sd in sds) analyzeStaff(bit, noStaff, sd, staves)
+                // A stem of the lower staff reaching up into the flag of a stem-down note of the upper staff (or the
+                // other way round) picks up that flag: it belongs to the other note (flags point right: the left stem).
+                for (a in sds) for (b in sds) if (a !== b) for (h in a.heads) if (h.hasStem && h.beams > 0) {
+                    val ss = a.staff.space
+                    if (b.heads.any { o ->
+                            o.hasStem && o.beams > 0 && o.stemUp != h.stemUp && o.stemX < h.stemX && h.stemX - o.stemX < ss * 1.5 &&
+                                h.stemEnd > min(o.cy, o.stemEnd.toDouble()) && h.stemEnd < max(o.cy, o.stemEnd.toDouble())
+                        }) h.beams = 0
+                }
                 if (firstKey == null && sds.isNotEmpty()) firstKey = detectKey(sds.first())
                 all.addAll(sds)
                 systems.add(SystemData(sds))
@@ -1143,6 +1152,14 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                         if (run >= ss * 0.25 && run <= ss * 1.0) count++
                         run = 0
                     }
+                    // (a beam does not reach far beyond the stem end: such ink is text or another symbol)
+                    if (i == -(ss * 0.25).roundToInt() && run == 1) {
+                        val r = img.verticalRun(x, y)!!
+                        if ((if (hd.stemUp) hd.stemEnd - r.first else r.last - hd.stemEnd) > ss * 0.5) {
+                            while (i <= scan && img[x, if (hd.stemUp) hd.stemEnd + i else hd.stemEnd - i]) i++
+                            run = 0; continue
+                        }
+                    }
                     i++
                 }
                 // a run cut off by the end of the window: only a beam if it ends soon after (not the long
@@ -1279,7 +1296,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         for (b in blobs + parts) {
             val w = b.width / ss; val h = b.height / ss
-            if (h < 1.5 || h > 3.7 || w < 0.15 || w > 1.5) continue
+            // (a thin flat's stem may be only 2 px wide)
+            if (h < 1.5 || h > 3.7 || w < 0.1 || w > 1.5) continue
             val x0 = b.minX + left; val x1 = b.maxX + left
             if (x0 < headerEnd || x1 <= sd.keyEnd) continue
             // must not contain a note head (stems belong to heads)
@@ -1305,6 +1323,31 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 if (bowl != null) { type = -1; refY = b.maxY + top - ss * 0.45 }
             }
             if (type != null) sd.accGlyphs.add(doubleArrayOf(x0.toDouble(), x1.toDouble(), refY, type.toDouble()))
+        }
+        // A flat whose stem happens to touch a beam above is part of the beam's symbol: look for the flat's shape
+        // right before heads that have no accidental yet (a thin stroke reaching well above the head and ending
+        // just below it, an open bowl on its right, nothing on its left).
+        for (hd in sd.heads) {
+            if (sd.accGlyphs.any { it[1] <= hd.x0 + ss * 0.15 && it[1] >= hd.x0 - ss * 3.2 && abs(it[2] - hd.cy) <= ss * 0.45 }) continue
+            val cy = (hd.cy - top).roundToInt()
+            for (xs in (hd.x0 - left - (ss * 0.6).roundToInt()) downTo (hd.x0 - left - (ss * 1.3).roundToInt())) {
+                val run = img.verticalRun(xs, cy) ?: continue
+                if (run.first > cy - ss * 1.3 || run.last < cy + ss * 0.2 || run.last > cy + ss * 0.9) continue
+                if (img[xs - 1, cy - (ss * 0.8).roundToInt()] && img[xs + 1, cy - (ss * 0.8).roundToInt()]) continue // not thin
+                if (sd.heads.any { xs + left in it.x0 - 1..it.x1 + 1 && abs(it.cy - hd.cy) < ss * 3 }) continue
+                if (sd.accGlyphs.any { xs + left >= it[0] - 1 && xs + left <= it[1] + 1 }) continue // part of another accidental
+                val bx0 = xs + (ss * 0.3).roundToInt(); val bx1 = min(xs + (ss * 0.8).roundToInt(), hd.x0 - left - 1)
+                val rows = (cy - (ss * 0.2).roundToInt())..(cy + (ss * 0.3).roundToInt())
+                val bowlInk = rows.count { y -> (bx0..bx1).any { img[it, y] } }
+                val open = rows.count { y -> !img[xs + 2, y] && (xs + 3..bx1).any { img[it, y] } }
+                // (only the flat's own height: above it the stroke may run into the beam)
+                val own = (cy - (ss * 1.3).roundToInt())..run.last
+                val leftInk = own.sumOf { y -> (xs - (ss * 0.5).roundToInt()..xs - (ss * 0.2).roundToInt()).count { img[it, y] } }
+                if (bowlInk >= rows.count() * 0.8 && open >= rows.count() * 0.5 && leftInk <= own.count() * 0.1) {
+                    sd.accGlyphs.add(doubleArrayOf((xs + left).toDouble(), (bx1 + left).toDouble(), run.last + top - ss * 0.45, -1.0))
+                    break
+                }
+            }
         }
     }
 
@@ -1413,7 +1456,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         // (only for one voice: two voices in a staff make a measure too long as well)
         val heads = cols.flatMap { it.heads }.filter { it.hasStem }
-        val oneVoice = heads.none { it.stemUp } || heads.all { it.stemUp }
+        // (one voice may turn its stems too, by the middle line: then the stems-up notes are the lower ones and below
+        // the middle; with two voices they are the higher ones)
+        val up = heads.filter { it.stemUp }; val down = heads.filter { !it.stemUp }
+        val oneVoice = up.isEmpty() || down.isEmpty() || (up.maxOf { it.step } < down.minOf { it.step } &&
+            up.all { it.step <= 5 } && down.all { it.step >= 3 } && heads.none { it.twoStems })
         if (marks.isEmpty() && oneVoice && cols.none { it.heads.size > 1 } && abs(sum() - measureLen) > 0.05) {
             // Tuplets printed without a number: a run of equal notes (3, 6, 9 or 12) whose 2/3 makes the measure
             // add up exactly; engravers set tuplet notes closer, so the most tightly spaced run wins.
@@ -1532,7 +1579,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 val near = sd.heads.filter { abs(it.cy - arc[2]) <= ss * 1.4 }
                 // (an arc along a staff line loses its thin ends with the line)
                 val onLine = sd.staff.lines.any { abs(it - arc[2]) <= ss * 0.35 }
-                val a = near.filter { it.x1 >= arc[0] - ss * (if (onLine) 2.0 else 1.7) && it.x1 <= arc[0] + ss * 0.8 }
+                val a = near.filter { it.x1 >= arc[0] - ss * (if (onLine) 2.3 else 1.7) && it.x1 <= arc[0] + ss * 0.8 }
                 // a tie may stop before the bar line that lies between the two notes
                 val reach = arc[1] + ss * 1.5 + if (sd.barlines.any { it.first >= arc[1] - 2 && it.last <= arc[1] + ss * 2.5 }) ss * 1.5 else 0.0
                 for (h1 in a) {
