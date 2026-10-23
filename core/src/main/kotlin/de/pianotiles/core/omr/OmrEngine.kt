@@ -419,13 +419,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         for (a in glyphs) if (upperDigit(a)) for (c in glyphs) if (lowerDigit(c) && abs(a.cx - c.cx) < ss * 0.8) {
             timeSigBoxes.add(intArrayOf(min(a.minX, c.minX), a.minY, max(a.maxX, c.maxX), c.maxY))
         }
-        /** A note with its stem: many rows hold only the thin stem (digits are wide all the way). */
+        /** A note with its stem: along the longest vertical stroke, many rows hold only the thin stem (beside
+         *  it at most a flag); the strokes of digits are wide. */
         fun stemmed(b: Blob): Boolean {
+            val sx = (b.minX..b.maxX).maxBy { x -> (b.minY..b.maxY).count { y -> noStaffCrop[x, y] } }
             var thin = 0
             for (y in b.minY..b.maxY) {
-                var l = -1; var r = -1
-                for (x in b.minX..b.maxX) if (noStaffCrop[x, y]) { if (l < 0) l = x; r = x }
-                if (l >= 0 && r - l + 1 <= ss * 0.35) thin++
+                if (!noStaffCrop[sx, y]) continue
+                var l = sx; while (l > b.minX && noStaffCrop[l - 1, y]) l--
+                var r = sx; while (r < b.maxX && noStaffCrop[r + 1, y]) r++
+                if (r - l + 1 <= ss * 0.35) thin++
             }
             return thin > b.height * 0.4
         }
