@@ -61,8 +61,9 @@ Eine Android-App (Tablet & Handy, Querformat), die beim Klavierüben hilft:
 - [x] App-Icon
 - [x] Automatischer Bedien-Test auf Emulator in der CI (`app/src/androidTest/.../SmokeTest.kt`)
 - [ ] **Test auf echtem Gerät durch den Nutzer** (Rückmeldung → Fehlerbehebung)
-- [~] Test auf dem lokalen Emulator (2026-10-23: Bibliothek, Üben, Einstellungen, Hilfe, Editor geprüft, 4 Fehler
-      behoben; offen: PDF-Import, PDF neben dem Üben, Schleifen-Dialog, Backup/Teilen, KI-Panel)
+- [~] Test auf dem lokalen Emulator (2026-10-23: Bibliothek, Üben, Einstellungen, Hilfe, Editor, PDF-Import,
+      PDF neben dem Üben, Dialoge geprüft, 8 Fehler behoben; offen: Backup/Teilen, KI-Panel, Stück-Menü)
+- [ ] Idee: Metronomangabe (♩ = 100) aus dem PDF lesen (derzeit Standard 90 BPM)
 - [ ] Mikrofon-Erkennung mit echtem Klavier feinjustieren (Schwellen, Latenz)
 - [x] Performance: Notennamen-Texte zwischenspeichern (Text-Cache 512), große Stücke flüssig zeichnen
 - [x] MusicXML: Wiederholungen + Volta-Klammern ausklappen, Tempowechsel (MusicXML + MIDI, Tempo-Karte in der Engine)

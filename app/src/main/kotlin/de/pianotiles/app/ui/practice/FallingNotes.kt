@@ -20,6 +20,7 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import de.pianotiles.app.ui.theme.PtColors
@@ -57,6 +58,7 @@ fun FallingNotes(
     val measurer = rememberTextMeasurer(cacheSize = 512) // note names repeat: measure each once
     val song = engine.song
     val noteOrder = remember(song) { song.notes.indices.sortedBy { song.notes[it].start } }
+    val flats = remember(song) { Pitch.usesFlats(song.notes.map { it.pitch }) }
     Canvas(
         modifier
             .fillMaxSize()
@@ -156,7 +158,7 @@ fun FallingNotes(
                 drawRoundRect(brush, Offset(x, top), Size(w, tileH), radius)
                 if (state == NoteState.PENDING) drawRoundRect(Color.White.copy(alpha = 0.35f), Offset(x, top), Size(w, tileH), radius, style = Stroke(1.2f))
                 if (showNames && naming != NoteNaming.NONE && w > 14) {
-                    val label = Pitch.name(n.pitch, naming)
+                    val label = Pitch.name(n.pitch, naming, flats)
                     // largest size that fits into the tile, so short notes are labelled too
                     for (fs in if (w > 34) LABEL_SIZES_WIDE else LABEL_SIZES_NARROW) {
                         if (drawLabel(
@@ -182,7 +184,7 @@ fun FallingNotes(
     }
 }
 
-private val LABEL_SIZES_WIDE = intArrayOf(13, 11, 9)
+private val LABEL_SIZES_WIDE = intArrayOf(13, 11, 9, 8)
 private val LABEL_SIZES_NARROW = intArrayOf(10, 8)
 
 /** Draws [text] unless it is larger than [maxWidth] x [maxHeight]; returns whether it was drawn. */
@@ -192,7 +194,12 @@ internal fun DrawScope.drawLabel(
     /** Which point of the text lands on [at], as a fraction of the text size: (0,0) top left, (0.5,1) bottom centre. */
     pivot: Offset = Offset.Zero,
 ): Boolean {
-    val layout = measurer.measure(text, TextStyle(color = color, fontSize = sizeSp.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal))
+    val style = TextStyle(
+        color = color, fontSize = sizeSp.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+        // tight box (no font padding) so labels fit into short tiles
+        lineHeight = sizeSp.sp, lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+    )
+    val layout = measurer.measure(text, style)
     if (layout.size.width > maxWidth || layout.size.height > maxHeight) return false
     drawText(layout, topLeft = Offset(at.x - layout.size.width * pivot.x, at.y - layout.size.height * pivot.y))
     return true

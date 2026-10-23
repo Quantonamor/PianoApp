@@ -6,8 +6,9 @@ Stand: **2026-10-23**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI kom
 ## Was als Nächstes zu tun ist (Reihenfolge)
 
 0. **Lokal mit Emulator:** jede UI-Änderung selbst ansehen (`tools/emu.sh install` + `shot`). Erster Emulator-Durchgang
-   2026-10-23 erledigt (Bibliothek, Üben Warten/Fließend, Einstellungen, Hilfe, Editor) – noch nicht angesehen:
-   PDF-Import-Ablauf, PDF neben dem Üben, Schleifen-Dialog, Backup/Teilen, KI-Panel.
+   2026-10-23 erledigt (Bibliothek, Üben Warten/Fließend, Einstellungen, Hilfe, Editor, PDF-Import, PDF neben dem
+   Üben, Schleifen-/Tempo-/Abschluss-Dialog) – noch nicht angesehen: Backup/Teilen, KI-Panel, Stück-Menü
+   (Umbenennen/Löschen). Idee aus dem Test: Metronomangabe (♩ = 100) im PDF lesen statt Standard 90 BPM.
 1. **Rückmeldungen des Nutzers vom Gerätetest** haben immer Vorrang (Fehler beheben, CI grün halten, dokumentieren).
 2. Sonst: **Konvergenz-Schleife der PDF-Erkennung** fortsetzen (`docs/PLAN.md` → „Konvergenz-Schleife“,
    Anleitung `tools/omr-eval/README.md`). Konkret:

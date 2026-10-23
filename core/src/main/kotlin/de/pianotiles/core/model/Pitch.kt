@@ -1,6 +1,7 @@
 package de.pianotiles.core.model
 
 import de.pianotiles.core.i18n.CoreText.t
+import kotlin.math.abs
 import kotlin.math.pow
 
 enum class NoteNaming { GERMAN, ENGLISH, SOLFEGE, NONE }
@@ -12,6 +13,9 @@ object Pitch {
     private val germanNames = arrayOf("C", "Cis", "D", "Dis", "E", "F", "Fis", "G", "Gis", "A", "B", "H")
     private val englishNames = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
     private val solfegeNames = arrayOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
+    private val germanFlatNames = arrayOf("C", "Des", "D", "Es", "E", "F", "Ges", "G", "As", "A", "B", "H")
+    private val englishFlatNames = arrayOf("C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B")
+    private val solfegeFlatNames = arrayOf("Do", "Re♭", "Re", "Mi♭", "Mi", "Fa", "Sol♭", "Sol", "La♭", "La", "Si♭", "Si")
 
     fun isBlackKey(pitch: Int): Boolean = when (((pitch % 12) + 12) % 12) {
         1, 3, 6, 8, 10 -> true
@@ -22,20 +26,38 @@ object Pitch {
 
     fun octave(pitch: Int): Int = pitch / 12 - 1
 
-    /** Short name without octave (e.g. "Fis"), used on tiles. */
-    fun name(pitch: Int, naming: NoteNaming): String {
+    /** Short name without octave (e.g. "Fis", or "Ges" with [flats]), used on tiles. */
+    fun name(pitch: Int, naming: NoteNaming, flats: Boolean = false): String {
         val pc = ((pitch % 12) + 12) % 12
         return when (naming) {
-            NoteNaming.GERMAN -> germanNames[pc]
-            NoteNaming.ENGLISH -> englishNames[pc]
-            NoteNaming.SOLFEGE -> solfegeNames[pc]
+            NoteNaming.GERMAN -> (if (flats) germanFlatNames else germanNames)[pc]
+            NoteNaming.ENGLISH -> (if (flats) englishFlatNames else englishNames)[pc]
+            NoteNaming.SOLFEGE -> (if (flats) solfegeFlatNames else solfegeNames)[pc]
             NoteNaming.NONE -> ""
         }
     }
 
     /** Name including octave in scientific notation, e.g. "C4". */
-    fun fullName(pitch: Int, naming: NoteNaming = NoteNaming.ENGLISH): String =
-        name(pitch, if (naming == NoteNaming.NONE) NoteNaming.ENGLISH else naming) + octave(pitch)
+    fun fullName(pitch: Int, naming: NoteNaming = NoteNaming.ENGLISH, flats: Boolean = false): String =
+        name(pitch, if (naming == NoteNaming.NONE) NoteNaming.ENGLISH else naming, flats) + octave(pitch)
+
+    private val majorScale = intArrayOf(0, 2, 4, 5, 7, 9, 11)
+
+    /**
+     * Key signature (-6..6) whose major scale contains the most of [pitches]; ties go to the key with
+     * fewer accidentals. Songs don't store their key, this is enough to spell black keys sensibly.
+     */
+    fun estimateKeyFifths(pitches: Iterable<Int>): Int {
+        val counts = IntArray(12)
+        for (p in pitches) counts[((p % 12) + 12) % 12]++
+        return (-6..6).sortedBy { abs(it) }.maxBy { fifths ->
+            val tonic = Math.floorMod(fifths * 7, 12)
+            majorScale.sumOf { counts[(tonic + it) % 12] }
+        }
+    }
+
+    /** Whether black keys should be named as flats (E♭) instead of sharps (D#) for these notes. */
+    fun usesFlats(pitches: Iterable<Int>): Boolean = estimateKeyFifths(pitches) < 0
 
     /** Diatonic step index: C4 = 28 (7 * 4), D4 = 29 ... Only for natural note letters. */
     private val letterSemitones = intArrayOf(0, 2, 4, 5, 7, 9, 11)

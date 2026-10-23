@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -35,9 +36,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import de.pianotiles.app.i18n.tr
 import de.pianotiles.app.ui.theme.PtColors
+
+/** The platform default dialog width is far too narrow on phones in landscape: use up to [max] instead. */
+private val wideDialog = DialogProperties(usePlatformDefaultWidth = false)
+private fun wideDialogModifier(max: Dp) = Modifier.padding(horizontal = 24.dp).widthIn(max = max).fillMaxWidth()
 
 @Composable
 fun SpeedDialog(vm: PracticeViewModel, onDismiss: () -> Unit) {
@@ -45,13 +52,15 @@ fun SpeedDialog(vm: PracticeViewModel, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text(tr("Fertig")) } },
         title = { Text("Tempo") },
+        properties = wideDialog,
+        modifier = wideDialogModifier(560.dp),
         text = {
             Column {
                 Text("${(vm.speed * 100).toInt()} %  ·  ${(vm.song.bpm * vm.speed).toInt()} BPM", style = MaterialTheme.typography.headlineSmall)
                 Slider(value = vm.speed, onValueChange = vm::changeSpeed, valueRange = 0.1f..1.5f, steps = 27)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (p in listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f)) {
-                        FilterChip(selected = vm.speed == p, onClick = { vm.changeSpeed(p) }, label = { Text("${(p * 100).toInt()} %") })
+                        FilterChip(selected = vm.speed == p, onClick = { vm.changeSpeed(p) }, label = { Text("${(p * 100).toInt()} %", maxLines = 1) })
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -67,7 +76,7 @@ fun SpeedDialog(vm: PracticeViewModel, onDismiss: () -> Unit) {
 @Composable
 private fun Stepper(label: String, value: Int, onChange: (Int) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.width(90.dp))
+        Text(label, Modifier.width(110.dp))
         IconButton(onClick = { onChange(value - 1) }) { Icon(Icons.Filled.Remove, tr("weniger")) }
         Text("$value", Modifier.width(36.dp), fontWeight = FontWeight.Bold)
         IconButton(onClick = { onChange(value + 1) }) { Icon(Icons.Filled.Add, tr("mehr")) }
@@ -92,7 +101,8 @@ fun LoopPanel(vm: PracticeViewModel, onDismiss: () -> Unit) {
             }
         },
         title = { Text(tr("Übungsschleife")) },
-        modifier = Modifier.widthIn(max = 640.dp),
+        properties = wideDialog,
+        modifier = wideDialogModifier(640.dp),
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(
@@ -175,9 +185,17 @@ fun FinishedDialog(vm: PracticeViewModel, info: FinishInfo, onBack: () -> Unit) 
     AlertDialog(
         onDismissRequest = { vm.finished = null },
         title = { Text(praise) },
+        properties = wideDialog,
+        modifier = wideDialogModifier(560.dp),
         text = {
             Column {
-                Text(tr("%s %% richtig", info.accuracy), style = MaterialTheme.typography.headlineMedium, color = PtColors.Hit)
+                Text(tr("%s %% richtig", info.accuracy), style = MaterialTheme.typography.headlineMedium,
+                    color = when {
+                        info.accuracy >= 80 -> PtColors.Hit
+                        info.accuracy >= 60 -> PtColors.LeftHand
+                        else -> PtColors.Miss
+                    },
+                )
                 Text(tr("Dauer: %s:%s min", info.seconds / 60, "%02d".format(info.seconds % 60)), color = PtColors.TextDim)
                 info.worstMeasure?.let { Text(tr("Die meisten Fehler in Takt %s.", it + 1), color = PtColors.TextDim) }
             }

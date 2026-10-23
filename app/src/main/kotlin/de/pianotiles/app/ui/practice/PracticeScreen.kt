@@ -334,8 +334,9 @@ private fun Overlays(vm: PracticeViewModel) {
             }
         }
         // waiting hint
+        val flats = remember(vm.song) { Pitch.usesFlats(vm.song.notes.map { it.pitch }) }
         if (vm.engine.isWaiting) {
-            val names = vm.engine.expectedPitches.sorted().joinToString("  ") { Pitch.fullName(it, vm.settings.noteNaming) }
+            val names = vm.engine.expectedPitches.sorted().joinToString("  ") { Pitch.fullName(it, vm.settings.noteNaming, flats) }
             Text(
                 tr("Spiele: %s", names),
                 Modifier.align(Alignment.BottomCenter).padding(bottom = 30.dp).clip(RoundedCornerShape(12.dp))

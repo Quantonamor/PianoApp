@@ -21,7 +21,9 @@ case "$1" in
     echo "booted: $AVD";;
   install)
     (cd "$ROOT" && ./gradlew :app:assembleDebug -q) || exit 1
-    "$ADB" install -r "$ROOT/app/build/outputs/apk/debug/app-debug.apk" >/dev/null
+    APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
+    command -v cygpath >/dev/null && APK="$(cygpath -m "$APK")" # adb.exe needs a Windows path
+    "$ADB" install -r "$APK" >/dev/null || exit 1
     "$ADB" shell pm grant de.pianotiles.app android.permission.RECORD_AUDIO
     "$ADB" shell am start -S -n de.pianotiles.app/.MainActivity >/dev/null && echo installed;;
   shot) mkdir -p "$OUT"; sleep "${3:-1}"; "$ADB" exec-out screencap -p > "$OUT/$2.png"; echo "$OUT/$2.png";;
@@ -30,11 +32,11 @@ case "$1" in
     for _ in $(seq 1 15); do
       "$ADB" shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
       XY=$("$ADB" shell cat /sdcard/ui.xml | python -c "
-import sys, re
+import sys, re, html
 x = sys.stdin.buffer.read().decode('utf-8'); q = sys.argv[1]
 for m in re.finditer(r'<node [^>]*>', x):
     n = m.group(0)
-    t = re.search(r'text=\"([^\"]*)\"', n).group(1) + ' ' + re.search(r'content-desc=\"([^\"]*)\"', n).group(1)
+    t = html.unescape(re.search(r'text=\"([^\"]*)\"', n).group(1) + ' ' + re.search(r'content-desc=\"([^\"]*)\"', n).group(1))
     if q in t:
         a, b, c, d = map(int, re.search(r'bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]', n).groups())
         print((a + c) // 2, (b + d) // 2); break

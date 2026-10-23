@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -88,8 +89,9 @@ private fun ProposalCard(vm: EditorViewModel, p: Proposal, naming: NoteNaming) {
     ) {
         Text(tr("Takt %s · %s", c.measure + 1, vm.handName(c.hand)), fontWeight = FontWeight.Bold)
         if (c.reason.isNotBlank()) Text(c.reason, style = MaterialTheme.typography.bodySmall)
-        Text(tr("Vorher: %s", notesText(p.before, naming)), style = MaterialTheme.typography.bodySmall, color = PtColors.Miss.copy(alpha = 0.9f))
-        Text(tr("Nachher: %s", notesText(c.notes, naming)), style = MaterialTheme.typography.bodySmall, color = PtColors.Hit)
+        val flats = remember(vm.song) { Pitch.usesFlats(vm.song.notes.map { it.pitch }) }
+        Text(tr("Vorher: %s", notesText(p.before, naming, flats)), style = MaterialTheme.typography.bodySmall, color = PtColors.Miss.copy(alpha = 0.9f))
+        Text(tr("Nachher: %s", notesText(c.notes, naming, flats)), style = MaterialTheme.typography.bodySmall, color = PtColors.Hit)
         when (p.status) {
             Proposal.Status.OPEN -> Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = { vm.measure = c.measure; vm.previewProposal = if (previewing) null else p }) { Text(if (previewing) tr("Vorschau aus") else tr("Ansehen")) }
@@ -102,9 +104,9 @@ private fun ProposalCard(vm: EditorViewModel, p: Proposal, naming: NoteNaming) {
     }
 }
 
-private fun notesText(ns: List<RelNote>, naming: NoteNaming): String {
+private fun notesText(ns: List<RelNote>, naming: NoteNaming, flats: Boolean): String {
     if (ns.isEmpty()) return tr("(leer)")
     return ns.sortedWith(compareBy({ it.start }, { it.pitch })).groupBy { Math.round(it.start * 48) }.values.joinToString("  ") { chord ->
-        chord.joinToString("+") { Pitch.fullName(it.pitch, naming) } + " " + durationSymbol(chord.maxOf { it.duration })
+        chord.joinToString("+") { Pitch.fullName(it.pitch, naming, flats) } + " " + durationSymbol(chord.maxOf { it.duration })
     }
 }

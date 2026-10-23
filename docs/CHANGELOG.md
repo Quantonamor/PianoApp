@@ -23,6 +23,10 @@
   Grund; fallende Noten wurden über die obere Leiste gezeichnet; Notennamen auf den Kacheln und Tasten-
   beschriftungen wurden abgeschnitten (jetzt mittig und passend verkleinert); „Bitte prüfen“ meldet Pausen
   nicht mehr als Fehler, wenn sie im Stück üblich sind (z. B. linke Hand bei „Für Elise“).
+* Notennamen folgen der Tonart: in B-Tonarten E♭/Es statt D#/Dis (Tonart wird aus den Tönen geschätzt, gilt
+  auch für schon gespeicherte Stücke); kurze Kacheln werden dank engerer Schrift öfter beschriftet.
+* Dialoge „Übungsschleife“, „Tempo“ und „Geschafft“ waren auf Handys im Querformat zu schmal (Überlappungen,
+  „125 %“ unerreichbar) – jetzt bis 560/640 dp breit; das Ergebnis ist je nach Trefferquote grün/orange/rot.
 
 ## 0.1.0 – erste Version
 

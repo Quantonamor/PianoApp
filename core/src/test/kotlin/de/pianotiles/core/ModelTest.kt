@@ -25,6 +25,23 @@ class ModelTest {
     }
 
     @Test
+    fun flatSpellingFollowsTheKey() {
+        val g = de.pianotiles.core.model.NoteNaming.GERMAN
+        val e = de.pianotiles.core.model.NoteNaming.ENGLISH
+        assertEquals("Es", Pitch.name(63, g, flats = true))
+        assertEquals("B", Pitch.name(70, g, flats = true))
+        assertEquals("H", Pitch.name(71, g, flats = true))
+        assertEquals("E♭", Pitch.name(63, e, flats = true))
+        assertEquals("A♭3", Pitch.fullName(56, e, flats = true))
+        // A-flat major (with a passing D natural) -> flats; "Für Elise" (A minor with D#/G#) -> sharps
+        val aFlatMajor = listOf(68, 70, 72, 73, 75, 77, 79, 80, 63, 56, 61, 62)
+        assertEquals(-4, Pitch.estimateKeyFifths(aFlatMajor))
+        assertEquals(true, Pitch.usesFlats(aFlatMajor))
+        assertEquals(false, Pitch.usesFlats(DemoSongs.furElise().notes.map { it.pitch }))
+        assertEquals(false, Pitch.usesFlats(emptyList()))
+    }
+
+    @Test
     fun stepsGroupChords() {
         val steps = DemoSongs.odeToJoy().notes.toSteps()
         assertEquals(setOf(48, 55, 64), steps.first().pitches)

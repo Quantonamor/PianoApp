@@ -420,7 +420,8 @@ private fun SelectionBar(vm: EditorViewModel, grid: Double, naming: de.pianotile
                     color = PtColors.TextDim,
                 )
             } else {
-                Text(tr("%s · Takt %s · %s", Pitch.fullName(sel.pitch, naming), song.measureIndexAt(sel.start) + 1, durationName(sel.duration)), Modifier.width(200.dp))
+                val flats = remember(song) { Pitch.usesFlats(song.notes.map { it.pitch }) }
+                Text(tr("%s · Takt %s · %s", Pitch.fullName(sel.pitch, naming, flats), song.measureIndexAt(sel.start) + 1, durationName(sel.duration)), Modifier.width(200.dp))
                 TextButton(onClick = { vm.modifySelected { it.copy(pitch = (it.pitch + 1).coerceAtMost(108)) } }) { Text("♯", style = MaterialTheme.typography.titleLarge) }
                 TextButton(onClick = { vm.modifySelected { it.copy(pitch = (it.pitch - 1).coerceAtLeast(21)) } }) { Text("♭", style = MaterialTheme.typography.titleLarge) }
                 IconButton(onClick = { vm.modifySelected { it.copy(pitch = (it.pitch + 12).coerceAtMost(108)) } }) { Icon(Icons.Filled.KeyboardDoubleArrowUp, tr("Oktave höher")) }
