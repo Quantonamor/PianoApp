@@ -1236,7 +1236,7 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         }
         for (b in blobs + parts) {
             val w = b.width / ss; val h = b.height / ss
-            if (h < 1.5 || h > 3.7 || w < 0.2 || w > 1.5) continue
+            if (h < 1.5 || h > 3.7 || w < 0.15 || w > 1.5) continue
             val x0 = b.minX + left; val x1 = b.maxX + left
             if (x0 < headerEnd || x1 <= sd.keyEnd) continue
             // must not contain a note head (stems belong to heads)
