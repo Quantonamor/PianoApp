@@ -17,6 +17,9 @@ Jeder Test hat 5 Min. Timeout; bei Fehlern stehen alle Thread-Stacks im Log („
 **Emulator verschwand (Okt. 23):** Ursache war sehr wahrscheinlich der Audio-Thread: mit `-noaudio` blockiert
 `AudioTrack.write` nicht, der Thread lief ungebremst – seit `Synth` höchstens 0,2 s vorausläuft, läuft der große
 Bedientest durch. Bei Fehlern druckt die CI jetzt „==== HOST ====“ (Speicher, Kernel-Meldungen) und „LOGCAT TAIL“.
+**Ton im Emulator aus (Okt. 23):** Der Emulator (ohne Audio-Gerät, `-noaudio`) verschwand reproduzierbar, sobald
+Musik spielte. In den UI-Tests ist deshalb `app.synth.outputEnabled = false` (Noten werden weiter geplant, nur
+kein AudioTrack) – danach lief alles im ersten Anlauf grün. Auf echten Geräten unverändert.
 **Emulator-Abstürze:** Der Emulator verschwindet in etwa jedem zweiten Lauf mitten in `libraryPracticeEditorSettings`
 (beim Abspielen von Ode im Fließend-Modus, ~12 s nach Testbeginn) – ohne App-Fehler, auch mit `-gpu guest`.
 Deshalb steckt der Ablauf in `tools/ci/ui_tests.sh`; verschwindet der Emulator, schreibt das Skript
