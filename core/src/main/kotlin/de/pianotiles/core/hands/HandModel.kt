@@ -45,6 +45,26 @@ class HandModel private constructor(
         }
     }
 
+    /**
+     * Per vertex 0..1: how close it lies to a finger joint (knuckle), where skin creases – 1 where two bones of
+     * the same finger share the vertex equally.
+     */
+    val crease: FloatArray by lazy {
+        val digit = IntArray(names.size) { j ->
+            val n = names[j]
+            listOf("thumb-", "index-finger-", "middle-finger-", "ring-finger-", "pinky-finger-").indexOfFirst { n.startsWith(it) }
+        }
+        FloatArray(vertexCount) { v ->
+            var ja = -1; var wa = 0f; var jb = -1; var wb = 0f
+            for (k in 0 until 4) {
+                val w = weights[v * 4 + k]; val j = joints[v * 4 + k].toInt() and 0xFF
+                if (w > wa) { jb = ja; wb = wa; ja = j; wa = w } else if (w > wb) { jb = j; wb = w }
+            }
+            if (ja < 0 || jb < 0 || ja == jb || digit[ja] < 0 || digit[ja] != digit[jb]) 0f
+            else (4f * wa * wb).coerceIn(0f, 1f)
+        }
+    }
+
     companion object {
         private val cache = HashMap<Hand, HandModel?>()
 
@@ -388,6 +408,7 @@ object Hand3D {
     private var rowMax = -1
     private var fbuf = FloatArray(0) // forearm fade: 1 = opaque, 0 = gone
     private var kbuf = FloatArray(0) // fingernail: 0..1
+    private var cbuf = FloatArray(0) // skin crease at a knuckle: 0..1
     private var pbuf = FloatArray(0) // finger pressing a key: 0..1 (tinted in the hand's colour)
     private var hbuf = ByteArray(0)  // which hand drew the pixel (0 right, 1 left)
 
@@ -398,7 +419,7 @@ object Hand3D {
         keysBottom: Float, alphaOverKeys: Float,
     ): Boolean {
         val n = width * height
-        if (n > zcap) { zcap = n; zbuf = FloatArray(n); nbuf = FloatArray(n * 3); cover = ByteArray(n); fbuf = FloatArray(n); kbuf = FloatArray(n); pbuf = FloatArray(n); hbuf = ByteArray(n) }
+        if (n > zcap) { zcap = n; zbuf = FloatArray(n); nbuf = FloatArray(n * 3); cover = ByteArray(n); fbuf = FloatArray(n); kbuf = FloatArray(n); cbuf = FloatArray(n); pbuf = FloatArray(n); hbuf = ByteArray(n) }
         java.util.Arrays.fill(out, 0)
         java.util.Arrays.fill(zbuf, 0, n, -Float.MAX_VALUE)
         java.util.Arrays.fill(cover, 0, n, 0)
@@ -449,6 +470,7 @@ object Hand3D {
         }
         val idx = model.indices
         val nail = model.nail
+        val crease = model.crease
         for (tri in 0 until idx.size / 3) {
             val a = idx[tri * 3]; val b = idx[tri * 3 + 1]; val c = idx[tri * 3 + 2]
             val ax = sp[a * 3]; val ay = sp[a * 3 + 1]; val bx = sp[b * 3]; val by = sp[b * 3 + 1]; val cx = sp[c * 3]; val cy = sp[c * 3 + 1]
@@ -477,6 +499,7 @@ object Hand3D {
                     cover[i] = 1
                     fbuf[i] = w0 * fade[a] + w1 * fade[b] + w2 * fade[c]
                     kbuf[i] = w0 * nail[a] + w1 * nail[b] + w2 * nail[c]
+                    cbuf[i] = w0 * crease[a] + w1 * crease[b] + w2 * crease[c]
                     pbuf[i] = w0 * press[a] + w1 * press[b] + w2 * press[c]
                     hbuf[i] = handId
                     nbuf[i * 3] = w0 * sn[a * 3] + w1 * sn[b * 3] + w2 * sn[c * 3]
@@ -541,6 +564,9 @@ object Hand3D {
                 var r = 150f + (250f - 150f) * lit + 34f * rim
                 var g = 92f + (214f - 92f) * lit + 6f * rim
                 var b = 78f + (190f - 78f) * lit - 4f * rim
+                // knuckles: the skin creases there – a little darker and redder where the joint faces the viewer
+                val ck = cbuf[i].let { it * it * it } * (1f - nailW) * max(0f, nz)
+                if (ck > 0f) { r *= 1f - 0.16f * ck; g *= 1f - 0.27f * ck; b *= 1f - 0.27f * ck }
                 if (nailW > 0f) {
                     r += (238f - r) * 0.55f * nailW; g += (196f - g) * 0.55f * nailW * lit; b += (190f - b) * 0.55f * nailW * lit
                 }
