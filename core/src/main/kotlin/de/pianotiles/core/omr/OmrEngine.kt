@@ -417,6 +417,16 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
         for (a in glyphs) if (upperDigit(a)) for (c in glyphs) if (lowerDigit(c) && abs(a.cx - c.cx) < ss * 0.8) {
             timeSigBoxes.add(intArrayOf(min(a.minX, c.minX), a.minY, max(a.maxX, c.maxX), c.maxY))
         }
+        /** A note with its stem: many rows hold only the thin stem (digits are wide all the way). */
+        fun stemmed(b: Blob): Boolean {
+            var thin = 0
+            for (y in b.minY..b.maxY) {
+                var l = -1; var r = -1
+                for (x in b.minX..b.maxX) if (noStaffCrop[x, y]) { if (l < 0) l = x; r = x }
+                if (l >= 0 && r - l + 1 <= ss * 0.35) thin++
+            }
+            return thin > b.height * 0.4
+        }
         // Both digits joined into one glyph (connected through the middle staff line): tall, centred, wider
         // than a quarter rest, before the first note.
         if (timeSigBoxes.isEmpty()) {
@@ -427,7 +437,8 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 // digit) the bottom line; a note with its stem is off-centre
                 h in 2.6..4.7 && w in 1.1..2.4 && abs(it.cy + top - st.middle) < ss * 0.6 &&
                     abs(it.minY + top - st.top) < ss * 0.7 && abs(it.maxY + top - st.bottom) < ss * 1.0 &&
-                    it.maxX + left < firstNoteX && it.cx + left < st.xStart + ss * 14 && it.minX + left > st.xStart + ss * 2.5
+                    it.maxX + left < firstNoteX && it.cx + left < st.xStart + ss * 14 && it.minX + left > st.xStart + ss * 2.5 &&
+                    !stemmed(it)
             }.minByOrNull { it.minX }?.let { timeSigBoxes.add(intArrayOf(it.minX, it.minY, it.maxX, it.maxY)) }
         }
         if (timeSigBoxes.isEmpty()) glyphs.firstOrNull {
