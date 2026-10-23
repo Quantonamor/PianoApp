@@ -94,6 +94,7 @@ class HandsShotTest {
         compose.mainClock.autoAdvance = false
         ActivityScenario.launch(MainActivity::class.java).use {
             waitText("Meine Bibliothek")
+            waitText("Alle meine Entchen") // the pieces are loaded (before that there is nothing to scroll)
             // scrolling needs frames: let the clock run meanwhile (with a paused clock the test waits for idle forever)
             compose.mainClock.autoAdvance = true
             compose.onNode(hasScrollToNodeAction() and SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)).performScrollToNode(hasText("Ode an die Freude"))
