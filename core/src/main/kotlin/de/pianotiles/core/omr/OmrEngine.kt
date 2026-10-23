@@ -653,7 +653,9 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val piece = atBar && w >= 0.35 && h <= 0.8
             if (!piece && (w < 1.0 || w / h < 2.2)) continue
             if (w > 12 || h > 1.6 || b.fill > 0.7) continue
-            if (maxVerticalRun(noBars, b) > ss * 0.32) continue
+            // (a short, thick crescent is still mostly empty in its box; beams are not)
+            val vrun = maxVerticalRun(noBars, b)
+            if (vrun > ss * 0.32 && !(vrun <= ss * 0.45 && b.fill < 0.35)) continue
             // beams cross stems (at their height), ties and slurs do not
             val acy = b.cy + top
             if (sd.heads.any {
@@ -1421,7 +1423,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 }
                 // An arc before the first note of the line that ends at a head: a tie from the previous line.
                 if (a.isEmpty() && arc[0] < (sd.heads.minOfOrNull { it.x0 } ?: 0)) {
-                    near.filter { it.x0 >= arc[1] - ss * 0.8 && it.x0 <= arc[1] + ss * 1.2 }.forEach { tiedFromPrevLine.add(it) }
+                    // (also a head pushed right by a second whose other head stands at the tie's end)
+                    near.filter { h ->
+                        h.x0 >= arc[1] - ss * 0.8 && (h.x0 <= arc[1] + ss * 1.2 || sd.heads.any { o ->
+                            abs(o.step - h.step) == 1 && o.x0 < h.x0 && o.x1 >= h.x0 - ss * 0.25 && o.x0 <= arc[1] + ss * 1.2
+                        })
+                    }.forEach { tiedFromPrevLine.add(it) }
                 }
             }
         }
