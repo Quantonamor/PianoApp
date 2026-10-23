@@ -1,7 +1,9 @@
 ch:bwv103.6.mxl
 ch:bwv16.6.mxl
+ch:bwv24.6.mxl
 ch:bwv244.15.mxl
 ch:bwv245.11.mxl
+ch:bwv245.5.mxl
 ch:bwv253.mxl
 ch:bwv268.mxl
 ch:bwv336.mxl
@@ -10,12 +12,15 @@ ch:bwv388.mxl
 ch:bwv392.mxl
 ch:bwv4.8.mxl
 ch:bwv413.mxl
+ch:bwv414.mxl
+ch:bwv93.7.mxl
 folk:AcaciaReel.abc:0
 folk:AmazonHornpipe.abc:0
 folk:CincinnatiLancashireClog.abc:0
 folk:ClearTheTrackHornpipe.abc:0
 folk:GreatWesternLancashireClog.abc:0
 folk:HuntingTheHareJig.abc:0
+folk:JennysWeddingReel.abc:0
 folk:LegacyJig.abc:0
 folk:MissJessWatsonsHornpipe.abc:0
 folk:MollyMcGuiresReel.abc:0
