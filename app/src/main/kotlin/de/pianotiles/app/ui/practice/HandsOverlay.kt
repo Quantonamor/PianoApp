@@ -51,8 +51,9 @@ private class HandRenderLoop(private val onFrame: () -> Unit) {
                 while (running && pending == null) lock.wait()
                 pending.also { pending = null }
             } ?: continue
-            runCatching { render(r) }
+            runCatching { render(r) }.onFailure { android.util.Log.e("HandRender", "rendering failed", it) }
         }
+        android.util.Log.i("HandRender", "render thread stopped")
     }, "HandRender").apply { priority = Thread.NORM_PRIORITY - 1; isDaemon = true; start() }
 
     fun request(geos: List<HandRenderer.Geometry>, w: Int, h: Int, scale: Float, keysHeight: Float) {

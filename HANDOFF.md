@@ -37,9 +37,13 @@ weitergearbeitet. Allgemeine Regeln und Befehle: `CLAUDE.md`. Fahrplan: `docs/PL
 1. **Hände im pausierten Zustand (App):** Im CI-Screenshot `08_hands_paused` waren die Hände noch nicht zu sehen
    (Fingerziffern ja → Overlay aktiv, aber kein Bild). Behoben wurden schon: Bild wird nach dem Rendern neu
    gezeichnet (`HandsOverlay.kt`, `rendered`-Zähler) und Hände sind ab Schlag −∞ aktiv (`HandMotion.pose`).
-   Letzter Verdacht: Rendern im Software-Emulator dauert > 1,5 s → Test wartet jetzt 4 s; die App loggt die
-   Renderzeit (`adb logcat -s HandRender`). **Lokal auf echtem Gerät prüfen:** Stück öffnen, ✋ an, pausiert →
-   Hände sichtbar? Renderzeit im Log? Falls langsam: Auflösung adaptiv senken (`HandsOverlay.kt`, `scale`).
+   **Neuester Befund (CI-Lauf 107):** auch nach 4 s Warten keine Hände; im Thread-Dump steht der Render-Thread
+   „HandRender (TERMINATED)“ und es gibt **keine einzige** Renderzeit-Zeile im Log → das erste Bild wurde nie
+   fertig bzw. der Thread wurde vorher beendet (`stop()` aus `onDispose`?). Beim Spielen (`08b`) erscheinen die
+   Hände – also vermutlich ein frisch angelegtes Overlay. Jetzt loggt der Thread Fehler („rendering failed“) und
+   sein Ende („render thread stopped“). **Lokal prüfen:** Stück öffnen, ✋ an, pausiert lassen,
+   `adb logcat -s HandRender` – Fehler? Thread-Ende? Renderzeit? Dann `HandRenderLoop`/`DisposableEffect` in
+   `HandsOverlay.kt` korrigieren (z. B. Loop pro Overlay-Instanz neu starten statt einmal im Konstruktor).
 2. **Rückmeldung vom echten Gerät:** Hände (Aussehen, Bewegung), Klang (Salamander-Samples), MIDI-Keyboard,
    Hochformat, Lernpfad. Ton auf echtem Gerät beim Abspielen (im Emulator war das der Absturzgrund – auf Geräten
    nicht erwartet, aber prüfen).
