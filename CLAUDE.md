@@ -32,7 +32,8 @@ Original-PDF und „KI-nachbessern“ (Claude-API mit eigenem Schlüssel des Nut
   `local.properties` mit `sdk.dir=C:/Users/Martin/AppData/Local/Android/Sdk` (Schrägstriche!), dann
   `bash tools/emu.sh start`, `bash tools/emu.sh install`, `tools/emu.sh shot NAME` (Screenshot ansehen),
   `tools/emu.sh tapt "Text"` (tippt auf Element mit diesem Text). Bedientest lokal:
-  `./gradlew :app:connectedDebugAndroidTest` (deinstalliert danach die App → `emu.sh install`).
+  `./gradlew :app:connectedDebugAndroidTest` (installiert über vorhandene App-Daten, deinstalliert danach die
+  App samt Daten → anschließend `emu.sh install`).
 - **In der Cloud-Session baut die App nur die CI** (GitHub Actions `.github/workflows/android.yml`: Core-Tests, APK als
   Artefakt `PianoTiles-apk`, Emulator-Bedientest `app/src/androidTest/.../SmokeTest.kt`). Lokal gibt es kein
   Android-SDK (dl.google.com gesperrt) – also nach jedem Push die CI prüfen. Bei UI-Test-Fehlern steht die

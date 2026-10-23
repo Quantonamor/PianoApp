@@ -10,6 +10,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -19,6 +20,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -91,6 +93,9 @@ class SmokeTest {
             waitText("Alle meine Entchen")
             shot("01_library")
 
+            // With more pieces in the library (e.g. a local emulator) the card may be outside the lazy grid:
+            // filter via the search field (scrolling would wait for idle, which the manual clock never reaches).
+            compose.onNode(hasSetTextAction()).performTextInput("Ode an")
             waitText("Ode an die Freude").performClick()
             waitText("Takt")
             shot("02_practice_paused")
