@@ -2,6 +2,9 @@
 
 ## 0.3.0 – in Arbeit (M6)
 
+* **Fehler behoben**: Bei pausiertem Stück waren die 3D-Hände unsichtbar (das fertige Bild aus dem Hintergrund-Thread
+  wurde nie gezeichnet, weil ohne Abspielen kein neuer Frame kam); jetzt zeichnet ein fertiges Bild neu, gerendert
+  wird nur bei geänderter Haltung.
 * **Fehler behoben**: Bei ausgeblendeter Leiste ging das Antippen des kleinen runden Zurück-Knopfs verloren (die Leiste
   kam schon beim Aufsetzen des Fingers zurück und der Knopf verschwand unter dem Finger).
 * **PDF-Erkennung**: eine Note mit Hals wird nicht mehr für eine Taktangabe gehalten (fehlende Köpfe in Chorälen,

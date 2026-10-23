@@ -5,7 +5,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -26,7 +29,7 @@ import de.pianotiles.core.model.Hand
  * newest pose ([request]) and draws the newest finished picture ([latest]); three bitmaps rotate, so the one
  * being drawn is never the one being written.
  */
-private class HandRenderLoop {
+private class HandRenderLoop(private val onFrame: () -> Unit) {
     private class Request(val geos: List<HandRenderer.Geometry>, val w: Int, val h: Int, val scale: Float, val keysHeight: Float)
 
     private val lock = Object()
@@ -72,6 +75,7 @@ private class HandRenderLoop {
         latestSize = IntSize(r.w, r.h)
         latest = images[i]
         next = (i + 1) % 3
+        onFrame()
     }
 }
 
@@ -87,10 +91,15 @@ fun HandsOverlay(
     modifier: Modifier = Modifier,
 ) {
     val measurer = rememberTextMeasurer(cacheSize = 16)
-    val loop = remember { HandRenderLoop() }
+    // a finished picture must be drawn even when nothing else redraws the screen (paused): count it as a frame
+    var rendered by remember { mutableIntStateOf(0) }
+    val main = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
+    val loop = remember { HandRenderLoop { main.post { rendered++ } } }
+    val lastKey = remember { longArrayOf(Long.MIN_VALUE) }
     DisposableEffect(loop) { onDispose { loop.stop() } }
     Canvas(modifier.fillMaxSize().clipToBounds()) {
-        frame.also { } // redraw every frame
+        frame.also { } // redraw every frame …
+        rendered.also { } // … and when the background thread has finished a picture
         val layout = KeyLayout(range.first, range.last, size.width)
         val firstWhite = layout.whites.firstOrNull() ?: return@Canvas
         val origin = KeyX.of(firstWhite) - 0.5f
@@ -102,7 +111,14 @@ fun HandsOverlay(
         val scale = 0.5f
         val bw = (size.width * scale).toInt().coerceAtLeast(1)
         val bh = (size.height * scale).toInt().coerceAtLeast(1)
-        loop.request(geos, bw, bh, scale, keysHeight)
+        // only a changed pose is rendered again (a finished picture redraws the canvas, which must not loop)
+        val key = geos.fold(31L * bw + bh) { acc, g ->
+            var h = acc * 31 + g.hand.ordinal
+            for (t in g.tips) h = (h * 31 + t[0].toBits()) * 31 + t[1].toBits()
+            for (d in g.down) h = h * 31 + d.toBits()
+            h
+        }
+        if (key != lastKey[0]) { lastKey[0] = key; loop.request(geos, bw, bh, scale, keysHeight) }
         val img = loop.latest
         val sz = loop.latestSize
         if (img != null && sz.width == bw && sz.height == bh) drawImage(
