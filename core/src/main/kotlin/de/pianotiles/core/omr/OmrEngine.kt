@@ -347,8 +347,11 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
             val touchesLine = lineYs.any { ly -> abs(b.minY + top - 1 - ly) <= st.lineThickness + 1 || abs(b.maxY + top + 1 - ly) <= st.lineThickness + 1 }
             if (!touchesLine && (h < 0.28 || w / h > 3.0)) return false
             // The window of a natural or sharp: long vertical strokes on both sides (a head has its stem on
-            // one side at most).
-            fun longStroke(xs: IntProgression) = xs.any { x -> (img.verticalRun(x, b.cy.roundToInt())?.let { it.last - it.first + 1 } ?: 0) >= ss * 1.5 }
+            // one side at most; two voices on one head have stems on both sides, but each leaves the head in
+            // one direction only, while an accidental's strokes span its whole window).
+            fun longStroke(xs: IntProgression) = xs.any { x ->
+                img.verticalRun(x, b.cy.roundToInt())?.let { it.last - it.first + 1 >= ss * 1.5 && it.first < b.minY && it.last > b.maxY } == true
+            }
             val reach = (ss * 0.3).roundToInt()
             if (longStroke(b.minX - 1 downTo b.minX - reach) && longStroke(b.maxX + 1..b.maxX + reach)) return false
             // A head's hole is enclosed by its own ring; a long stroke right at the border means a cell between
