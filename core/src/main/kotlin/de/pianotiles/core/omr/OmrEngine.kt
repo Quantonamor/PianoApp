@@ -493,6 +493,12 @@ class OmrEngine(private val options: OmrOptions = OmrOptions()) {
                 h in 1.4..2.6 && w in 0.8..2.2 && abs(cy + top - st.middle) < ss * 0.5 && total > 0 && ink < total * 0.2 &&
                     frags.count { f -> f.minX >= bx[0] && f.maxX <= bx[2] && f.minY >= bx[1] && f.maxY <= bx[3] } >= 2
             }?.let { timeSigBoxes.add(it); sd.commonTime = true }
+            // two digits, one of them broken by the line removal: the joined pieces cover the staff from top to bottom
+            if (timeSigBoxes.isEmpty()) boxes.firstOrNull { bx ->
+                val w = (bx[2] - bx[0] + 1) / ss; val h = (bx[3] - bx[1] + 1) / ss
+                w in 0.8..2.2 && h in 3.3..4.7 && abs((bx[1] + bx[3]) / 2.0 + top - st.middle) < ss * 0.5 &&
+                    frags.count { f -> f.minX >= bx[0] && f.maxX <= bx[2] && f.minY >= bx[1] && f.maxY <= bx[3] } >= 2
+            }?.let { timeSigBoxes.add(it) }
         }
         if (System.getProperty("omr.trace") != null) println("TIMESIG staff=$staffNo ${timeSigBoxes.map { (it.map { v -> v }).toString() }} common=${sd.commonTime} left=$left top=$top")
         timeSigBoxes.forEach { sd.timeSigs.add(intArrayOf(it[0] + left, it[1] + top, it[2] + left, it[3] + top)) }
