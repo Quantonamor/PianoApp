@@ -1,5 +1,15 @@
 # Übergabe für die nächste Session („weiter“)
 
+> **Neuester Stand (Session 2026-10-24):** Die aktuellste Arbeit liegt **nicht** auf diesem Branch, sondern auf
+> `ccr-564d5418-uo5d3u` (Merge von `master` in den OMR-Konvergenz-Branch + OMR-Runde 11, Seed 11111).
+> Dort sind die **letzten beiden CI-Läufe rot** (Runs 40017154811, 40017230383) → zuerst diesen Branch holen
+> (`git fetch origin ccr-564d5418-uo5d3u` und in den Session-Branch mergen), CI-Logs ansehen
+> (`get_job_logs`, „==== FAILED TESTS ====“) und reparieren. Das dortige HANDOFF.md ist maßgeblich.
+> **APK-Download:** Es gibt kein GitHub-Release. Letzte grüne APK = Artefakt `PianoTiles-apk` in
+> https://github.com/Quantonamor/PianoApp/actions/runs/40010092626 (Stand OMR-Runde 10, gültig bis 21.01.2027);
+> `master`: https://github.com/Quantonamor/PianoApp/actions/runs/39940635093.
+> Idee/Angebot an den Nutzer: Release-Workflow (APK automatisch als GitHub-Release mit festem Link).
+
 Stand: **2026-10-23 (spät)**, letzter Commit auf Branch `ccr-257ad710-x5upqq`, **CI komplett grün**
 (Core-Tests, APK-Build, Emulator-Bedientest). Allgemeine Regeln und Befehle stehen in `CLAUDE.md`.
 
